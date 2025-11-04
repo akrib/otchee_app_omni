@@ -67,6 +67,20 @@ require([
 
         /* fonction d'initialisation de la page */
     $(document).ready(function () {
+        var originalTooltip = $.fn.tooltip;
+        $.fn.tooltip = function(options) {
+            try {
+                // Si on essaie de détruire, vérifier d'abord l'existence
+                if (options === 'destroy' && !this.data('ui-tooltip')) {
+                    return this;
+                }
+                return originalTooltip.apply(this, arguments);
+            } catch (e) {
+                log(e, 'Tooltip error caught', 1);
+                return this;
+            }
+        };
+
         createUserInterface();
         var downtimeID = getToken('DT_ID');
         var dashboardType = $('#dashboardType').html();
@@ -112,6 +126,36 @@ require([
         $('#' + cur).remove();
         numberTabs -= 1;
     });/* OMNI_DONE */
+
+
+/* fonction permettant de supprimer une periode */
+/* lorque l'on click sur le bouton 'x' dans     */
+/* l'interface utilisateur                      */
+$(document).on('click', '.btnx', function () {
+    var cur = $(this).attr('id');
+    cur = cur.replace('btnx', 'tab');
+    
+    // Nettoyer les tooltips avant de supprimer
+    var $tab = $('#' + cur);
+    var $content = $('#content-' + cur);
+    
+    // Détruire les tooltips s'ils existent
+    $tab.find('[data-ui-tooltip]').each(function() {
+        if ($(this).data('ui-tooltip')) {
+            $(this).tooltip('destroy');
+        }
+    });
+    $content.find('[data-ui-tooltip]').each(function() {
+        if ($(this).data('ui-tooltip')) {
+            $(this).tooltip('destroy');
+        }
+    });
+    
+    // Supprimer les éléments
+    $tab.remove();
+    $content.remove();
+    numberTabs -= 1;
+});/* OMNI_DONE */
 
         /* Fonction qui met en focus la periode sélectionée */
     $(document).on('click', '.tab', function () {
