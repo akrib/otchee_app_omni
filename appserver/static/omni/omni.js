@@ -1633,33 +1633,66 @@ $(document).on('click', '.btnx', function () {
         }
     }/* OMNI_DONE */
 
-        /* Fonction de configuration des datepicker */
-    function applyDatepickerUI(minDate=getTodayDate(),div='') {
-        log(minDate,'in : applyDatepickerUI');
-        var dateFormat = 'yy-mm-dd';
-        var from = $(div+'[id^=datepicker_begin]')
-        .datepicker({
-            defaultDate: 'w',
-            changeMonth: true,
-            numberOfMonths: 1,
-            dateFormat: dateFormat,
-            minDate: 0,
-        })
-        .on('change', function () {
-            to.datepicker('option', 'minDate', getDate(this));
-        });
-        var to = $('[id^=datepicker_end]')
-        .datepicker({
-            defaultDate: 'w',
-            changeMonth: true,
-            numberOfMonths: 1,
-            dateFormat: dateFormat,
-            minDate: 0,
-        })
-        .on('change', function () {
-            from.datepicker('option', 'maxDate', getDate(this));
-        });
-    }/* OMNI_DONE */
+ /* Fonction de configuration des datepicker */
+function applyDatepickerUI(minDate=getTodayDate(),div='') {
+    log(minDate,'in : applyDatepickerUI');
+    var dateFormat = 'yy-mm-dd';
+    
+    var from = $(div+'[id^=datepicker_begin]')
+    .datepicker({
+        defaultDate: '+1w',
+        changeMonth: true,
+        numberOfMonths: 1,
+        dateFormat: dateFormat,
+        minDate: minDate,
+    })
+    .on('change', function () {
+        var selectedDate = getDate(this);
+        // Mettre à jour la date minimale du datepicker de fin
+        to.datepicker('option', 'minDate', selectedDate);
+        
+        // Vérifier si la date de fin est inférieure à la nouvelle date de début
+        var endDate = to.val();
+        if (endDate && selectedDate) {
+            var endDateObj = $.datepicker.parseDate(dateFormat, endDate);
+            if (endDateObj < selectedDate) {
+                // Réinitialiser la date de fin si elle est inférieure à la date de début
+                to.val('');
+                log('Date de fin réinitialisée car inférieure à la date de début', 'applyDatepickerUI', 1);
+            }
+        }
+    });
+    
+    var to = $(div+'[id^=datepicker_end]')
+    .datepicker({
+        defaultDate: '+1w',
+        changeMonth: true,
+        numberOfMonths: 1,
+        dateFormat: dateFormat,
+        minDate: minDate,
+    })
+    .on('change', function () {
+        var selectedDate = getDate(this);
+        // Mettre à jour la date maximale du datepicker de début
+        from.datepicker('option', 'maxDate', selectedDate);
+        
+        // Vérifier si la date de début est supérieure à la nouvelle date de fin
+        var beginDate = from.val();
+        if (beginDate && selectedDate) {
+            var beginDateObj = $.datepicker.parseDate(dateFormat, beginDate);
+            if (beginDateObj > selectedDate) {
+                // Réinitialiser la date de fin car elle est inférieure à la date de début
+                $(this).val('');
+                log('Date de fin invalide : inférieure à la date de début', 'applyDatepickerUI', 1);
+                
+                // Afficher un message d'erreur à l'utilisateur
+                setToken('modal_header', 'ERREUR');
+                setToken('modal_content', 'La date de fin ne peut pas être inférieure à la date de début.');
+                $('#modal_link')[0].click();
+            }
+        }
+    });
+}/* OMNI_DONE */
 
         /* Fonction qui renvoie la date d'un datePicker */
     function getDate(element) {
