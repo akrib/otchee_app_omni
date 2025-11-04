@@ -1,0 +1,207 @@
+<form script="omni/omni_journal.js,common\assets\js\sidebar\sidebar.js" hideEdit="true" version="1.1">
+  <label>ITSI : Maintenance Logs</label>
+  <search>
+    <query>
+      |makeresults
+    </query>
+    <done>
+      <set token="input_daycount">0</set>
+      <set token="input_earliest">@d</set>
+      <set token="input_latest">+1d@d</set>
+    </done>
+  </search>
+  <search id="base_filtre">
+    <query>
+      <![CDATA[| rest /services/authentication/users splunk_server=local 
+           | search [
+                    | rest /services/authentication/current-context splunk_server=local 
+                    | rename username as title 
+                    | fields title] 
+                | fields title roles realname 
+                | rename title as userName|rename realname as Name  
+                | stats values(Name) as Name by userName, roles
+                | search NOT roles IN ("client_all_*","user","all_itop_user","*_cds_client","can_*","splk_*","all_mrspoc_user")
+                | eval filtre2=case(roles like "%all_cds_adm%", "client=*", roles like "%dms_itoa_%", "client=*", roles like "%rab_%", "client=*", roles like "%admin%", "client=*")    
+                | rex field=roles "client_(?<client_name>[^\_]+)_*"
+                | eval filtre="client="+client_name 
+                | eval filtre=if(isnull(filtre), filtre2, filtre) 
+                |stats values(filtre) as filtre by userName,Name
+                |mvexpand filtre]]>
+        </query>
+    <preview>
+      <set token="cli_filtre">$result.filtre$</set>
+    </preview>
+  </search>
+  <search id="consult1">
+    <query>
+      <![CDATA[
+        | inputlookup omni_kv_trace_log_def
+        | search service="$input_service$" 
+          AND kpi="$input_kpis$" 
+          AND creator=$input_author$ 
+          AND ID=$input_ID$
+          AND entity="$input_entity$" 
+          AND NOT action="obsolete"
+                | table ID,dt_update,action
+        | lookup omni_kv_trace_log_def ID,dt_update,action
+        | eval
+        service=if(service="*","TOUS",service),
+        service=mvjoin(service,";"),
+        kpi=if(kpi="*","TOUS",kpi),
+        kpi=mvjoin(kpi,";"),
+        entity=if(entity="*","TOUS",entity),
+        entity=mvjoin(entity,";")
+      ]]>
+    </query>
+    <earliest></earliest>
+    <latest>now</latest>
+  </search>
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel>
+      <html>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+                <span class="omni-title-first-part">
+                  <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
+                </span>
+                <span class="omni-title-second-part"> Maintenance Logs</span>
+              </h1>
+                    <p style="display: inline-block;" class="gradient-spoc">Suivez les modifications de vos maintenances en quelques clics.</p>
+               </div>
+          </div>
+     </section>
+      </html>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <html>
+        <style>
+          .results-table th.col-info .icon-info {
+            width:40px !important;
+            text-align:center !important;
+            }
+        </style>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <table id="legende" style="padding-left:25% !important;">
+          <tr>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/add_v2.svg" width="24px"/> Ajout
+            </td>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/pen_v2.svg" width="24px"/> Modification
+            </td>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/recycle_v2.svg" width="24px"/> Obsolète
+            </td>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/trash_v2.svg" width="24px"/> Suppression
+            </td>
+          </tr>
+        </table>
+      </html>
+    </panel>
+  </row>
+  <row id="sidebar">
+    <panel>
+      <input type="dropdown" token="input_service" searchWhenChanged="true">
+        <label>Nom du Service</label>
+        <search>
+          <query>| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
+| spath input=value path={} output=svcs 
+| stats count by svcs
+| spath input=svcs path=title output=service_title 
+| spath input=svcs path=kpis{} output=kpi 
+| stats values(service_title) as service_title by kpi
+| spath input=kpi path=_key output=search_id 
+| spath input=kpi path=service_id output=service_id
+| dedup service_title service_id 
+| fields service_title service_id</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <fieldForLabel>service_title</fieldForLabel>
+        <fieldForValue>service_title</fieldForValue>
+        <change>
+          <unset token="form.input_kpis"></unset>
+        </change>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="dropdown" token="input_kpis" searchWhenChanged="true">
+        <label>Nom du KPI</label>
+        <search>
+          <query>
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
+| spath input=value path={} output=svcs 
+| stats count by svcs
+| fromjson svcs
+| eval service_data=split("$input_service$",";"),valid=0, valid=mvmap(service_data,valid+if(service_data=title,1,0)), valid=sum(valid)
+| where valid&gt;0
+| stats count by kpis
+| spath input=kpis path=title output=kpi_title
+| table kpi_title
+          </query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+        <fieldForLabel>kpi_title</fieldForLabel>
+        <fieldForValue>kpi_title</fieldForValue>
+        <choice value="*">All</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="text" token="input_entity" searchWhenChanged="true">
+        <label>Entity</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="text" token="input_author" searchWhenChanged="true">
+        <label>Identifiant de l'utilisateur</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <prefix>"*</prefix>
+        <suffix>*"</suffix>
+      </input>
+      <input type="text" token="input_ID" searchWhenChanged="true">
+        <label>ID de la maintenance</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <prefix>"*</prefix>
+        <suffix>*"</suffix>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table id="highlight">
+        <search base="consult1">
+          <query>
+            | sort -dt_update
+            | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
+            | table  ID,last_update, action,creator,service,kpi,entity,commentary
+            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE action as ACTION, last_update as "DATE",creator as AUTEUR
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="selected_client">$row.service$</set>
+          <set token="selected_site">$row.kpi$</set>
+          <set token="selected_cible">$row.entity$</set>
+          <set token="selected_commentaire">$row.commentaire$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

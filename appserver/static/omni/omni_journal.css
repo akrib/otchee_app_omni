@@ -1,0 +1,225 @@
+.table-chrome>thead>tr>th {
+    text-align: center;
+}
+
+td.icon {
+    text-align: center;
+}
+
+td.icon i {
+    font-size: 25px;
+    text-shadow: 1px 1px #aaa;
+}
+
+td.icon .severe {
+    color: red;
+}
+
+td.icon .elevated {
+    color: orangered;
+}
+
+td.icon .low {
+    color: #006400;
+}
+
+/* Row Coloring */
+#tablenoheader thead {
+    display: none;
+}
+
+#highlight .results-table tr.expanded-content-row td, .results-table tr.expanded-row td {
+    background-color: transparent !important;
+}
+
+#highlight td {
+    color: #2c3e50;
+}
+
+#highlight th.hide {
+    display: none;
+}
+
+#highlight td.hide {
+    display: none;
+}
+
+.range-owner {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/owner.png") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 48px 48px;
+    background-position: center;
+}
+
+.range-other {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/modifier.png") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 48px 48px;
+    background-position: center;
+}
+
+.range-update {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/updated.png") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 48px 48px;
+    background-position: center;
+}
+
+.range-nochange {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/updated.png") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 48px 48px;
+    background-position: center;
+    opacity: 0;
+}
+
+.range-add {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/add_v2.svg") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 24px 24px;
+    background-position: center;
+}
+.range-obsolete {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/recycle_v2.svg") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 24px 24px;
+    background-position: center;
+}
+.range-modify {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/pen_v2.svg") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 24px 24px;
+    background-position: center;
+}
+.range-delete {
+    text-align: center;
+    background: url("/static/app/otchee_app_omni/media/trash_v2.svg") 5px no-repeat;
+    text-indent:-99999em;
+    overflow:hidden;
+    background-size: 24px 24px;
+    background-position: center;
+}
+
+#highlight .table td {
+    border-top: 1px solid #bdc3c7;
+    text-align: center;
+}
+
+#highlight td.range-severe, td.range-elevated {
+    font-weight: bold;
+}
+
+.icon-inline i {
+    font-size: 18px;
+    margin-left: 5px;
+}
+.icon-inline i.icon-alert-circle {
+    color: #ef392c;
+}
+.icon-inline i.icon-alert {
+    color: #ff9c1a;
+}
+.icon-inline i.icon-check {
+    color: #5fff5e;
+}
+.icon-inline i.icon-graph {
+    background: transparent url("/static/app/otchee_app_omni/graph.png") no-repeat;
+    display:inline-block;
+    height:16px; /* your image height */
+    text-indent:-99999em;
+    width:16px; /* your image width */
+    overflow:hidden;
+    background-size: contain;
+}
+
+.icon-inline i.icon-downtime {
+    background: transparent url("/static/app/otchee_app_omni/downtime.png") no-repeat;
+    display:inline-block;
+    height:16px; /* your image height */
+    text-indent:-99999em;
+    width:16px; /* your image width */
+    overflow:hidden;
+    background-size: contain;
+}
+
+.icon-inline i.icon-config {
+    background:url("/static/app/otchee_app_omni/settings.png") no-repeat;
+    display:inline-block;
+    height:16px; /* your image height */
+    text-indent:-99999em;
+    width:16px; /* your image width */
+    overflow:hidden;
+    background-size: contain;
+}
+
+.icon-inline i.icon-metric-service {
+    background:url("/static/app/otchee_app_omni/graph.png") no-repeat;
+    display:inline-block;
+    height:16px; /* your image height */
+    text-indent:-99999em;
+    width:16px; /* your image width */
+    overflow:hidden;
+    background-size: contain;
+}
+
+div[data-test-panel-id='presets'], div[data-test-panel-id='date'], div[data-test-panel-id='relative'], div[data-test-panel-id='realTime'], div[data-test-panel-id='advanced'] {
+    display: none;
+}
+
+#highlight th[data-sort-key="SERVICE"] {
+     display: none; 
+}
+
+#highlight th[data-sort-key="KPI"] {
+     display: none; 
+}
+
+#highlight th[data-sort-key="ENTITY"] {
+     display: none;
+}
+
+#highlight th[data-sort-key="COMMENTAIRE"] {
+     display: none; 
+}
+#highlight th[data-sort-key="fullRaw"] {
+     display: none; 
+}
+table#legende {
+border-collapse: inherit;
+border-spacing: 10px;
+}
+
+td.dataexpansion {
+text-align: left !important;
+}
+
+#selector_container {
+    display: inline-flex;
+}
+
+#selector_1.dashboard-cell{
+  width : 20% !important;
+}
+
+#selector_table.dashboard-cell{
+  width : 79.5% !important;
+  height : 100% !important;
+}
+
+.ui-widget-content {
+  outline: none !important;
+}

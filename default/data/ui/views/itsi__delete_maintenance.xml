@@ -1,0 +1,159 @@
+<form script="common\assets\js\modal_popup\modal_popup.js,common\assets\js\dual\dual.js,omni/omni.js" hideEdit="true" version="1.1">
+<label>ITSI : Delete Maintenance</label>
+  <init>
+    <eval token="update">now()</eval>
+    <eval token="debug">1</eval>
+  </init>
+  <search>
+    <query>|makresults</query>
+    <done>
+      <set token="modal_header"></set>
+      <set token="modal_content"></set>
+      <set token="modal_footer"></set>
+    </done>
+  </search>
+  <search>
+    <query>
+|rest /services/authentication/users splunk_server=local
+| search
+[| rest /services/authentication/current-context splunk_server=local
+| rename username as title
+| fields title]
+| table title realname email
+		</query>
+    <done>
+      <set token="login">$result.title$</set>
+      <set token="realname">$result.realname$</set>
+      <set token="email">$result.email$</set>
+      <set token="form.email">$result.email$</set>
+    </done>
+  </search>
+    <search>
+    <query>
+      index="cds_repository_results" sourcetype="GitLab:Project" id=19 | stats latest(open_issues_count) as open_issues_count
+    </query>
+    <done>
+      <condition>
+        <set token="open_issues">$result.open_issues_count$</set>
+      </condition>
+    </done>
+  </search>
+  <fieldset submitButton="false" autoRun="false"></fieldset>
+    <row>
+
+    <panel>
+      <html>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;"><span class="omni-title-first-part"><img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"></img></span><span class="omni-title-second-part"> Delete Maintenance</span></h1>
+               </div>
+          </div>
+     </section>
+        </html>
+    </panel>
+  </row>
+  <row depends="$DT_ID$" rejects="$update_full_loading$">
+    <panel>
+      <html>
+        <div class="Loadercontainer" height="100%">
+          <div class="rel">
+            <div class="center"/>
+            <div class="ring ring_1">
+              <div class="part part_1"/>
+            </div>
+            <div class="ring ring_2">
+              <div class="part part_2"/>
+              <div class="part part_3"/>
+            </div>
+          </div>
+        </div>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <center>
+          <H2>Chargement des datas en cours</H2>
+        </center>
+      </html>
+    </panel>
+  </row>
+<row depends="$DT_ID$,$update_full_loading$">
+    <panel>
+      <html> 
+          <h1>PORTEE DE LA MAINTENANCE</h1>
+          <br/>
+        
+    <div id="selection_desc"/>
+    </html>
+    </panel>
+  </row>
+<row depends="$DT_ID$,$update_full_loading$">
+    <panel>
+      <input type="checkbox" token="sendingEmail">
+        <label></label>
+        <choice value="1">Cocher pour envoyer un email recapitulatif</choice>
+        <delimiter> </delimiter>
+      </input>
+      <input type="text" token="email" depends="$sendingEmail$">
+        <label>Adresse Email du destinataire</label>
+      </input>
+    </panel>
+  </row>
+  <row depends="$DT_ID$,$update_full_loading$">
+    <panel>
+      <html>
+				<center>
+					<div id="downtime"/>
+				</center>
+			</html>
+    </panel>
+  </row>
+  
+  <row depends="$hide_style$">
+    <panel>
+      <html>
+          <table border="1" text-align="center">
+            <tr>
+                <td>
+                    dashboardType
+                </td>
+                <td>
+                    <div id="dashboardType">delete</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    debug_mod (0 = off; 1 = on)
+                </td>
+                <td>
+                    <div id="debug">0</div>
+                </td>
+            </tr>
+        </table>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <a href="#modalpopup" rel="modal_popup:open" id="modal_link" style="visibility=hidden;"/>
+        <div id="modalpopup" class="modal_popup">
+          <table>
+            <tr>
+              <div id="modal_header"/>
+            </tr>
+            <tr>
+              <div id="modal_content"/>
+            </tr>
+            <tr>
+              <div id="modal_footer"/>
+            </tr>
+          </table>
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>

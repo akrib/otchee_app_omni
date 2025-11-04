@@ -1,0 +1,135 @@
+/* ---------------------------------------------------
+Bouton "Afficher les filtres"
+----------------------------------------------------- */     
+.navbar {
+    padding: 15px 10px;
+    background: #fff;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 40px;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .navbar-btn {
+    box-shadow: none;
+    outline: none !important;
+    border: none;
+    }
+    
+    /* ---------------------------------------------------
+    SIDEBAR STYLE
+    ----------------------------------------------------- */
+    #sidebar::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* make scrollbar transparent */
+    }
+    
+    #sidebar .dashboard-body,#sidebar .footer,#sidebar .header,#sidebar .dashboard-panel,#sidebar .dashboard-cell,#sidebar .panel-body, #sidebar .dashboard-panel {
+    background: #7386D5 !important; 
+    }
+    
+    
+    
+    #back_button{
+    width : 30px !important;
+    }
+    #side_inputs{
+    width : 310px !important;
+    }
+    
+    #sidebar {
+    border-radius: 0 20px 20px 0;
+    width: 350px;
+    position: fixed;
+    top: 0;
+    left: -350px;
+    height: 100vh;
+    z-index: 999;
+    background: #7386D5; 
+    color: #fff;
+    transition: all 0.3s;
+    /* overflow-y: scroll; */
+    box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
+    }
+    
+    #sidebar.active {
+    left: 0;
+    }
+    
+    #dismiss {
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+    text-align: center;
+    background: #7386D5; 
+    position: absolute;
+    top: 150px;
+    right: 10px;
+    cursor: pointer;
+    -webkit-transition: all 0.3s;
+    -o-transition: all 0.3s;
+    transition: all 0.3s;
+    }
+    
+    #sidebarCollapse {
+    visibility:visible;
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+    text-align: center;
+    background: #7386D5; 
+    position: absolute;
+    top: 150px;
+    right: -35px;
+    cursor: pointer;
+    z-index: 999;
+    -webkit-transition: all 0.3s;
+    -o-transition: all 0.3s;
+    transition: all 0.3s;
+    }
+
+
+    #dismiss:hover {
+    background: #fff; 
+    color: #7386D5 ; 
+    }
+
+    #sidebarCollapse:hover {
+    background: #fff; 
+    color: #7386D5 ; 
+    }
+    
+    #sidebarCollapse.active {
+    visibility: hidden;
+    right: 350px;
+    z-index: 997;
+    }   
+    #sidebarCollapse {     
+    border-radius: 0 20px 20px 0;
+    font-size: 24px; 
+    }
+    #dismiss {
+    border-radius: 20px;
+    font-size: 24px;     
+    moz-transform: rotate(180deg);
+    -webkit-transform: rotate(180deg);
+    -o-transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    transform: rotate(180deg);
+    }
+
+    .overlay {
+    display: none;
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 998;
+    opacity: 0;
+    transition: all 0.5s ease-in-out;
+    }
+    .overlay.active {
+    display: block;
+    opacity: 1;
+    }
+    

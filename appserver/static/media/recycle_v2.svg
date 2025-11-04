@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   height="381.989"
+   viewBox="0 0 92.173 95.497"
+   width="368.693"
+   version="1.1"
+   id="svg12"
+   sodipodi:docname="recycle_v2.svg"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)">
+  <metadata
+     id="metadata16">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     id="namedview14"
+     showgrid="false"
+     inkscape:zoom="2.2723167"
+     inkscape:cx="184.3465"
+     inkscape:cy="190.99451"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg12" />
+  <defs
+     id="defs8">
+    <linearGradient
+       xlink:href="#a"
+       id="b"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-17.914 -16.252)"
+       x1="32.708"
+       y1="103.033"
+       x2="75.779"
+       y2="42.2"
+       spreadMethod="pad" />
+    <linearGradient
+       id="a">
+      <stop
+         offset="0"
+         stop-color="#ed0080"
+         id="stop3"
+         style="stop-color:#274685;stop-opacity:1" />
+      <stop
+         offset="1"
+         stop-color="#f99d1c"
+         id="stop5"
+         style="stop-color:#1977cc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <path
+     d="M61.962 66.433a1.75 1.75 0 010 3.5H60.71a1.75 1.75 0 010-3.5zm28.273-6.635L78.39 80.103a14.314 14.314 0 01-12.324 7.079H56.32v6.566a1.75 1.75 0 01-3.1 1.113L39.256 77.92a1.753 1.753 0 010-2.227L53.22 58.753a1.75 1.75 0 013.1 1.113v8.317a1.75 1.75 0 01-3.5 0V64.74l-9.945 12.067 9.945 12.066v-3.442a1.75 1.75 0 011.75-1.75h11.5a10.8 10.8 0 009.3-5.342l4.905-8.407h-11.44a1.75 1.75 0 010-3.5h11.293l-6.342-9.95a1.748 1.748 0 01-.011-1.862l9.348-15.06a1.75 1.75 0 011.427-.825 1.721 1.721 0 011.48.728l3.465 4.822a14.283 14.283 0 01.74 15.512zm-3.58-13.47l-1.936-2.7-7.386 11.9 5.92 9.29 3.959-6.787a10.775 10.775 0 00-.556-11.702zm-61.594.05L11.85 66.186l11.794.248a1.749 1.749 0 011.556 1.025l7.34 16.133a1.749 1.749 0 01-1.531 2.473l-5.934.206a13.6 13.6 0 01-.494.008 14.282 14.282 0 01-12.82-8l-4.71-9.638a1.752 1.752 0 01.1-1.71c0-.007.01-.01.015-.017V66.9L23.12 42.98a1.75 1.75 0 012.427-.485l2.863 1.91-4.52-14.969-15.555 1.58 2.863 1.908a1.75 1.75 0 01.488 2.423l-6.38 9.565a10.8 10.8 0 00-.717 10.7l2.145 4.391a1.753 1.753 0 01-3.148 1.544l-2.145-4.39a14.313 14.313 0 01.95-14.179l5.409-8.11-5.463-3.643a1.751 1.751 0 01.794-3.2l21.842-2.215a1.753 1.753 0 011.852 1.237l6.345 21.016a1.749 1.749 0 01-2.646 1.962zm-2.591 23.53l-11.014-.23 3.45 7.06a10.775 10.775 0 0010.048 6.034l3.317-.115zm4.646-63.577a1.741 1.741 0 001.106-.395c.183-.15.372-.293.566-.432a1.75 1.75 0 00-2.035-2.848q-.383.273-.745.57a1.75 1.75 0 001.108 3.1zm-5.968 10l17.717.488h.049a1.749 1.749 0 001.555-.95l6.373-12.373h11.712a10.8 10.8 0 019.3 5.343l5.792 9.93a1.749 1.749 0 002.393.63l2.974-1.733L73.6 32.34l-15.434-2.513 2.974-1.734a1.753 1.753 0 00.63-2.394l-9.075-15.56a1.75 1.75 0 00-3.024 1.764l8.194 14.044-5.673 3.309a1.75 1.75 0 00.6 3.239l21.668 3.527a1.807 1.807 0 00.282.023 1.749 1.749 0 001.644-1.141l7.6-20.6a1.749 1.749 0 00-2.522-2.118l-5.678 3.312-4.91-8.42A14.318 14.318 0 0058.553 0H35.045a14.274 14.274 0 00-2.575.234 1.75 1.75 0 10.634 3.442 10.813 10.813 0 011.94-.176h7.859l-5.043 9.794-14-.386 1.354-3.032a1.752 1.752 0 10-3.2-1.426l-2.421 5.422a1.75 1.75 0 001.55 2.462z"
+     fill="url(#b)"
+     id="path10" />
+</svg>

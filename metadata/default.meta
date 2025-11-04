@@ -1,0 +1,108 @@
+[]
+access = read : [ * ], write : [ admin, sc_admin ]
+
+### VIEWSTATES: even normal users should be able to create shared viewstates
+
+[viewstates]
+access = read : [ * ], write : [ admin, sc_admin ]
+
+[nav/default]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729885.421249000
+
+[views/accueil]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728730241.999231000
+
+[views/help]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.073713000
+
+[views/itsi__add_maintenance]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.081209000
+
+[views/itsi__delete_maintenance]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.081822000
+
+[views/itsi__maintenance_logs]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.085042000
+
+[views/itsi__maintenance_search]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.091870000
+
+[views/itsi__modify_maintenance]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.097134000
+
+[views/itsi__maintenance_target]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.097872000
+
+[collections/omni_kv]
+export = system
+owner = admin
+version = 9.3.0
+modtime = 1728729853.106769000
+
+[views/itsi__my_own_maintenance]
+access = read : [ * ]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.107466000
+
+[collections/omni_kv_trace_log]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.112286000
+
+[transforms/omni_kv_def]
+access = read : [ * ]
+export = system
+owner = admin
+version = 9.3.0
+modtime = 1728729853.114690000
+
+[transforms/omni_kv_trace_log_def]
+export = none
+owner = admin
+version = 9.3.0
+modtime = 1728729853.115359000
+
+[macros]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = system
+
+[commands]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = system
+

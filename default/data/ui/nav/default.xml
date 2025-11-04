@@ -1,0 +1,14 @@
+<nav search_view="search" color="#74b9ff00">
+  <view name="accueil" default="true" />
+  <collection label="Maintenance">
+    <view name="itsi__maintenance_search" />
+    <view name="itsi__add_maintenance" />
+    <view name="itsi__maintenance_target" />
+  </collection>
+  <collection label="Profil">
+    <view name="itsi__my_own_maintenance" />
+    <view name="itsi__maintenance_logs" />
+    <view name="dashboards" />
+    <view name="search"/>
+  </collection>
+</nav>

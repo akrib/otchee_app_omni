@@ -1,0 +1,554 @@
+<form script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,common\assets\js\dual\dual.js,omni/omni.js" hideEdit="true" version="1.1">
+  <label>ITSI : Modify Maintenance</label>
+  <init>
+    <eval token="update">now()</eval>
+    <set token="stepLabel">firstStep</set>
+    <set token="modal_header"></set>
+    <set token="modal_content"></set>
+    <set token="modal_footer"></set>
+    <!--<set token="hide">true</set>-->
+  </init>
+  <search>
+    <query>
+      |rest /services/authentication/users splunk_server=local
+      | search
+      [| rest /services/authentication/current-context splunk_server=local
+      | rename username as title
+      | fields title]
+      | table title realname email
+    </query>
+    <done>
+      <set token="login">$result.title$</set>
+      <set token="realname">$result.realname$</set>
+      <set token="email">$result.email$</set>
+      <set token="form.email">$result.email$</set>
+    </done>
+  </search>
+  <search id="between_date_query">
+    <query>
+      | stats count 
+      | eval type_between_date="$type_between_date$",
+        input_begin_hour="$input_begin_hour$",
+        input_begin_hour=if(len(input_begin_hour)=1,"0".input_begin_hour,input_begin_hour),
+        input_begin_minute="$input_begin_minute$",
+        input_begin_minute=if(len(input_begin_minute)=1,"0".input_begin_minute,input_begin_minute),
+        input_end_hour="$input_end_hour$",
+        input_end_hour=if(len(input_end_hour)=1,"0".input_end_hour,input_end_hour),
+        input_end_minute="$input_end_minute$",
+        input_end_minute=if(len(input_end_minute)=1,"0".input_end_minute,input_end_minute),
+        input_between_begin_day="$input_between_begin_day$",
+        input_between_begin_day=if(len(input_between_begin_day)=1,"0".input_between_begin_day,input_between_begin_day),
+        input_between_begin_month="$input_between_begin_month$",
+        input_between_begin_month=if(len(input_between_begin_month)=1,"0".input_between_begin_month,input_between_begin_month),
+        input_between_begin_year="$input_between_begin_year$",
+        input_between_begin_year=if(len(input_between_begin_year)=1,"0".input_between_begin_year,input_between_begin_year),
+        input_between_end_day="$input_between_end_day$",
+        input_between_end_day=if(len(input_between_end_day)=1,"0".input_between_end_day,input_between_end_day),
+        input_between_end_month="$input_between_end_month$",
+        input_between_end_month=if(len(input_between_end_month)=1,"0".input_between_end_month,input_between_end_month),
+        input_between_end_year="$input_between_end_year$",
+        input_between_end_year=if(len(input_between_end_year)=1,"0".input_between_end_year,input_between_end_year),
+        dowmtime=type_between_date."#".input_between_begin_year."-".input_between_begin_month."-".input_between_begin_day."#".input_between_end_year."-".input_between_end_month."-".input_between_end_day."#".input_begin_hour.":".input_begin_minute.":00#".input_end_hour.":".input_end_minute.":00"
+    </query>
+    <progress>
+      <unset token="period_selected"></unset>
+    </progress>
+    <done>
+      <set token="period_selected">$result.dowmtime$</set>
+    </done>
+  </search>
+  <search id="base_service">
+    <query>
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
+| spath input=value path={} output=svcs 
+| stats count by svcs
+| spath input=svcs path=title output=service_title 
+| spath input=svcs path=kpis{} output=kpi 
+| stats values(service_title) as service_title by kpi
+```| spath input=kpi path=_key output=search_id   ```
+```| spath input=kpi path=service_id output=service_id ```
+| eval service_title=lower(service_title)
+| fields service_title
+    </query>
+  </search>
+  <search id="base_kpi">
+    <query>
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
+| spath input=value path={} output=svcs 
+| stats count by svcs
+| fromjson svcs
+| eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(title) LIKE(service_data),1,0)), valid=sum(valid)
+| where valid&gt;0
+| stats count by kpis
+| spath input=kpis path=title output=kpi_title
+| table kpi_title
+      </query>
+  </search>
+  <search id="base_entity">
+    <query>   
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
+| eval value=spath(value,"{}") 
+| stats count by value 
+| fromjson value 
+| spath input=services path=title output=service_title 
+| eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
+| where valid&gt;0
+| rename title as entity_title
+    </query>
+  </search>
+  <!-- <row>
+    <panel ref="footer_mrspocv2"></panel>
+  </row> -->
+  <fieldset submitButton="false"></fieldset>
+<!--  <row>-->
+<!--    <panel>-->
+<!--      <html>-->
+<!--        <center>-->
+<!--<div id="header" class="bg-mrspoc">-->
+<!--    <h1>MODIFIER UNE MAINTENANCE</h1>-->
+<!--</div>-->
+<!--</center>-->
+<!--</html>-->
+<!--    </panel>-->
+<!--  </row>-->
+  <row depends="$DT_ID$" rejects="$update_full_loading$">
+    <panel>
+      <html>
+      <center>
+          <h1>Mise à jour de maintenance</h1>
+        </center>
+      </html>
+    </panel>
+  </row>
+  <row depends="$DT_ID$" rejects="$update_full_loading$">
+    <panel>
+      <html>
+        <div class="Loadercontainer" height="100%">
+          <div class="rel">
+            <div class="center"/>
+            <div class="ring ring_1">
+              <div class="part part_1"/>
+            </div>
+            <div class="ring ring_2">
+              <div class="part part_2"/>
+              <div class="part part_3"/>
+            </div>
+          </div>
+        </div>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <center>
+          <H2>Chargement des datas en cours</H2>
+        </center>
+      </html>
+    </panel>
+  </row>
+  <row >
+
+    <panel>
+      <html>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;"><span class="omni-title-first-part"><img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"></img></span><span class="omni-title-second-part"> Modify Maintenance</span></h1>
+               </div>
+          </div>
+     </section>
+        </html>
+    </panel>
+    <panel depends="$DT_ID$,$update_full_loading$">
+      <html>
+       <div id="step_control_wizard_holder"/>
+           <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
+           <p id="swc_step_1" data-label="KPI" data-validateToken="kpi_selected"/>    
+           <p id="swc_step_2" data-label="Entity" data-validateToken="entity_selected"/>
+           <p id="swc_step_3" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
+           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
+        <div id="step-control-wizard"/>
+        </html>
+    </panel>
+  </row>
+  <row depends="$step_0$,$DT_ID$,$update_full_loading$">
+    <panel>
+      <html>
+        <h1>SERVICE</h1>
+      </html>
+    </panel>
+    <panel>
+      <input type="dropdown" token="service_select_input_type">
+        <label>type de séléction</label>
+        <choice value="1">All</choice>
+        <choice value="2">List</choice>
+        <choice value="3">Wildcard</choice>
+        <change>
+          <condition value="1">
+            <set token="service_selected">*</set>
+            <eval token="service_select_all">1</eval>
+            <eval token="service_select_dual">null()</eval>
+            <eval token="service_select_rex">null()</eval>
+            <eval token="service_type">1</eval>
+          </condition>
+          <condition value="2">
+            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
+            <eval token="service_select_all">null()</eval>
+            <eval token="service_select_dual">1</eval>
+            <eval token="service_select_rex">null()</eval>
+            <eval token="service_type">2</eval>
+          </condition>
+          <condition value="3">
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <eval token="service_select_all">null()</eval>
+            <eval token="service_select_dual">null()</eval>
+            <eval token="service_select_rex">1</eval>
+            <eval token="service_type">3</eval>
+          </condition>
+          <condition>
+            <!--<unset token="service_selected"></unset>-->
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <eval token="service_select_all">null()</eval>
+            <eval token="service_select_dual">null()</eval>
+            <eval token="service_select_rex">null()</eval>
+            <eval token="service_type">-1</eval>
+          </condition>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <table>
+        <search base="base_service">
+          <query>
+| appendpipe [stats count| eval service_title="*"  | where count==0 |table service_title]
+| table service_title
+| eval service_title=lower(service_title)
+| eval service_data=replace(lower("$service_for_concat$"),"\*","%"), service_data=split(service_data,","),valid=0, valid=mvmap(service_data,valid+if(service_title LIKE(service_data),1,0)), valid=sum(valid) 
+| eval service_title=if(valid&gt;0,"selected="+service_title,"default="+service_title)
+| stats values(service_title) as export
+| eval export=mvjoin(export,";")
+</query>
+          <progress>
+            <unset token="service_maj"></unset>
+            <unset token="service_concat"></unset>
+            <unset token="form.service_concat"></unset>
+          </progress>
+          <done>
+            <set token="service_concat">$result.export$</set>
+            <set token="form.service_concat">$result.export$</set>
+            <set token="service_maj">1</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_0$,$service_select_all$,$DT_ID$,$update_full_loading$,$hide$">
+    <panel>
+      <table>
+        <search base="base_service">
+          <query>
+| rename service_title as List
+| table List
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_0$,$service_select_dual$,$DT_ID$,$update_full_loading$">
+    <panel>
+      <title></title>
+      <html>
+        <div class="dual col-sm-12" input_token="service_concat" outputCondition="service_select_input_type,2" output_token="service_selected" refresh_token="service_select_dual"/>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_0$,$service_select_rex$,$DT_ID$,$update_full_loading$">
+    <panel>
+      <input type="text" token="service_text_selected">
+        <label>Wildcard</label>
+        <change>
+          <eval token="service_selected">if(isnotnull($service_text_selected$) AND $service_select_rex$=1,lower($service_text_selected$),null())</eval>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_1$">
+    <panel>
+      <html>
+        <h1>KPI</h1>
+      </html>
+    </panel>
+    <panel>
+      <input type="dropdown" token="kpi_select_input_type">
+        <label>type de séléction</label>
+        <choice value="1">All</choice>
+        <choice value="2">List</choice>
+        <choice value="3">Wildcard</choice>
+        <change>
+          <condition value="1">
+            <eval token="kpi_selected">"%"</eval>
+            <eval token="kpi_select_all">1</eval>
+            <eval token="kpi_select_dual">null()</eval>
+            <eval token="kpi_select_rex">null()</eval>
+            <eval token="kpi_type">1</eval>
+          </condition>
+          <condition value="2">
+            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
+            <eval token="kpi_select_all">null()</eval>
+            <eval token="kpi_select_dual">1</eval>
+            <eval token="kpi_select_rex">null()</eval>
+            <eval token="kpi_type">2</eval>
+          </condition>
+          <condition value="3">
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <eval token="kpi_select_all">null()</eval>
+            <eval token="kpi_select_dual">null()</eval>
+            <eval token="kpi_select_rex">1</eval>
+            <eval token="kpi_type">3</eval>
+          </condition>
+          <condition>
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <unset token="kpi_selected"></unset>
+            <eval token="kpi_select_all">null()</eval>
+            <eval token="kpi_select_dual">null()</eval>
+            <eval token="kpi_select_rex">null()</eval>
+            <eval token="kpi_type">-1</eval>
+          </condition>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <table>
+        <search base="base_kpi">
+          <query>
+| appendpipe [stats count| eval kpi_title="*"  | where count==0 |table kpi_title]
+| table kpi_title
+| eval kpi_title=lower(kpi_title)
+| eval kpi_data=replace(lower("$kpi_for_concat$"),"\*","%"), kpi_data=split(kpi_data,","),valid=0, valid=mvmap(kpi_data,valid+if(kpi_title LIKE(kpi_data),1,0)), valid=sum(valid)
+| eval kpi_title=if(valid&gt;0,"selected="+kpi_title,"default="+kpi_title)
+| stats values(kpi_title) as export
+| eval export=mvjoin(export,";")
+</query>
+          <progress>
+            <unset token="kpi_maj"></unset>
+            <unset token="kpi_concat"></unset>
+          </progress>
+          <done>
+            <set token="kpi_concat">$result.export$</set>
+            <set token="kpi_maj">1</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_1$,$kpi_select_all$,$hide$">
+    <panel>
+      <table>
+        <search base="base_kpi">
+          <query>
+| rename kpi_title as List
+| table List
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_1$,$kpi_select_dual$">
+    <panel>
+      <title></title>
+      <html>
+        <div class="dual col-sm-12" input_token="kpi_concat" outputCondition="kpi_select_input_type,2" output_token="kpi_selected" refresh_token="kpi_select_dual"/>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_1$,$kpi_select_rex$">
+    <panel>
+      <input type="text" token="kpi_text_selected">
+        <label>Wildcard</label>
+        <change>
+          <eval token="kpi_selected">if(isnotnull($kpi_text_selected$) AND $kpi_select_rex$=1,lower($kpi_text_selected$),null())</eval>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_2$">
+    <panel>
+      <html>
+        <h1>ENTITY</h1>
+      </html>
+    </panel>
+    <panel>
+      <input type="dropdown" token="entity_select_input_type">
+        <label>type de séléction</label>
+        <choice value="1">All</choice>
+        <choice value="2">List</choice>
+        <choice value="3">Wildcard</choice>
+        <change>
+          <condition value="1">
+            <eval token="entity_selected">"%"</eval>
+            <eval token="entity_select_all">1</eval>
+            <eval token="entity_select_dual">null()</eval>
+            <eval token="entity_select_rex">null()</eval>
+            <eval token="entity_type">1</eval>
+          </condition>
+          <condition value="2">
+            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
+            <eval token="entity_select_all">null()</eval>
+            <eval token="entity_select_dual">1</eval>
+            <eval token="entity_select_rex">null()</eval>
+            <eval token="entity_type">2</eval>
+          </condition>
+          <condition value="3">
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <eval token="entity_select_all">null()</eval>
+            <eval token="entity_select_dual">null()</eval>
+            <eval token="entity_select_rex">1</eval>
+            <eval token="entity_type">3</eval>
+          </condition>
+          <condition>
+            <unset token="entity_selected"></unset>
+            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
+            <eval token="entity_select_all">null()</eval>
+            <eval token="entity_select_dual">null()</eval>
+            <eval token="entity_select_rex">null()</eval>
+            <eval token="entity_type">-1</eval>
+          </condition>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <table>
+        <search base="base_entity">
+          <query>
+| appendpipe [stats count| eval entity_title="*"  | where count==0 |table entity_title]
+| table entity_title
+| eval entity_title=lower(entity_title)
+| eval entity_data=replace(lower("$entity_for_concat$"),"\*","%"), entity_data=split(entity_data,","),valid=0, valid=mvmap(entity_data,valid+if(entity_title LIKE(entity_data),1,0)), valid=sum(valid)
+| eval entity_title=if(valid&gt;0,"selected="+entity_title,"default="+entity_title)
+| stats values(entity_title) as export
+| eval export=mvjoin(export,";")
+</query>
+          <progress>
+            <unset token="entity_maj"></unset>
+            <unset token="entity_concat"></unset>
+          </progress>
+          <done>
+            <set token="entity_concat">$result.export$</set>
+            <set token="entity_maj">1</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_2$,$entity_select_all$">
+    <panel>
+      <table>
+        <search base="base_entity,$hide$">
+          <query>
+| rename entity_title as List
+| table List
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_2$,$entity_select_dual$">
+    <panel>
+      <title></title>
+      <html>
+        <div class="dual col-sm-12" input_token="entity_concat" outputCondition="entity_select_input_type,2" output_token="entity_selected" refresh_token="entity_select_dual"/>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_2$,$entity_select_rex$">
+    <panel>
+      <input type="text" token="entity_text_selected">
+        <label>Wildcard</label>
+        <change>
+          <eval token="entity_selected">if(isnotnull($entity_text_selected$) AND $entity_select_rex$=1,lower($entity_text_selected$),null())</eval>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_3$">
+    <panel>
+      <html>
+        <center>
+          <div id="downtime"/>
+        </center>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_3$">
+    <panel>
+      <input type="checkbox" token="sendingEmail">
+        <label></label>
+        <choice value="1">Cocher pour envoyer un email recapitulatif</choice>
+      </input>
+      <input type="text" token="email" depends="$sendingEmail$">
+        <label>Adresse Email du destinataire</label>
+      </input>
+    </panel>
+  </row>
+  <row depends="$DT_ID$,$update_full_loading$">
+    <panel>
+      <html>
+        <div id="step_control_wizard_holder"/>
+        <div id="step-control-wizard"/>
+      </html>
+    </panel>
+  </row>
+  <row depends="$hide_style$">
+    <panel>
+      <html>
+        <table border="1" text-align="center">
+          <tr>
+            <td>dashboardType</td>
+            <td>
+              <div id="dashboardType">update</div>
+            </td>
+          </tr>
+          <tr>
+            <td>debug_mod (0 = off; 1 = on)</td>
+            <td>
+              <div id="debug">0</div>
+            </td>
+          </tr>
+        </table>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <a href="#modalpopup" rel="modal_popup:open" id="modal_link" style="visibility=hidden;"/>
+        <div id="modalpopup" class="modal_popup">
+          <table>
+            <tr>
+              <div id="modal_header"/>
+            </tr>
+            <tr>
+              <div id="modal_content"/>
+            </tr>
+            <tr>
+              <div id="modal_footer"/>
+            </tr>
+          </table>
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>

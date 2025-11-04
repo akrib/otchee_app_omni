@@ -1,0 +1,212 @@
+<form  version="1.1" hideEdit="true">
+  <label>ITSI : Maintenance Target</label>
+  <init>
+    <set token="hide">true</set>
+  </init>
+<search id="base_service">
+  <query>
+ <![CDATA[
+
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
+| eval value=spath(value,"{}") 
+| stats count by value 
+| fromjson value 
+| spath input=services path=title output=service_title 
+| eval service_title=lower(service_title), ID="$DT_ID$" 
+| table ID service_title entity_name 
+| join ID [ 
+      | inputlookup omni_kv_def where ID="$DT_ID$"
+      | sort - version
+      | head 1
+      | eval service_data=mvjoin(service,";"),
+       kpi_data=mvjoin(kpi,";"),
+       entity_data=mvjoin(entity,";")
+      | table  ID service_data kpi_data entity_data ]
+| eval service_valid=0, service_data=split(replace(lower(service_data),"\*","%"),";"), service_valid=mvmap(service_data,service_valid+if(service_title LIKE (service_data),1,0)),service_valid=sum(service_valid)
+| where service_valid>0
+]]>
+</query>
+</search>
+       <search id="base_kpi">
+          <query>
+ <![CDATA[
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
+| spath input=value path={} output=svcs 
+| stats count by svcs
+| fromjson svcs
+| eval  ID="$DT_ID$", service_title=lower(title)
+| join ID [ 
+      | inputlookup omni_kv_def where ID="$DT_ID$"
+      | sort - version
+      | head 1
+      | eval service_data=mvjoin(service,";"),
+       kpi_data=mvjoin(kpi,";"),
+       entity_data=mvjoin(entity,";")
+      | table  ID service_data kpi_data entity_data ]
+| eval service_valid=0, service_data=split(replace(lower(service_data),"\*","%"),";"), service_valid=mvmap(service_data,service_valid+if(service_title LIKE (service_data),1,0)),service_valid=sum(service_valid)
+| where service_valid>0
+| stats count by kpis kpi_data
+| spath input=kpis path=title output=kpi_title
+| appendpipe [stats count| eval kpi_title="*"  | where count==0 |table kpi_title]
+| eval kpi_valid=0, kpi_data=split(replace(lower(kpi_data),"\*","%"),";"), kpi_valid=mvmap(kpi_data,kpi_valid+if(kpi_title LIKE (kpi_data),1,0)), kpi_valid=sum(kpi_valid)
+| where kpi_valid>0
+]]>
+</query>
+        </search>
+        <search id="base_entity">
+          <query>
+ <![CDATA[
+| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
+| eval value=spath(value,"{}") 
+| stats count by value 
+| fromjson value 
+| spath input=services path=title output=service_title 
+| eval service_title=lower(service_title),title=lower(title), ID="$DT_ID$"
+| rename title as entity_title
+| table ID service_title entity_title 
+| join ID [ 
+      | inputlookup omni_kv_def where ID="$DT_ID$"
+      | sort - version
+      | head 1
+      | eval service_data=mvjoin(service,";"),
+       kpi_data=mvjoin(kpi,";"),
+       entity_data=mvjoin(entity,";")
+      | table  ID service_data kpi_data entity_data ]
+| eval service_valid=0, service_data=split(replace(lower(service_data),"\*","%"),";"), service_valid=mvmap(service_data,service_valid+if(service_title LIKE (service_data),1,0)),service_valid=sum(service_valid)
+| where service_valid>0
+| appendpipe [stats count| eval entity_title="*"  | where count==0 |table entity_title]
+| eval entity_valid=0, entity_data=split(replace(lower(entity_data),"\*","%"),";"), entity_valid=mvmap(entity_data,entity_valid+if(entity_title LIKE (entity_data),1,0)), entity_valid=sum(entity_valid)
+| where entity_valid>0 
+]]>
+</query>
+        </search>
+  <row>
+    <panel>
+      <html>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+                <span class="omni-title-first-part"><img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"></img></span><span class="omni-title-second-part"> Maintenance Target</span>
+              </h1>
+               </div>
+          </div>
+     </section>
+      </html>
+    </panel>
+    <panel>
+      <input type="text" token="DT_ID">
+      <label>ID de maintenance</label>
+      <change>
+        <eval token="DT_ID_TRIM">trim("$DT_ID$")</eval>
+      </change>
+    </input>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Nombre de Service</title>
+      <single>
+        <search base="base_service">
+          <query>
+ <![CDATA[
+| stats dc(service_title) as service_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Nombre de KPI</title>
+      <single>
+        <search base="base_kpi">
+          <query>
+ <![CDATA[
+| stats dc(kpi_title) as kpi_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Nombre d'Entity</title>
+      <single>
+        <search base="base_entity">
+          <query>
+ <![CDATA[
+| stats dc(entity_title) as entity_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Nombre de Service</title>
+      <table>
+        <search base="base_service">
+          <query>
+ <![CDATA[
+| table service_title
+| dedup service_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Nombre de KPI</title>
+      <table>
+        <search base="base_kpi">
+          <query>
+ <![CDATA[
+| table kpi_title
+| dedup kpi_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Nombre d'Entity</title>
+      <table>
+        <search  base="base_entity">
+          <query>
+ <![CDATA[
+| table entity_title
+| dedup entity_title
+]]>
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$hidden$">
+    <panel>
+      <html>
+        <style>
+  .fxWHoM {
+display : none !important;
+}
+.ui-resizable {
+min-height: 80px !important;
+}
+.single{
+min-width : 150px !important;
+}
+.kXIBSE {
+      display: none !important;
+}
+
+</style>
+      </html>
+    </panel>
+  </row>
+</form>

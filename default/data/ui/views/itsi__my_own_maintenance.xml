@@ -1,0 +1,316 @@
+<form script="omni/omni_journal.js,common\assets\js\sidebar\sidebar.js, common\assets\js\custom_button\custom_button.js" hideEdit="false" version="1.1">
+  <label>ITSI : My Own Maintenance</label>
+  <search>
+    <query>
+|rest /services/authentication/users splunk_server=local
+| search [
+  | rest /services/authentication/current-context splunk_server=local 
+  | rename username as title 
+  | fields title]
+| table title realname
+    </query>
+    <done>
+      <set token="login">$result.title$</set>
+      <set token="realname">$result.realname$</set>
+      <set token="input_daycount">0</set>
+      <set token="input_earliest">@d</set>
+      <set token="input_latest">+1d@d</set>
+    </done>
+  </search>
+  <search id="mydt">
+    <query>
+     <![CDATA[
+| inputlookup  omni_kv_trace_log_def
+| eval _raw=downtime.";".commentary.";".creator.";".action.";".dt_update.";".ID.";".mvjoin(service,",").";".mvjoin(kpi,",").";".mvjoin(entity,",").";".version,
+downtime=mvjoin(downtime,"£")
+| eval state=case(action=="add", "ACTIVE", action=="update", "ACTIVE", action=="delete", "DELETE")
+| sort - dt_update
+| eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
+| eval
+downtime=replace(downtime,"Monday","Lundi"),
+downtime=replace(downtime,"Tuesday","Mardi"),
+downtime=replace(downtime,"Wednesday","Mercredi"),
+downtime=replace(downtime,"Thursday","Jeudi"),
+downtime=replace(downtime,"Friday","Vendredi"),
+downtime=replace(downtime,"Saturday","Samedi"),
+downtime=replace(downtime,"Sunday","Dimanche"),
+downtime=replace(downtime,"weekly","Hebdomadaire"),
+downtime=replace(downtime,"monthly","Mensuel"),
+downtime=replace(downtime,"between_date","Date à date"),
+downtime=replace(downtime,"special_date_first_in_month","Premier du mois"),
+downtime=replace(downtime,"special_date_second_in_month","Deuxieme du mois"),
+downtime=replace(downtime,"special_date_third_in_month","Troisieme du mois"),
+downtime=replace(downtime,"special_date_fourth_in_month","Quatrieme du mois"),
+downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
+| eval downtime=split(downtime,"£")
+| eval orig_creator=if(action=="add", creator,""), timestamp=tonumber(dt_update)
+| eval Action=case(action=="add", "Created", action="delete", "Deleted", action="update", "Updated")
+| sort - ID,timestamp
+| rename creator as AUTEUR, Action as ACTION, service as SERVICE, kpi as KPI, entity as ENTITY, commentary as COMMENTAIRE, version as VERSION
+| eval FOREIGN_UPDATE=if(AUTEUR!="$login$", 1, 0),O=if("$login$"=orig_creator,1,0), DATE=strftime(timestamp/1000,"%F %T"), SERVICE=mvjoin(SERVICE,";"), KPI=mvjoin(KPI,";"),ENTITY=mvjoin(ENTITY,";")
+| where AUTEUR="$login$" and action!="obsolete"
+
+]]>
+    </query>
+    <earliest></earliest>
+    <latest>now</latest>
+  </search>
+  <search base="mydt">
+    <query>
+     <![CDATA[
+| stats count(eval(NOT state like "%DELETE%")) as Active count(eval(state like "%DELETE%")) as Delete count as Total
+]]>
+    </query>
+    <done>
+      <set token="count_active_rule">$result.Active$</set>
+      <set token="count_delete_rule">$result.Delete$</set>
+      <set token="count_total_rule">$result.Total$</set>
+    </done>
+  </search>
+  <search id="basesearch_definedandlaunch">
+    <query>
+      | makeresults 
+      | eval valid="valid" $Valider$
+    </query>
+    <progress>
+      <unset token="sidebar_mgmt"></unset>
+      <unset token="user_guide"></unset>
+      <unset token="form.input_gathering"></unset>
+    </progress>
+    <done>
+      <set token="valide">$valid$</set>
+      <set token="defined_input_client">$input_client$</set>
+      <set token="defined_input_site">$input_site$</set>
+      <set token="defined_target">$target$</set>
+      <set token="defined_input_target">$input_target$</set>
+      <set token="defined_input_servicename">$input_servicename$</set>
+      <set token="defined_input_creator">$input_creator$</set>
+      <set token="defined_input_ID">$input_ID$</set>
+    </done>
+  </search>
+  <!--<row>
+    <panel id="footer_mrspocv2" ref="footer_mrspocv2" app="otchee_app_omni"></panel>
+  </row> -->
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel id="paneltitle">
+      <html>
+        <style>
+          #paneltitle { width: 70% !important; }
+          #userpanel { width: 30% !important; }
+        </style>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+                <span class="omni-title-first-part">
+                  <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
+                </span>
+                <span class="omni-title-second-part"> My Own Maintenance</span>
+              </h1>
+               </div>
+          </div>
+     </section>
+        </html>
+    </panel>
+    <panel id="userpanel">
+      <html>
+                        
+                          <div style="display: inline-block; background-color: #3c444d; border-radius: 100px; padding:20px;">
+                            <img src="/static/app/otchee_app_omni/media/user_v2.svg" width="100px"/>
+                          </div>
+                        <div style="display: inline-block;float: right;">
+    <h2 style="font-size: 18px !important;">
+                
+                  <strong>
+                  <p style="display: inline-block; " class="gradient-spoc">Bienvenue, $realname$ ($login$)</p>
+                </strong>
+                
+              </h2>
+            
+          
+            <h3 style="font-size:16px; color: #3c444d;">RECAPITULATIF DE VOS POLITIQUES</h3>
+
+
+            <table>
+          <tr>
+            <td style="font-size: 16px; padding-right: 20px;">ACTIVES: <strong>
+                <font style="color: #3C5488;">$count_active_rule$</font>
+              </strong>
+            </td>
+            </tr>
+            <tr>
+            <td style="font-size: 16px; padding-right: 20px;">SUPPRIMEES: <strong>
+                <font style="color: #a29bfe;">$count_delete_rule$</font>
+              </strong>
+            </td>
+            </tr>
+            <tr>
+            <td style="font-size: 16px; padding-right: 20px;">TOTALES: <strong>
+                <font style="color: #F25C78;">$count_total_rule$</font>
+              </strong>
+            </td>
+          </tr>
+        </table>
+          </div>
+       
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html/>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <html>
+        
+      <!--  <style>
+        th[data-sort-key="Type de ciblage"] { width: 120px !important;  }
+        th[data-sort-key="Élément ciblé"] { width: 120px !important; }
+        th[data-sort-key="ELEMENT"] { width: 30% !important; }
+        #highlight th[data-sort-key=RECAPITULATIF] { display: none; }
+        #highlight th[data-sort-key=COMMENTAIRE] { display: none; }
+        #highlight th[data-sort-key=AUTEUR] { display: none; }
+        #highlight th[data-sort-key=TRACE] { display: none; }
+        </style>
+      -->  
+        
+      <style>
+        div[data-test-panel-id='presets'],div[data-test-panel-id='date'],div[data-test-panel-id='relative'],div[data-test-panel-id='realTime'],div[data-test-panel-id='advanced'] {display: none;}
+
+
+.table td, .table th {
+    height: 48px !important;        
+}
+
+table#legende {
+border-collapse: inherit;
+border-spacing: 10px;
+}
+td.dataexpansion {
+text-align: left !important;
+}
+
+.tab-content {
+    display: block;
+
+}
+
+.results-table th.col-info .icon-info {
+            width:40px !important;
+            text-align:center !important;
+            }
+
+
+      </style>
+  </html>
+    </panel>
+  </row>
+  <row id="sidebar">
+    <panel id="custom_button_Valider">
+      <input type="text" token="input_creator" searchWhenChanged="true">
+        <label>Identifiant de l'utilisateur</label>
+        <default>%</default>
+        <initialValue>%</initialValue>
+        <change>
+          <unset token="Valider"></unset>
+        </change>
+      </input>
+      <input type="text" token="input_ID" searchWhenChanged="true">
+        <label>Identifiant de la maintenance</label>
+        <default>%</default>
+        <initialValue>%</initialValue>
+        <change>
+          <unset token="Valider"></unset>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$hide$">
+      <html>
+        <div>
+          <style>
+         #custom_button_.dashboard-cell{
+            width : 5% !important;
+            height : 100% !important;
+          }
+
+        </style>
+  
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <html>
+      <table border="1" text-align="center">
+        <tr>
+          <td>
+            Lookup_name
+          </td>
+          <td>
+           <div id="lookup"/>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            dashboard_type
+          </td>
+          <td>
+            <div id="dashboard_type">add</div>
+          </td>
+        </tr>
+                <tr>
+          <td>
+            debug_mod (0 = off; 1 = on)
+          </td>
+          <td>
+            <div id="debug">0</div>
+          </td>
+        </tr>
+      </table>
+      <style>
+        .ui-widget-content {
+          outline: none !important;
+        }
+      </style>
+    </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>LEGENDE</title>
+      <html>
+        <table id="legende">
+          <tr>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/owner.png" width="48px"/> Propriétaire de la règle
+            </td>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/modifier.png" width="48px"/> Modificateur de la règle
+            </td>
+            <td>
+              <img src="/static/app/otchee_app_omni/media/updated.png" width="48px"/> Règle mise à jour par un autre utilisateur
+            </td>
+          </tr>
+        </table>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table id="highlight">
+        <search base="mydt">
+          <query>
+          | table O, ID, DATE, ACTION, SERVICE, KPI, ENTITY, COMMENTAIRE, VERSION</query>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</form>

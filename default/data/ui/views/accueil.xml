@@ -1,0 +1,130 @@
+<form hideEdit="true" version="1.1">
+    <label>Omni</label>
+    <row>
+        <panel id="panel_titre">
+          <html>
+            <div style="text-align: center; margin-top: 5px; vertical-align:center;">
+                <h1 style="font-size: 48px; color: #0072c6; font-weight: bold;">Bienvenue sur <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"></img></h1>
+                <p>Observability Maintenance Natural Interface</p>
+            </div>
+          </html>
+        </panel>
+        <panel id="panel_aide">
+          <html>
+            <div style="margin-top: 20px;">
+              <a href="/app/otchee_app_omni/help" style="text-decoration: none; color: #0072c6; font-size: 18px;vertical-align:bottom;"><img src="/static/app/otchee_app_omni/media/help.gif" style="padding-left: 35px; width: 50px; vertical-align:text-top;"/><br></br>Besoin d'aide ?</a>
+            </div>
+          </html>
+        </panel>
+    </row>
+    <row>
+      <panel id="panel_description">
+        <html>
+          <div  style="margin-top: 30px;">
+          <p style="font-size: 18px; color: #0072c6; font-weight: bold;text-align: center;">
+            OMNI est une application dédiée à la gestion de vos périodes de maintenance pour Splunk IT Service Intelligence. <br/>Nous offrons dans cette application la possibilité de gérer vos maintenances de manières avancées tout en restant compliant avec Splunk IT Service Intelligence.
+          </p>
+          </div>
+        </html>
+      </panel>
+      <panel id="panel_feature">
+        <html>
+          <div style="text-align: center; margin-top: 5px;">
+            <table>
+              <tr>
+                <td><img src="/static/app/otchee_app_omni/media/add.gif" style="position: relative; top: 10px; width: 50px; vertical-align:text-top;"/></td>
+                <td style="text-align: left; width: 300px;"><div style="margin-top: 10px; display: inline-block;">
+                  <center><a href="/app/otchee_app_omni/itsi__add_maintenance" style="display: block; width:300px; text-decoration: none; background-color: #0072c6; color: white; padding: 15px 30px; border-radius: 5px; font-size: 18px;">
+                   Ajouter une maintenance
+                  </a></center>
+                </div>
+              </td>
+            </tr>
+              <tr>
+                <td><img src="/static/app/otchee_app_omni/media/telescope.gif" style="position: relative; top: 10px; width: 50px; vertical-align:text-top;"/></td>
+                <td style="text-align: left;width: 300px;"><div style="margin-top: 10px; display: inline-block;">
+                  <center><a href="/app/otchee_app_omni/itsi__maintenance_search" style="display: block; width:300px; text-decoration: none; background-color: #0072c6; color: white; padding: 15px 30px; border-radius: 5px; font-size: 18px;">
+                   Rechercher d'une maintenance
+                  </a></center>
+                </div>
+            </td>
+            </tr>
+          </table>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <div style="margin-top: 10px; padding: 15px;">
+          <h2 style="color: #0072c6; font-size: 24px; font-weight: bold;">Les Fonctionnalités Clés</h2><br/>
+          <center>
+            <span style="display: inline-block; width:20%; vertical-align: top; margin: 10px;">
+              <center>
+                <p>
+                  <img class="img-title" src="/static/app/otchee_app_omni/media/easy-peasy.gif" style="width: 100px;vertical-align:text-top;"/>
+                </p>
+                <hr/>
+                <h3 class="accueil-title">PILOTER EN 1 POINT UNIQUE</h3><br/>
+              </center>
+              <p style="text-align: justify;">Grâce à notre interface avancée et simple à prendre en main, gérer vos maintenances en un seul point et de manière transverses pour l'ensemble de votre Système d'Information.</p>
+            </span>
+            <span style="display: inline-block; width:20%; vertical-align: top; margin: 10px;">
+              <center>
+                <p>
+                  <img class="img-title" src="/static/app/otchee_app_omni/media/interface_color.gif" style="width: 100px;vertical-align:text-top;"/>
+                </p>
+                <hr/>
+                <h3 class="accueil-title">INTERFACE DE GESTION AVANCEES</h3><br/>
+              </center>
+              <p style="text-align: justify;">L'interface OMNI permet à son utilisateur d'avoir une interface complète vous permettant de planifier vos maintenances : Récurrentes, date à date, premier Lundi du mois, tous les 1,5,12 de chaque mois, ...</p>
+            </span>
+            <span style="display: inline-block; width:20%; vertical-align: top; margin: 10px;">
+              <center>
+                <p>
+                  <img class="img-title" src="/static/app/otchee_app_omni/media/progress.gif" style="width: 100px;vertical-align:text-top;"/>
+                </p>
+                <hr/>
+                <h3 class="accueil-title">INTEGRATION TRANSPARENTE AVEC ITSI</h3><br/>
+              </center>
+              <p style="text-align: justify;">Vous pourrez mettr en maintenances vos services, KPIs et entités présents dans Splunk IT Service Intelligence.</p>
+            </span>
+            <span style="display: inline-block; width:20%; vertical-align: top; margin: 10px;">
+              <center>
+                <p>
+                  <img class="img-title" src="/static/app/otchee_app_omni/media/analytics.gif" style="width: 100px;vertical-align:text-top;"/>
+                </p>
+                <hr/>
+                <h3 class="accueil-title">RAPPORTS ET TABLEAUX DE BORDS DEDIES</h3><br/>
+              </center>
+              <p style="text-align: justify;">Nous vous mettons à disposition un espace Splunk dédié au pilotage de vos maintenances avec fonction de recherche, d'ajout, de modification, de suppression, consultation des historiques, votre espace personnel, ...</p>
+            </span>
+          </center>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <div style="text-align: center; margin-top: 30px;">
+          <h2 style="color: #0072c6;">Contactez-nous</h2>
+          <p style="font-size: 18px; color: #555555;">Pour toute question ou suggestion, n'hésitez pas à nous contacter à <a href="mailto:observability@otchee.fr" style="color: #0072c6;">observability@otchee.fr</a>.</p>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row depends="$hide$">
+    <panel>
+      <html>
+        <style>
+          #panel_description {width: calc(100% - 430px) !important;}
+          #panel_feature {width: 430px !important;}
+          #panel_titre {width: 90% !important;}
+          #panel_aide {width: 10% !important;}
+        </style>
+      </html>
+    </panel>
+  </row>
+</form>

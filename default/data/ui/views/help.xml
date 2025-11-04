@@ -1,0 +1,39 @@
+<dashboard version="1.1" theme="light" hideEdit="true">
+    <label>Page d'Aide - Omni</label>
+    <description>
+        Ceci est la page d'aide pour l'application Omni, conçue pour gérer les périodes de maintenance sur ITSI.
+        Veuillez trouver ci-dessous des informations utiles et des liens pour vous aider à utiliser l'application.
+    </description>
+
+    <row>
+        <panel>
+            <html>
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1 style="color: #0072c6; text-align: center;">Bienvenue sur la page d'aide de l'application Omni</h1>
+                    <p style="font-size: 16px; color: #555;">L'application Omni vous permet de gérer et planifier des périodes de maintenance pour les services dans ITSI. Utilisez cette page pour en savoir plus sur les fonctionnalités et l'utilisation de l'application.</p>
+                    
+                    <h2 style="color: #0072c6;">Fonctionnalités principales :</h2>
+                    <ul style="font-size: 16px; color: #333;">
+                        <li>Planification des périodes de maintenance</li>
+                        <li>Suivi et gestion des services pendant la maintenance</li>
+                        <li>Intégration avec ITSI pour des alertes et rapports améliorés</li>
+                    </ul>
+
+                    <h2 style="color: #0072c6;">Liens utiles :</h2>
+                    <ul style="font-size: 16px; color: #333;">
+                        <li><a href="#" style="color: #1E90FF;">Guide d'utilisation de l'application Omni</a></li>
+                        <li><a href="#" style="color: #1E90FF;">FAQ - Questions fréquentes</a></li>
+                        <li><a href="#" style="color: #1E90FF;">Support technique Splunk</a></li>
+                    </ul>
+
+                    <h2 style="color: #0072c6;">Support :</h2>
+                    <p style="font-size: 16px; color: #555;">Si vous rencontrez des problèmes ou avez des questions, n'hésitez pas à contacter notre équipe de support à l'adresse <a href="mailto:observability@otchee.fr" style="color: #0072c6;">observability@otchee.fr</a>.</p>
+
+                    <div style="text-align: center; margin-top: 40px;">
+                        <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Logo de l'entreprise" style="width: 150px;"/>
+                    </div>
+                </div>
+            </html>
+        </panel>
+    </row>
+</dashboard>
