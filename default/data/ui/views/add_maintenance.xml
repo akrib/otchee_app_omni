@@ -6,7 +6,7 @@
     <unset token="kpi_selected"></unset>
     <unset token="entity_selected"></unset>
     <!--<unset token="service_select_input_type"></unset>-->
-    <set token="hide">1</set>
+    <!--<set token="hide">1</set>-->
   </init>
   <search>
     <query>
