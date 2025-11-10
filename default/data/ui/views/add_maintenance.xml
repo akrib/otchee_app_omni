@@ -7,23 +7,9 @@
     <unset token="entity_selected"></unset>
     <!--<unset token="service_select_input_type"></unset>-->
     <set token="hide">1</set>
+    <!--<eval token="email">$env:user_email$</eval>-->
+    <!--<eval token="form.email">$env:user_email$</eval>-->
   </init>
-  <search>
-    <query>
-      |rest /services/authentication/users splunk_server=local
-      | search
-      [| rest /services/authentication/current-context splunk_server=local
-      | rename username as title
-      | fields title]
-      | table title realname email
-    </query>
-    <done>
-      <set token="login">$result.title$</set>
-      <set token="realname">$result.realname$</set>
-      <set token="email">$result.email$</set>
-      <set token="form.email">$result.email$</set>
-    </done>
-  </search>
   <search id="base_service">
     <query>
 | rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/service report_as=text 
@@ -60,6 +46,7 @@
 | spath input=services path=title output=service_title 
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
+| rename entity_name as entity_title
     </query>
   </search>
   <fieldset submitButton="false"></fieldset>
@@ -80,7 +67,7 @@
      </section>
         </html>
     </panel>
-     <panel>
+    <panel>
       <html>
        <div id="step_control_wizard_holder"/>
            <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
@@ -102,38 +89,32 @@
   <row depends="$step_0$">
     <panel>
       <input type="dropdown" token="service_select_input_type">
-        <label>type de séléction</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
+            <set token="service_type">1</set>
             <unset token="service_selected"></unset>
-            <eval token="service_select_all">1</eval>
             <unset token="service_select_dual"></unset>
             <unset token="service_select_rex"></unset>
-            <eval token="service_type">1</eval>
+            <!-- Pour "All", on définit directement calculated -->
+            <set token="service_calculated">%</set>
           </condition>
           <condition value="2">
+            <set token="service_type">2</set>
             <unset token="service_selected"></unset>
-            <unset token="service_select_all"></unset>
-            <eval token="service_select_dual">1</eval>
+            <unset token="service_calculated"></unset>
+            <set token="service_select_dual">1</set>
             <unset token="service_select_rex"></unset>
-            <eval token="service_type">2</eval>
           </condition>
           <condition value="3">
+            <set token="service_type">3</set>
             <unset token="service_selected"></unset>
-            <unset token="service_select_all"></unset>
+            <unset token="service_calculated"></unset>
             <unset token="service_select_dual"></unset>
-            <eval token="service_select_rex">1</eval>
-            <eval token="service_type">3</eval>
-          </condition>
-          <condition>
-            <unset token="service_selected"></unset>
-            <unset token="service_select_all"></unset>
-            <unset token="service_select_dual"></unset>
-            <unset token="service_select_rex"></unset>
-            <eval token="service_type">-1</eval>
+            <set token="service_select_rex">1</set>
           </condition>
         </change>
       </input>
@@ -156,29 +137,34 @@
   </row>
   <row depends="$step_0$,$service_select_dual$,$service_loaded$">
     <panel>
-      <title></title>
       <input type="multiselect" token="service_concat">
-        <label>Service</label>
+        <label>Services</label>
         <fieldForLabel>service_title</fieldForLabel>
         <fieldForValue>service_title</fieldForValue>
         <search base="base_service">
           <query>
 | table service_title 
-| stats count as _count by service_title 
-          </query>
+| stats count as _count by service_title
+        </query>
           <done>
-            <set token="service_loaded"></set>
+            <set token="service_loaded">1</set>
           </done>
         </search>
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
+        <change>
+          <set token="service_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
   <row depends="$step_0$,$service_select_rex$">
     <panel>
       <input type="text" token="service_text_selected">
-        <label>Wildcard</label>
+        <label>Wildcard (ex: *prod*)</label>
+        <change>
+          <set token="service_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
@@ -189,7 +175,8 @@
         <title>service query</title>
         <search base="base_service">
           <query>
-| rename service_title as List
+| rename service_title as List 
+| eval show="$hide$"
 | table List
           </query>
         </search>
@@ -199,47 +186,35 @@
     <panel>
       <table>
         <title>all service query $service_select_all$</title>
-        <search>
+        <search id="service_validator">
           <query>
-|makeresults
-|eval query_laucher="$service_select_all$" 
-|eval service_selected="%"
-          </query>
+| makeresults
+| eval type="$service_type$", 
+       calculated="$service_calculated$",
+       method=case(
+         type=="1", "All",
+         type=="2", "List",
+         type=="3", "Wildcard",
+         true(), "Non défini"
+       ),
+       is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
+| where is_valid=1
+| fields calculated method type
+    </query>
           <done>
-            <set token="service_selected">$result.service_selected$</set>
+            <condition match="'job.resultCount' == 1">
+              <set token="service_selected">$result.calculated$</set>
+            </condition>
+            <condition>
+              <unset token="service_selected"></unset>
+            </condition>
           </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>list service query $service_select_dual$</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$service_select_dual$" 
-|eval service_selected="$service_concat$"
-          </query>
-          <done>
-            <set token="service_selected">$result.service_selected$</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>wildcard service query $service_select_rex$</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$service_select_rex$" 
-|eval service_selected="$service_text_selected$"
-          </query>
-          <done>
-            <set token="service_selected">$result.service_selected$</set>
-          </done>
+          <cancelled>
+            <unset token="service_selected"></unset>
+          </cancelled>
+          <error>
+            <unset token="service_selected"></unset>
+          </error>
         </search>
         <option name="drilldown">none</option>
       </table>
@@ -255,38 +230,32 @@
   <row depends="$step_1$">
     <panel>
       <input type="dropdown" token="kpi_select_input_type">
-        <label>type de séléction</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
+            <set token="kpi_type">1</set>
             <unset token="kpi_selected"></unset>
-            <eval token="kpi_select_all">1</eval>
             <unset token="kpi_select_dual"></unset>
             <unset token="kpi_select_rex"></unset>
-            <eval token="kpi_type">1</eval>
+            <!-- Pour "All", on définit directement calculated -->
+            <set token="kpi_calculated">%</set>
           </condition>
           <condition value="2">
+            <set token="kpi_type">2</set>
             <unset token="kpi_selected"></unset>
-            <unset token="kpi_select_all"></unset>
-            <eval token="kpi_select_dual">1</eval>
+            <unset token="kpi_calculated"></unset>
+            <set token="kpi_select_dual">1</set>
             <unset token="kpi_select_rex"></unset>
-            <eval token="kpi_type">2</eval>
           </condition>
           <condition value="3">
+            <set token="kpi_type">3</set>
             <unset token="kpi_selected"></unset>
-            <unset token="kpi_select_all"></unset>
+            <unset token="kpi_calculated"></unset>
             <unset token="kpi_select_dual"></unset>
-            <eval token="kpi_select_rex">1</eval>
-            <eval token="kpi_type">3</eval>
-          </condition>
-          <condition>
-            <unset token="kpi_selected"></unset>
-            <unset token="kpi_select_all"></unset>
-            <unset token="kpi_select_dual"></unset>
-            <unset token="kpi_select_rex"></unset>
-            <eval token="kpi_type">-1</eval>
+            <set token="kpi_select_rex">1</set>
           </condition>
         </change>
       </input>
@@ -303,34 +272,40 @@
 </div>
 </div>
 <h1 class="loader title">Chargement</h1>
+
     </html>
     </panel>
   </row>
   <row depends="$step_1$,$kpi_select_dual$,$kpi_loaded$">
     <panel>
-      <title></title>
       <input type="multiselect" token="kpi_concat">
-        <label>KPI</label>
+        <label>kpis</label>
         <fieldForLabel>kpi_title</fieldForLabel>
         <fieldForValue>kpi_title</fieldForValue>
         <search base="base_kpi">
           <query>
 | table kpi_title 
 | stats count as _count by kpi_title
-          </query>
+        </query>
           <done>
-            <set token="kpi_loaded"></set>
+            <set token="kpi_loaded">1</set>
           </done>
         </search>
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
+        <change>
+          <set token="kpi_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
   <row depends="$step_1$,$kpi_select_rex$">
     <panel>
       <input type="text" token="kpi_text_selected">
-        <label>Wildcard</label>
+        <label>Wildcard (ex: *prod*)</label>
+        <change>
+          <set token="kpi_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
@@ -341,7 +316,8 @@
         <title>kpi query</title>
         <search base="base_kpi">
           <query>
-| rename kpi_title as List
+| rename kpi_title as List 
+| eval show="$hide$"
 | table List
           </query>
         </search>
@@ -350,48 +326,36 @@
     </panel>
     <panel>
       <table>
-        <title>all kpi query</title>
-        <search>
+        <title>all kpi query $kpi_select_all$</title>
+        <search id="kpi_validator">
           <query>
-|makeresults
-|eval query_laucher="$kpi_select_all$" 
-|eval kpi_selected="%"
-          </query>
+| makeresults
+| eval type="$kpi_type$", 
+       calculated="$kpi_calculated$",
+       method=case(
+         type=="1", "All",
+         type=="2", "List",
+         type=="3", "Wildcard",
+         true(), "Non défini"
+       ),
+       is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
+| where is_valid=1
+| fields calculated method type
+    </query>
           <done>
-            <set token="kpi_selected">$result.kpi_selected$</set>
+            <condition match="'job.resultCount' == 1">
+              <set token="kpi_selected">$result.calculated$</set>
+            </condition>
+            <condition>
+              <unset token="kpi_selected"></unset>
+            </condition>
           </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>list kpi query</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$kpi_select_dual$" 
-|eval kpi_selected="$kpi_concat$"
-          </query>
-          <done>
-            <set token="kpi_selected">$result.kpi_selected$</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>wildcard kpi query</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$kpi_select_rex$" 
-|eval kpi_selected="$kpi_text_selected$"
-          </query>
-          <done>
-            <set token="kpi_selected">$result.kpi_selected$</set>
-          </done>
+          <cancelled>
+            <unset token="kpi_selected"></unset>
+          </cancelled>
+          <error>
+            <unset token="kpi_selected"></unset>
+          </error>
         </search>
         <option name="drilldown">none</option>
       </table>
@@ -407,38 +371,32 @@
   <row depends="$step_2$">
     <panel>
       <input type="dropdown" token="entity_select_input_type">
-        <label>type de séléction</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
+            <set token="entity_type">1</set>
             <unset token="entity_selected"></unset>
-            <eval token="entity_select_all">1</eval>
             <unset token="entity_select_dual"></unset>
             <unset token="entity_select_rex"></unset>
-            <eval token="entity_type">1</eval>
+            <!-- Pour "All", on définit directement calculated -->
+            <set token="entity_calculated">%</set>
           </condition>
           <condition value="2">
+            <set token="entity_type">2</set>
             <unset token="entity_selected"></unset>
-            <unset token="entity_select_all"></unset>
-            <eval token="entity_select_dual">1</eval>
+            <unset token="entity_calculated"></unset>
+            <set token="entity_select_dual">1</set>
             <unset token="entity_select_rex"></unset>
-            <eval token="entity_type">2</eval>
           </condition>
           <condition value="3">
+            <set token="entity_type">3</set>
             <unset token="entity_selected"></unset>
-            <unset token="entity_select_all"></unset>
+            <unset token="entity_calculated"></unset>
             <unset token="entity_select_dual"></unset>
-            <eval token="entity_select_rex">1</eval>
-            <eval token="entity_type">3</eval>
-          </condition>
-          <condition>
-            <unset token="entity_selected"></unset>
-            <unset token="entity_select_all"></unset>
-            <unset token="entity_select_dual"></unset>
-            <unset token="entity_select_rex"></unset>
-            <eval token="entity_type">-1</eval>
+            <set token="entity_select_rex">1</set>
           </condition>
         </change>
       </input>
@@ -455,33 +413,40 @@
 </div>
 </div>
 <h1 class="loader title">Chargement</h1>
+
     </html>
     </panel>
   </row>
   <row depends="$step_2$,$entity_select_dual$,$entity_loaded$">
     <panel>
-      <title></title>
       <input type="multiselect" token="entity_concat">
-        <label>Entity</label>
-        <fieldForLabel>entity_name</fieldForLabel>
-        <fieldForValue>entity_name</fieldForValue>
+        <label>entitys</label>
+        <fieldForLabel>entity_title</fieldForLabel>
+        <fieldForValue>entity_title</fieldForValue>
         <search base="base_entity">
-          <query>| table entity_name
-| stats count as _count by entity_name
+          <query>
+| table entity_title 
+| stats count as _count by entity_title
         </query>
           <done>
-            <set token="entity_loaded"></set>
+            <set token="entity_loaded">1</set>
           </done>
         </search>
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
+        <change>
+          <set token="entity_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
   <row depends="$step_2$,$entity_select_rex$">
     <panel>
       <input type="text" token="entity_text_selected">
-        <label>Wildcard</label>
+        <label>Wildcard (ex: *prod*)</label>
+        <change>
+          <set token="entity_calculated">$value$</set>
+        </change>
       </input>
     </panel>
   </row>
@@ -492,57 +457,46 @@
         <title>entity query</title>
         <search base="base_entity">
           <query>
-| rename entity_name as List
+| rename entity_title as List 
+| eval show="$hide$"
 | table List
-</query>
+          </query>
         </search>
         <option name="drilldown">none</option>
       </table>
     </panel>
     <panel>
       <table>
-        <title>all entity query</title>
-        <search>
+        <title>all entity query $entity_select_all$</title>
+        <search id="entity_validator">
           <query>
-|makeresults
-|eval query_laucher="$entity_select_all$" 
-|eval entity_selected="%"
-          </query>
+| makeresults
+| eval type="$entity_type$", 
+       calculated="$entity_calculated$",
+       method=case(
+         type=="1", "All",
+         type=="2", "List",
+         type=="3", "Wildcard",
+         true(), "Non défini"
+       ),
+       is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
+| where is_valid=1
+| fields calculated method type
+    </query>
           <done>
-            <set token="entity_selected">$result.entity_selected$</set>
+            <condition match="'job.resultCount' == 1">
+              <set token="entity_selected">$result.calculated$</set>
+            </condition>
+            <condition>
+              <unset token="entity_selected"></unset>
+            </condition>
           </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>list entity query</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$entity_select_dual$" 
-|eval entity_selected="$entity_concat$"
-          </query>
-          <done>
-            <set token="entity_selected">$result.entity_selected$</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-    <panel>
-      <table>
-        <title>wildcard entity query</title>
-        <search>
-          <query>
-|makeresults
-|eval query_laucher="$entity_select_rex$" 
-|eval entity_selected="$entity_text_selected$"
-          </query>
-          <done>
-            <set token="entity_selected">$result.entity_selected$</set>
-          </done>
+          <cancelled>
+            <unset token="entity_selected"></unset>
+          </cancelled>
+          <error>
+            <unset token="entity_selected"></unset>
+          </error>
         </search>
         <option name="drilldown">none</option>
       </table>
@@ -565,6 +519,8 @@
       </input>
       <input type="text" token="email" depends="$sendingEmail$">
         <label>Adresse Email du destinataire</label>
+        <default>$env:user_email$</default>
+        <initialValue>$env:user_email$</initialValue>
       </input>
     </panel>
   </row>
