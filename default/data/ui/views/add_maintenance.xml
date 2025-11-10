@@ -6,7 +6,7 @@
     <unset token="kpi_selected"></unset>
     <unset token="entity_selected"></unset>
     <!--<unset token="service_select_input_type"></unset>-->
-    <!--<set token="hide">1</set>-->
+    <set token="hide">1</set>
   </init>
   <search>
     <query>
@@ -80,7 +80,7 @@
      </section>
         </html>
     </panel>
-    <panel>
+     <panel>
       <html>
        <div id="step_control_wizard_holder"/>
            <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
@@ -157,7 +157,7 @@
   <row depends="$step_0$,$service_select_dual$,$service_loaded$">
     <panel>
       <title></title>
-      <input type="multiselect" token="service_dual_selected">
+      <input type="multiselect" token="service_concat">
         <label>Service</label>
         <fieldForLabel>service_title</fieldForLabel>
         <fieldForValue>service_title</fieldForValue>
@@ -165,12 +165,6 @@
           <query>
 | table service_title 
 | stats count as _count by service_title 
-| appendpipe 
-[| stats count
- | eval service_title="*"
- | where count==0
- |table service_title
-]
           </query>
           <done>
             <set token="service_loaded"></set>
@@ -185,9 +179,6 @@
     <panel>
       <input type="text" token="service_text_selected">
         <label>Wildcard</label>
-        <change>
-          <eval token="service_selected">if(isnotnull($service_text_selected$) AND $service_select_rex$=1,lower($service_text_selected$),null())</eval>
-        </change>
       </input>
     </panel>
   </row>
@@ -207,7 +198,7 @@
     </panel>
     <panel>
       <table>
-        <title>all service query</title>
+        <title>all service query $service_select_all$</title>
         <search>
           <query>
 |makeresults
@@ -223,12 +214,12 @@
     </panel>
     <panel>
       <table>
-        <title>list service query</title>
+        <title>list service query $service_select_dual$</title>
         <search>
           <query>
 |makeresults
 |eval query_laucher="$service_select_dual$" 
-|eval service_selected="$service_dual_selected$"
+|eval service_selected="$service_concat$"
           </query>
           <done>
             <set token="service_selected">$result.service_selected$</set>
@@ -239,7 +230,7 @@
     </panel>
     <panel>
       <table>
-        <title>wildcard service query</title>
+        <title>wildcard service query $service_select_rex$</title>
         <search>
           <query>
 |makeresults
@@ -315,10 +306,10 @@
     </html>
     </panel>
   </row>
-  <row depends="$step_1$,$kpi_select_dual$">
+  <row depends="$step_1$,$kpi_select_dual$,$kpi_loaded$">
     <panel>
       <title></title>
-      <input type="multiselect" token="kpi_selected">
+      <input type="multiselect" token="kpi_concat">
         <label>KPI</label>
         <fieldForLabel>kpi_title</fieldForLabel>
         <fieldForValue>kpi_title</fieldForValue>
@@ -326,11 +317,6 @@
           <query>
 | table kpi_title 
 | stats count as _count by kpi_title
-| appendpipe
-[ | stats count
-  | eval kpi_title="*"
-  | where count==0 
-  | table kpi_title]
           </query>
           <done>
             <set token="kpi_loaded"></set>
@@ -345,9 +331,6 @@
     <panel>
       <input type="text" token="kpi_text_selected">
         <label>Wildcard</label>
-        <change>
-          <eval token="kpi_selected">if(isnotnull($kpi_text_selected$) AND $kpi_select_rex$=1,lower($kpi_text_selected$),null())</eval>
-        </change>
       </input>
     </panel>
   </row>
@@ -388,7 +371,7 @@
           <query>
 |makeresults
 |eval query_laucher="$kpi_select_dual$" 
-|eval kpi_selected="$kpi_dual_selected$"
+|eval kpi_selected="$kpi_concat$"
           </query>
           <done>
             <set token="kpi_selected">$result.kpi_selected$</set>
@@ -475,24 +458,19 @@
     </html>
     </panel>
   </row>
-  <row depends="$step_2$,$entity_select_dual$">
+  <row depends="$step_2$,$entity_select_dual$,$entity_loaded$">
     <panel>
       <title></title>
-      <input type="multiselect" token="entity_selected">
+      <input type="multiselect" token="entity_concat">
         <label>Entity</label>
-        <fieldForLabel>entity_title</fieldForLabel>
-        <fieldForValue>entity_title</fieldForValue>
+        <fieldForLabel>entity_name</fieldForLabel>
+        <fieldForValue>entity_name</fieldForValue>
         <search base="base_entity">
-          <query>| table entity_title 
-| stats count as _count by entity_title
-| appendpipe 
- [| stats count
-  | eval entity_title="*"
-  | where count==0 
-  |table entity_title]
+          <query>| table entity_name
+| stats count as _count by entity_name
         </query>
           <done>
-            <set token="kpi_loaded"></set>
+            <set token="entity_loaded"></set>
           </done>
         </search>
         <delimiter>;</delimiter>
@@ -504,9 +482,6 @@
     <panel>
       <input type="text" token="entity_text_selected">
         <label>Wildcard</label>
-        <change>
-          <eval token="entity_selected">if(isnotnull($entity_text_selected$) AND $entity_select_rex$=1,lower($entity_text_selected$),null())</eval>
-        </change>
       </input>
     </panel>
   </row>
@@ -517,7 +492,7 @@
         <title>entity query</title>
         <search base="base_entity">
           <query>
-| rename entity_title as List
+| rename entity_name as List
 | table List
 </query>
         </search>
@@ -547,7 +522,7 @@
           <query>
 |makeresults
 |eval query_laucher="$entity_select_dual$" 
-|eval entity_selected="$entity_dual_selected$"
+|eval entity_selected="$entity_concat$"
           </query>
           <done>
             <set token="entity_selected">$result.entity_selected$</set>
