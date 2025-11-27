@@ -1,0 +1,497 @@
+<form version="1.1" theme="light" script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js,simple_xml_examples:showtokens.js" hideEdit="true">
+  <label>ITSI : Add Maintenance_v3</label>
+  <init>
+    <set token="toast_message">information incomplete</set>
+    <unset token="service_selected"></unset>
+    <unset token="kpi_selected"></unset>
+    <unset token="entity_selected"></unset>
+    <!--<unset token="service_select_input_type"></unset>-->
+    <set token="hide">1</set>
+    <!--<eval token="email">$env:user_email$</eval>-->
+    <!--<eval token="form.email">$env:user_email$</eval>-->
+    <set token="field_sup">0</set>
+  </init>
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel>
+      <html>
+        <section class="navbar custom-navbar" role="navigation">
+          <div class="container">
+               <div class="navbar-header">
+                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+                <span class="omni-title-first-part">
+                  <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
+                </span>
+                <span class="omni-title-second-part"> Add Maintenance</span>
+              </h1>
+               </div>
+          </div>
+     </section>
+        </html>
+    </panel>
+    <panel>
+      <html>
+       <div id="step_control_wizard_holder"/>
+           <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="export"/> 
+           <p id="swc_step_1" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
+           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
+        <div id="step-control-wizard"/>
+        </html>
+    </panel>
+  </row>
+  <row depends="$step_0$">
+    <panel>
+      <html>
+        <h1>Champ Custom</h1>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_0$">
+    <panel id="custom_left_01">
+      <input type="checkbox" token="show_custom_field_sup">
+        <label></label>
+        <choice value="1">Ajouter un deuxieme champs custom</choice>
+        <delimiter> </delimiter>
+        <change>
+          <condition value="1">
+            <set token="field_sup">1</set>
+          </condition>
+          <condition>
+            <set token="field_sup">0</set>
+          </condition>
+        </change>
+      </input>
+    </panel>
+    <panel id="custom_right_01">
+      <input type="checkbox" token="not_1" id="field_not_1">
+        <label></label>
+        <choice value="NOT">NOT</choice>
+        <delimiter> </delimiter>
+        <default></default>
+      </input>
+      <input type="text" token="field_name_1">
+        <label>Nom du champ Custom 1</label>
+        <default></default>
+      </input>
+      <input type="dropdown" token="field_type_1" id="field_select_1_1">
+        <label>Operateur</label>
+        <choice value="other_field">un autre champ</choice>
+        <choice value="string">string</choice>
+        <choice value="number">number</choice>
+        <default>string</default>
+        <initialValue>string</initialValue>
+        <change>
+          <set token="field_operator_1">=</set>
+          <set token="form.field_operator_1">=</set>
+        </change>
+      </input>
+      <input type="dropdown" token="field_operator_1" id="field_select_1_2">
+        <label>Operateur</label>
+        <default>=</default>
+        <initialValue>=</initialValue>
+        <fieldForLabel>filter</fieldForLabel>
+        <fieldForValue>filter</fieldForValue>
+        <search>
+          <query>
+| makeresults 
+| eval filter=split(case("$field_type_1$"="other_field","=,!=", "$field_type_1$"="string","=,!=,inull(),isnotnul(), LIKE ","$field_type_1$"="number","=,!=,&lt;=,&gt;=,&lt;,&gt;,isnull(),isnotnull()",true(),"="),",")
+| stats count as _c by filter</query>
+        </search>
+      </input>
+      <input type="text" token="field_value_1">
+        <label>Valeur du champ 1</label>
+        <default></default>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_0$,$show_custom_field_sup$">
+    <panel id="custom_left_02" depends="$show_custom_field_sup$">
+      <input type="dropdown" token="operator">
+        <label>Choisissez l'operateur</label>
+        <choice value="AND">AND</choice>
+        <choice value="OR">OR</choice>
+        <default>AND</default>
+        <initialValue>AND</initialValue>
+      </input>
+    </panel>
+    <panel id="custom_right_02" depends="$show_custom_field_sup$">
+      <input type="checkbox" token="not_2" id="field_not_2">
+        <label></label>
+        <choice value="NOT">NOT</choice>
+        <delimiter> </delimiter>
+        <default></default>
+      </input>
+      <input type="text" token="field_name_2">
+        <label>Nom du champ Custom 2</label>
+        <default></default>
+      </input>
+      <input type="dropdown" token="field_type_2" id="field_select_2_1">
+        <label>Operateur</label>
+        <choice value="other_field">un autre champ</choice>
+        <choice value="string">string</choice>
+        <choice value="number">number</choice>
+        <default>string</default>
+        <initialValue>string</initialValue>
+        <change>
+          <set token="field_operator_2">=</set>
+          <set token="form.field_operator_2">=</set>
+        </change>
+      </input>
+      <input type="dropdown" token="field_operator_2" id="field_select_2_2">
+        <label>Operateur</label>
+        <default>=</default>
+        <initialValue>=</initialValue>
+        <fieldForLabel>filter</fieldForLabel>
+        <fieldForValue>filter</fieldForValue>
+        <search>
+          <query>
+| makeresults 
+| eval filter=split(case("$field_type_2$"="other_field","=,!=", "$field_type_2$"="string","=,!=,inull(),isnotnul(), LIKE ","$field_type_2$"="number","=,!=,&lt;=,&gt;=,&lt;,&gt;,isnull(),isnotnull()",true(),"="),",")
+| stats count as _c by filter</query>
+        </search>
+      </input>
+      <input type="text" token="field_value_2">
+        <label>Valeur du champ 2</label>
+        <default></default>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_0$">
+    <panel>
+      <table>
+        <search>
+          <query>|makeresults 
+|eval 
+ not_1=coalesce("$not_1$",""), 
+ field_name_1=coalesce("$field_name_1$",""), 
+ field_type_1=coalesce("$field_type_1$",""),
+ value_quote_1=case(field_type_1="string","\"",true(),""),
+ field_operator_1=case("$field_operator_1$"="isnull()","isnull(", "$field_operator_1$"="isnotnull()","isnotnull(",true(),"$field_operator_1$"),
+ field_value_1=coalesce("$field_value_1$",""),
+ field_close_parenthesis_1=if("$field_operator_1$"="isnull()" OR "$field_operator_1$"="isnotnull()",")",""),
+ operator=coalesce("$operator$",""),
+ not_2=coalesce("$not_2$",""),
+ field_name_2=coalesce("$field_name_2$",""), 
+ field_type_2=coalesce("$field_type_2$",""),
+ value_quote_2=case(field_type_2="string","\"",true(),""),
+ field_operator_2=case("$field_operator_2$"="isnull()","isnull(", "$field_operator_2$"="isnotnull()","isnotnull(",true(),"$field_operator_2$"),
+ field_value_2=coalesce("$field_value_2$",""),
+ field_close_parenthesis_2=if("$field_operator_2$"="isnull()" OR "$field_operator_2$"="isnotnull()",")",""),
+ priority=0,
+ export=not_1+if(len(not_1)=0,""," ")+field_name_1+field_operator_1+value_quote_1+field_value_1+value_quote_1+field_close_parenthesis_1+if(coalesce("$field_sup$","")="1"," "+operator+" "+not_2+if(len(not_1)=0,""," ")+field_name_2+field_operator_2+value_quote_2+field_value_2+value_quote_2+field_close_parenthesis_2,"")
+ | eval is_valid=if(match(export, "^(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\))(?:\\s+(?:AND|OR)\\s+(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\)))?$") OR len(export)=0, "Valide", "Invalide")
+|table export, is_valid, priority</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+    <done>
+      <eval token="export">if(len($result.export$)>0 AND "$result.is_valid$"="valide",$result.export$,null())</eval>
+    </done>
+        </search>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_1$">
+    <panel>
+      <html>
+        <center>
+          <div id="downtime"/>
+        </center>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_1$">
+    <panel>
+      <input type="checkbox" token="sendingEmail">
+        <label></label>
+        <choice value="1">Cocher pour envoyer un email recapitulatif</choice>
+      </input>
+      <input type="text" token="email" depends="$sendingEmail$">
+        <label>Adresse Email du destinataire</label>
+        <default>$env:user_email$</default>
+        <initialValue>$env:user_email$</initialValue>
+      </input>
+    </panel>
+  </row>
+  <row depends="$hide_style$">
+    <panel>
+      <html>
+        <table border="1" text-align="center">
+          <tr>
+            <td>dashboardType</td>
+            <td>
+              <div id="dashboardType">add</div>
+            </td>
+          </tr>
+          <tr>
+            <td>debug_mod (0 = off; 1 = on)</td>
+            <td>
+              <div id="debug">0</div>
+            </td>
+          </tr>
+        </table>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <a href="#modalpopup" rel="modal_popup:open" id="modal_link" style="visibility=hidden;"/>
+        <div id="modalpopup" class="modal_popup">
+          <table>
+            <tr>
+              <div id="modal_header"/>
+            </tr>
+            <tr>
+              <div id="modal_content"/>
+            </tr>
+            <tr>
+              <div id="modal_footer"/>
+            </tr>
+          </table>
+        </div>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: #1977cc;
+}
+
+.loader h1 {
+  color: #FFFFFF;
+  text-align: center;
+  font-family: sans-serif;
+  text-transform: uppercase;
+  font-size: 20px;
+  position: relative;
+}
+
+.loader h1:after {
+  position: absolute;
+  content: "";
+  -webkit-animation: Dots 2s cubic-bezier(0, .39, 1, .68) infinite;
+  animation: Dots 2s cubic-bezier(0, .39, 1, .68) infinite;
+}
+
+.loader {
+  margin: 1% auto 0px;
+}
+
+.loader.container{
+width: 200px;
+height: 100px;
+background: #274685;
+}
+
+.loader.container:before{
+padding:10px;
+}
+
+.book {
+  border: 4px solid #FFFFFF;
+  width: 60px;
+  height: 45px;
+  position: relative;
+  perspective: 150px;
+}
+
+.loader.page {
+  display: block;
+  width: 30px;
+  height: 45px;
+  border: 4px solid #FFFFFF;
+  border-left: 1px solid #274685;
+  margin: 0;
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  overflow: hidden;
+  background: #274685;
+  transform-style: preserve-3d;
+  -webkit-transform-origin: left center;
+  transform-origin: left center;
+}
+
+.book .page:nth-child(1) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.6s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.6s infinite;
+}
+
+.book .page:nth-child(2) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.45s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.45s infinite;
+}
+
+.book .page:nth-child(3) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.2s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.2s infinite;
+}
+.loader.title{
+ color: #3c444d;
+ text-align:center;
+}
+
+
+/* Page turn */
+
+@-webkit-keyframes pageTurn {
+  0% {
+    -webkit-transform: rotateY( 0deg);
+    transform: rotateY( 0deg);
+  }
+  20% {
+    background: #1977cc;
+  }
+  40% {
+    background: #1977cc;
+    -webkit-transform: rotateY( -180deg);
+    transform: rotateY( -180deg);
+  }
+  100% {
+    background: #1977cc;
+    -webkit-transform: rotateY( -180deg);
+    transform: rotateY( -180deg);
+  }
+}
+
+@keyframes pageTurn {
+  0% {
+    transform: rotateY( 0deg);
+  }
+  20% {
+    background: #1977cc;
+  }
+  40% {
+    background: #1977cc;
+    transform: rotateY( -180deg);
+  }
+  100% {
+    background: #1977cc;
+    transform: rotateY( -180deg);
+  }
+}
+
+
+/* Dots */
+
+@-webkit-keyframes Dots {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+@keyframes Dots {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+.splunk-multidropdown{
+min-height: 32px;
+max-height: 300px;
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
+border: 1px solid rgb(129, 141, 153);
+padding: 5px;
+vertical-align: middle;
+width: 800px !important;
+height: auto !important; /* Changé : hauteur automatique */
+background: #e1e6eb !important;
+line-height: 30px !important;
+display: inline-flex;
+background:#fff;
+}
+
+.splunk-multidropdown [class^="BoxStyles__Styled-"]{
+min-height: 32px;
+max-height: 300px;
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
+border: 1px solid rgb(129, 141, 153);
+padding: 5px;
+vertical-align: middle;
+width: 788px !important;
+height: auto !important; /* Changé : hauteur automatique */
+background: #fff !important;
+line-height: 30px !important;
+display: inline-flex;
+}
+.splunk-multidropdown [class^="BoxStyles__Styled-"] [class^="ClickableStyles__StyledA-"]{
+background:#fff !important;
+background-color:#fff !important;
+color:#000 !important;
+}
+
+.dashboard-body .view-mode .splunk-multidropdown [data-test="textbox"] {
+background: #fff !important;
+}
+
+.add.square.icon:before{
+left:40px;
+content:"➕";
+}
+.add.square.icon{
+width:40px;
+padding:10px
+}
+
+.splunk-multidropdown [class^="TooltipStyles"]{
+display:none !important;
+}
+#custom_left_01, #custom_left_02{
+width: 10% !important;
+min-width: 150px !important;
+max-width: 250px !important;
+}
+#custom_right_01, #custom_right_02{
+width: 150px !important;
+}
+
+#field_not_1, #field_not_2{
+width: 100px !important;
+}
+.dashboard-body .view-mode div[id^="field_select"] {
+width : 150px !important;
+} 
+
+.dashboard-body .view-mode div[id^="field_select"] .splunk-dropdown div div div{ 
+width : 150px !important;
+} 
+
+.dashboard-body .view-mode div[id^="field_select"]  span[class^="ButtonStyles__StyledLabel"]{
+width : 120px !important;
+padding-left: 0 !important;
+}
+
+.dashboard-body .view-mode div[id^="field_select"]  button[data-test="button"]{
+width : 0px !important;
+min-width: 0px !important;
+max-width: 0px !important;
+height : 0px !important;
+min-height: 0px !important;
+max-height: 0px !important;
+padding-left: 0 !important;
+opacity: 0 !important;
+}
+
+</style>
+      </html>
+    </panel>
+  </row>
+</form>

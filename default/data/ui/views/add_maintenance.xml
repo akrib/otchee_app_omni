@@ -43,10 +43,12 @@
 | eval value=spath(value,"{}") 
 | stats count by value 
 | fromjson value 
+| stats values(itsi_event_name) as itsi_event_name by services
 | spath input=services path=title output=service_title 
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
-| rename entity_name as entity_title
+| stats count as _c by itsi_event_name
+| rename itsi_event_name as entity_title
     </query>
   </search>
   <fieldset submitButton="false"></fieldset>
@@ -116,6 +118,13 @@
             <unset token="service_select_dual"></unset>
             <set token="service_select_rex">1</set>
           </condition>
+          <condition>
+            <unset token="service_type"></unset>
+            <unset token="service_selected"></unset>
+            <unset token="service_calculated"></unset>
+            <unset token="service_select_dual"></unset>
+            <unset token="service_select_rex"></unset>
+          </condition>
         </change>
       </input>
     </panel>
@@ -153,7 +162,7 @@
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
         <change>
-          <set token="service_calculated">$value$</set>
+          <eval token="service_calculated">mvjoin($service_concat$,";")</eval>
         </change>
       </input>
     </panel>
@@ -257,6 +266,13 @@
             <unset token="kpi_select_dual"></unset>
             <set token="kpi_select_rex">1</set>
           </condition>
+          <condition>
+            <unset token="kpi_type"></unset>
+            <unset token="kpi_selected"></unset>
+            <unset token="kpi_calculated"></unset>
+            <unset token="kpi_select_dual"></unset>
+            <unset token="kpi_select_rex"></unset>
+          </condition>
         </change>
       </input>
     </panel>
@@ -294,7 +310,7 @@
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
         <change>
-          <set token="kpi_calculated">$value$</set>
+          <eval token="kpi_calculated">mvjoin($kpi_concat$,";")</eval>
         </change>
       </input>
     </panel>
@@ -398,6 +414,13 @@
             <unset token="entity_select_dual"></unset>
             <set token="entity_select_rex">1</set>
           </condition>
+          <condition>
+            <unset token="entity_type"></unset>
+            <unset token="entity_selected"></unset>
+            <unset token="entity_calculated"></unset>
+            <unset token="entity_select_dual"></unset>
+            <unset token="entity_select_rex"></unset>
+          </condition>
         </change>
       </input>
     </panel>
@@ -435,7 +458,7 @@
         <delimiter>;</delimiter>
         <choice value="%">All</choice>
         <change>
-          <set token="entity_calculated">$value$</set>
+          <eval token="entity_calculated">mvjoin($entity_concat$,";")</eval>
         </change>
       </input>
     </panel>
@@ -716,20 +739,41 @@ padding:10px;
 }
 
 .splunk-multidropdown{
-width:800px;
-height:300px;
-background:#e1e6eb;
+min-height: 32px;
+max-height: 300px;
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
+border: 1px solid rgb(129, 141, 153);
+padding: 5px;
+vertical-align: middle;
+width: 800px !important;
+height: auto !important; /* Changé : hauteur automatique */
+background: #e1e6eb !important;
+line-height: 30px !important;
+display: inline-flex;
+background:#fff;
 }
 
 .splunk-multidropdown [class^="BoxStyles__Styled-"]{
-width:800px !important;
-height:300px !important;
-background:#e1e6eb !important;
+min-height: 32px;
+max-height: 300px;
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
+border: 1px solid rgb(129, 141, 153);
+padding: 5px;
+vertical-align: middle;
+width: 788px !important;
+height: auto !important; /* Changé : hauteur automatique */
+background: #fff !important;
+line-height: 30px !important;
+display: inline-flex;
 }
 .splunk-multidropdown [class^="BoxStyles__Styled-"] [class^="ClickableStyles__StyledA-"]{
 background:#fff !important;
 background-color:#fff !important;
 color:#000 !important;
+}
+
+.dashboard-body .view-mode .splunk-multidropdown [data-test="textbox"] {
+background: #fff !important;
 }
 
 .add.square.icon:before{
@@ -741,6 +785,9 @@ width:40px;
 padding:10px
 }
 
+.splunk-multidropdown [class^="TooltipStyles"]{
+display:none !important;
+}
 
 </style>
       </html>

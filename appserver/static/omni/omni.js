@@ -1325,9 +1325,166 @@ $(document).on('click', '.btnx', function () {
             return [selected, errors, errorOutput];
     }
 
+/* Fonction de calcul et lancement de */
+    /* requetes SPL dans le moteur splunk */
+    function sendData(sendingType) {
+        const selectedInDashboardFields = {
+            DATA : 0,
+            NB_ERROR: 1,
+            ERROR_MSG: 2
+        }
+        var closingWindowLink = ''
+            + '<a href="/app/'
+            + app_path
+            + '/'
+            + viewName
+            + '">Fermer la fenêtre</a>';
+        var goToConsultLink = ''
+            + '<a href="/app/'
+            + app_path
+            + '/accueil">Fermer la fenêtre</a>';
+        log(sendingType,'in : sendData');
+        loadSpinnerChangeMsg('Verification des données en entrée');
+        loadSpinnerState('ON');
+        
+        // Validation des datepickers avant de continuer
+        var dateValidationErrors = validateAllDatepickers();
+        if (dateValidationErrors.length > 0) {
+            loadSpinnerState('OFF');
+            setToken('modal_header', 'ERREUR');
+            setToken('modal_content', dateValidationErrors);
+            $('#modal_link')[0].click();
+            return;
+        }
+        
+        var selectedValues = getSelectedInDashboard();
+        log(selectedValues,'selectedValues');
+        var selected = selectedValues[selectedInDashboardFields.DATA];
+        var errors = selectedValues[selectedInDashboardFields.NB_ERROR];
+        var errorOutput = selectedValues[selectedInDashboardFields.ERROR_MSG];
+        var query = '';
+        var dashboardType = $('#dashboardType').html();
+        log(selected,'selected');
+        log(errors,'errors');
+        log(errorOutput,'errorOutput');
+        if (errors > 0) {
+            loadSpinnerState('OFF');
+            setToken('modal_header', 'ERREUR');
+            setToken('modal_content', errorOutput);
+            $('#modal_link')[0].click();
+        } else {
+            /* on cache les bouton pour evité que plusieurs lancement de la fonction ai lieux */
+            $('input#VALID_button').hide();
+            $('input#CANCEL_button').hide();
+            loadSpinnerChangeMsg('Mise à jour 0%');
+            if (dashboardType == 'add') {
+                query = createAddQuery(selected);
+            } else if (dashboardType == 'update') {
+                query = createUpdateQuery(selected);
+            } else if (dashboardType == 'delete') {
+                query = createDeleteQuery(selected);
+            } else {
+                log('ERREUR DE dashboardType:' + dashboardType);
+            }
+            if (sendingType == 'valid') {
+                var omni_kv = new SearchManager({
+                    id: 'omni_kv' + selected['ID'],
+                    preview: false,
+                    cache: false,
+                    search: mvc.tokenSafe(query),
+                });
+                //attente que la requete retourne des données et traitement du schéma
+                omni_kv.on('search:done', function (properties) {
+                    log(properties,'omni_kv search:done');
+
+                    if (dashboardType == 'add') {
+                        sendSavesearchThenShowOkMsg(
+                            'Information',
+                            'Mise &agrave; jour de la base des downtimes OK',
+                            closingWindowLink
+                        );
+                    } else if (dashboardType == 'update' || dashboardType == 'delete')  {
+                        sendSavesearchThenShowOkMsg(
+                            'Information',
+                            'Mise &agrave; jour de la base des downtimes OK',
+                            goToConsultLink
+                        );
+                    } else {
+                        log('ERREUR DE dashboardType:' + dashboardType);
+                    }
+                });
+            }
+        }
+    }
+    
+    /* Fonction de validation de tous les datepickers */
+    function validateAllDatepickers() {
+        log('', 'in : validateAllDatepickers');
+        var errorMessages = '';
+        var errorCount = 0;
+        var periodNumber = 1;
+        
+        $('[id^=content-tab-Period]').each(function () {
+            log($(this), 'Validation du tab Period ' + periodNumber);
+            
+            // Vérifier si c'est un type "between_date" (date à date)
+            if ($(this).find('[periodID=radioD]').is(':checked')) {
+                var dateBegin = $(this).find('[id^=datepicker_begin]').val();
+                var dateEnd = $(this).find('[id^=datepicker_end]').val();
+                
+                log([dateBegin, dateEnd], 'Dates de la période ' + periodNumber);
+                
+                // Vérifier que la date de début est remplie
+                if (!dateBegin || dateBegin.trim() === '') {
+                    errorCount++;
+                    errorMessages += '- <b>Période ' + periodNumber + '</b> : La date de début est obligatoire<br />';
+                }
+                
+                // Vérifier que la date de fin est remplie
+                if (!dateEnd || dateEnd.trim() === '') {
+                    errorCount++;
+                    errorMessages += '- <b>Période ' + periodNumber + '</b> : La date de fin est obligatoire<br />';
+                }
+                
+                // Vérifier que les dates sont au bon format (YYYY-MM-DD)
+                var dateFormatRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (dateBegin && !dateFormatRegex.test(dateBegin)) {
+                    errorCount++;
+                    errorMessages += '- <b>Période ' + periodNumber + '</b> : La date de début n\'est pas au bon format (AAAA-MM-JJ)<br />';
+                }
+                if (dateEnd && !dateFormatRegex.test(dateEnd)) {
+                    errorCount++;
+                    errorMessages += '- <b>Période ' + periodNumber + '</b> : La date de fin n\'est pas au bon format (AAAA-MM-JJ)<br />';
+                }
+                
+                // Vérifier que la date de fin est postérieure ou égale à la date de début
+                if (dateBegin && dateEnd && dateFormatRegex.test(dateBegin) && dateFormatRegex.test(dateEnd)) {
+                    var dateBeginObj = new Date(dateBegin);
+                    var dateEndObj = new Date(dateEnd);
+                    
+                    if (dateEndObj < dateBeginObj) {
+                        errorCount++;
+                        errorMessages += '- <b>Période ' + periodNumber + '</b> : La date de fin ne peut pas être antérieure à la date de début<br />';
+                    }
+                }
+            }
+            
+            periodNumber++;
+        });
+        
+        if (errorCount > 0) {
+            errorMessages = '<b>Impossible de valider le downtime :</b><br /><br />' + errorMessages;
+        }
+        
+        log([errorCount, errorMessages], 'Résultat de la validation des datepickers');
+        return errorMessages;
+    }
+
+
+
         /* Fonction de calcul et lancement de */
         /* requetes SPL dans le moteur splunk */
-    function sendData(sendingType) {
+    function sendData_old(sendingType) {
         const selectedInDashboardFields = {
             DATA : 0,
             NB_ERROR: 1,
@@ -1633,8 +1790,159 @@ $(document).on('click', '.btnx', function () {
         }
     }/* OMNI_DONE */
 
- /* Fonction de configuration des datepicker */
+
+/* Fonction de configuration des datepicker */
 function applyDatepickerUI(minDate=getTodayDate(),div='') {
+    log(minDate,'in : applyDatepickerUI');
+    var dateFormat = 'yy-mm-dd';
+    
+    // Fonction pour activer le datepicker de fin
+    function enableEndDatepicker(selectedDate) {
+        to.prop('disabled', false);
+        to.css({
+            'background-color': '#ffffff',
+            'cursor': 'pointer',
+            'opacity': '1'
+        });
+        to.datepicker('option', 'minDate', selectedDate);
+        to.datepicker('option', 'disabled', false);
+        
+        log('Datepicker de fin activé', 'applyDatepickerUI');
+    }
+    
+    // Fonction pour désactiver le datepicker de fin
+    function disableEndDatepicker() {
+        to.prop('disabled', true);
+        to.css({
+            'background-color': '#e9ecef',
+            'cursor': 'not-allowed',
+            'opacity': '0.6'
+        });
+        to.val('');
+        to.datepicker('option', 'disabled', true);
+        
+        log('Datepicker de fin désactivé', 'applyDatepickerUI');
+    }
+    
+    var from = $(div+'[id^=datepicker_begin]')
+    .datepicker({
+        defaultDate: '+1w',
+        changeMonth: true,
+        numberOfMonths: 1,
+        dateFormat: dateFormat,
+        minDate: minDate,
+        onSelect: function(dateText, inst) {
+            log(['Date sélectionnée:', dateText], 'datepicker_begin onSelect');
+            var selectedDate = $.datepicker.parseDate(dateFormat, dateText);
+            
+            if (selectedDate) {
+                enableEndDatepicker(selectedDate);
+                
+                // Vérifier si la date de fin est inférieure à la nouvelle date de début
+                var endDate = to.val();
+                if (endDate) {
+                    var endDateObj = $.datepicker.parseDate(dateFormat, endDate);
+                    if (endDateObj < selectedDate) {
+                        to.val('');
+                        log('Date de fin réinitialisée car inférieure à la date de début', 'applyDatepickerUI', 1);
+                    }
+                }
+            }
+        }
+    })
+    .on('change', function () {
+        log('Event change déclenché sur datepicker_begin', 'applyDatepickerUI');
+        var selectedDate = getDate(this);
+        
+        if (selectedDate) {
+            enableEndDatepicker(selectedDate);
+            
+            var endDate = to.val();
+            if (endDate) {
+                var endDateObj = $.datepicker.parseDate(dateFormat, endDate);
+                if (endDateObj < selectedDate) {
+                    to.val('');
+                    log('Date de fin réinitialisée car inférieure à la date de début', 'applyDatepickerUI', 1);
+                }
+            }
+        } else {
+            disableEndDatepicker();
+        }
+    });
+    
+    var to = $(div+'[id^=datepicker_end]')
+    .datepicker({
+        defaultDate: '+1w',
+        changeMonth: true,
+        numberOfMonths: 1,
+        dateFormat: dateFormat,
+        minDate: minDate,
+        onSelect: function(dateText, inst) {
+            log(['Date de fin sélectionnée:', dateText], 'datepicker_end onSelect');
+            var selectedDate = $.datepicker.parseDate(dateFormat, dateText);
+            
+            if (selectedDate) {
+                from.datepicker('option', 'maxDate', selectedDate);
+                
+                var beginDate = from.val();
+                if (beginDate) {
+                    var beginDateObj = $.datepicker.parseDate(dateFormat, beginDate);
+                    if (beginDateObj > selectedDate) {
+                        $(this).val('');
+                        log('Date de fin invalide : inférieure à la date de début', 'applyDatepickerUI', 1);
+                        
+                        setToken('modal_header', 'ERREUR');
+                        setToken('modal_content', 'La date de fin ne peut pas être inférieure à la date de début.');
+                        $('#modal_link')[0].click();
+                    }
+                }
+            }
+        }
+    })
+    .prop('disabled', true)
+    .css({
+        'background-color': '#e9ecef',
+        'cursor': 'not-allowed',
+        'opacity': '0.6'
+    })
+    .on('change', function () {
+        var selectedDate = getDate(this);
+        
+        if (selectedDate) {
+            from.datepicker('option', 'maxDate', selectedDate);
+            
+            var beginDate = from.val();
+            if (beginDate) {
+                var beginDateObj = $.datepicker.parseDate(dateFormat, beginDate);
+                if (beginDateObj > selectedDate) {
+                    $(this).val('');
+                    log('Date de fin invalide : inférieure à la date de début', 'applyDatepickerUI', 1);
+                    
+                    setToken('modal_header', 'ERREUR');
+                    setToken('modal_content', 'La date de fin ne peut pas être inférieure à la date de début.');
+                    $('#modal_link')[0].click();
+                }
+            }
+        }
+    });
+    
+    // Vérifier si le datepicker de début a déjà une valeur (cas de mise à jour)
+    var fromValue = from.val();
+    log(['Valeur initiale du datepicker de début:', fromValue], 'applyDatepickerUI');
+    if (fromValue && fromValue.length > 0) {
+        try {
+            var fromDate = $.datepicker.parseDate(dateFormat, fromValue);
+            if (fromDate) {
+                enableEndDatepicker(fromDate);
+            }
+        } catch(e) {
+            log(e, 'Erreur lors du parsing de la date initiale', 1);
+        }
+    }
+}/* OMNI_DONE */
+  
+/* Fonction de configuration des datepicker */
+ function applyDatepickerUI_old(minDate=getTodayDate(),div='') {
     log(minDate,'in : applyDatepickerUI');
     var dateFormat = 'yy-mm-dd';
     
