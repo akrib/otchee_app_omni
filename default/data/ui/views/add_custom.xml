@@ -6,6 +6,7 @@
     <set token="kpi_selected">*</set>
     <set token="entity_selected">*</set>
     <set token="step_opt">000</set>
+    <unset token="dt_filter_selected"></unset> 
     <!--<unset token="service_select_input_type"></unset>-->
     <set token="hide">1</set>
     <!--<eval token="email">$env:user_email$</eval>-->
@@ -35,7 +36,7 @@
                 <span class="omni-title-first-part">
                   <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
                 </span>
-                <span class="omni-title-second-part"> Add Maintenance</span>
+                <span class="omni-title-second-part"> Add Maintenance </span>
               </h1>
                </div>
           </div>
@@ -190,14 +191,18 @@
  field_operator_2=case("$field_operator_2$"="isnull()","isnull(", "$field_operator_2$"="isnotnull()","isnotnull(",true(),"$field_operator_2$"),
  field_value_2=coalesce("$field_value_2$",""),
  field_close_parenthesis_2=if("$field_operator_2$"="isnull()" OR "$field_operator_2$"="isnotnull()",")",""),
- priority=0,
  export=not_1+if(len(not_1)=0,""," ")+field_name_1+field_operator_1+value_quote_1+field_value_1+value_quote_1+field_close_parenthesis_1+if(coalesce("$field_sup$","")="1"," "+operator+" "+not_2+if(len(not_1)=0,""," ")+field_name_2+field_operator_2+value_quote_2+field_value_2+value_quote_2+field_close_parenthesis_2,"")
  | eval is_valid=if(match(export, "^(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\))(?:\\s+(?:AND|OR)\\s+(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\)))?$") OR len(export)=0, "Valide", "Invalide")
 |table export, is_valid, priority</query>
           <earliest>$earliest$</earliest>
           <latest>$latest$</latest>
     <done>
-      <eval token="dt_filter_selected">if(len($result.export$)>0 AND "$result.is_valid$"="valide",$result.export$,null())</eval>
+      <condition match='$result.is_valid$="Valide"'>
+        <set token="dt_filter_selected">$result.export$</set>
+      </condition>
+      <condition>
+        <unset token="dt_filter_selected">$result.export$</unset>
+      </condition>
     </done>
         </search>
         <option name="refresh.display">progressbar</option>
@@ -228,7 +233,7 @@
   </row>
 <row depends="$hide$">
   <html>
-    
+ <!--<div id="debug">1</div>   -->
     
     
 <div id="help_tour_00" data-element=".omni-title-second-part" data-title="Bienvenue" data-description="Bienvenue sur le dashboard d'ajout de filtre custom" data-side="left" data-align="start"></div>    

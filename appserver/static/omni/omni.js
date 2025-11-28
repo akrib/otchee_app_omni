@@ -129,6 +129,29 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var mm = String(today.getMonth() + 1).padStart(2, '0');
                 var yy = today.getFullYear();
                 return yy + '-' + mm + '-' + dd;
+            },
+            escapeSPLString(value) {
+                if (this.isNull(value)) {
+                    return '';
+                }
+                
+                // Convertir en string si ce n'est pas déjà le cas
+                var str = String(value);
+                
+                // Échapper les backslashes d'abord (important de le faire en premier)
+                str = str.replace(/\\/g, '\\\\');
+                
+                // Échapper les guillemets doubles
+                str = str.replace(/"/g, '\\"');
+                
+                // Optionnel : échapper les retours à la ligne
+                str = str.replace(/\n/g, '\\n');
+                str = str.replace(/\r/g, '\\r');
+                
+                // Optionnel : échapper les tabulations
+                str = str.replace(/\t/g, '\\t');
+                
+                return str;
             }
         };
 
@@ -412,6 +435,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return null;
                 }
             }
+
         };
 
         // ==================== SPINNER DE CHARGEMENT ====================
@@ -743,7 +767,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
                 
                 var baseQuery = `| stats count as service
-                    | eval service=split("${arr['service']},";"),
+                    | eval service=split("${arr['service']}",";"),
                         kpi=split("${arr['kpi']}",";"),
                         entity=split("${arr['entity']}",";"),
                         dt_filter="${arr['dt_filter']}",
@@ -760,7 +784,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
                         | eval key="${arr['key']}",`);
                 }
-
+                Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
                 return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
             }
         };
@@ -886,7 +910,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = TokenManager.get('dt_filter_selected');
+                selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
                 selected['downtimeFields'] = [];
                 
                 // Version
@@ -934,7 +958,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = TokenManager.get('dt_filter_selected');
+                selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 
                 return [selected, 0, ''];
