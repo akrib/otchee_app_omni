@@ -92,6 +92,18 @@ downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
     <panel id="footer_mrspocv2" ref="footer_mrspocv2" app="otchee_app_omni"></panel>
   </row> -->
   <fieldset submitButton="false"></fieldset>
+      <row>
+    <panel>
+      <html>
+        <h2 style="font-size:16px !important;">
+                    <a href="./accueil">
+                        <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
+                        <strong>Revenir à l'écran "Menu des Maintenances"</strong>
+                    </a>
+                </h2>
+      </html>
+    </panel>
+  </row>
   <row>
     <panel id="paneltitle">
       <html>

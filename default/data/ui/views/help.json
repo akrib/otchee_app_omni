@@ -1,0 +1,299 @@
+{
+    "title": "Documentation OMNI - Guide Utilisateur",
+    "description": "Documentation complète de l'application OMNI - Observability Maintenance Natural Interface",
+    "inputs": {},
+    "defaults": {
+        "dataSources": {
+            "ds.search": {
+                "options": {
+                    "queryParameters": {
+                        "earliest": "$global_time.earliest$",
+                        "latest": "$global_time.latest$"
+                    }
+                }
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header": {
+            "context": {},
+            "options": {
+                "markdown": "# Documentation OMNI\n\n## Observability Maintenance Natural Interface\n\n### Guide utilisateur complet\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section1": {
+            "context": {},
+            "options": {
+                "markdown": "# 1. Présentation générale\n\n## Qu'est-ce qu'OMNI ?\n\n**OMNI (Observability Maintenance Natural Interface)** est une application Splunk dédiée à la gestion avancée des périodes de maintenance pour **Splunk IT Service Intelligence (ITSI)**.\n\n## À quoi sert OMNI ?\n\nOMNI vous permet de :\n\n- **Planifier** vos périodes de maintenance de manière centralisée\n- **Gérer** les maintenances pour vos services, KPIs et entités ITSI\n- **Automatiser** les récurrences (hebdomadaires, mensuelles, spécifiques)\n- **Tracer** toutes les modifications apportées aux maintenances\n- **Rechercher** rapidement vos politiques de maintenance existantes\n\n## Pourquoi utiliser OMNI ?\n\n### Interface intuitive\nGestion simplifiée en quelques clics\n\n### Flexibilité\nPlanification simple ou avancée selon vos besoins\n\n### Intégration native\nCompatible avec ITSI sans configuration complexe\n\n### Traçabilité complète\nHistorique détaillé de toutes les actions\n\n### Gestion centralisée\nUn seul point d'entrée pour toutes vos maintenances\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section2": {
+            "context": {},
+            "options": {
+                "markdown": "# 2. Fonctionnalités principales\n\n## 1. Piloter en un point unique\n\nGérez toutes vos maintenances depuis une interface unifiée qui couvre l'ensemble de votre Système d'Information.\n\n## 2. Interface de gestion avancée\n\nPlanifiez vos maintenances selon différents modes :\n\n- **Date à date** : Période spécifique avec début et fin\n- **Hebdomadaire** : Récurrence sur des jours de la semaine\n- **Mensuel** : Récurrence sur des jours du mois\n- **Spécifique** : Premier/dernier lundi du mois, etc.\n\n## 3. Intégration transparente avec ITSI\n\nMettez en maintenance vos :\n\n- **Services** ITSI\n- **KPIs** (indicateurs de performance)\n- **Entités** (serveurs, applications, etc.)\n\n## 4. Rapports et tableaux de bord dédiés\n\nAccédez à :\n\n- Recherche avancée de maintenances\n- Consultation des historiques\n- Votre espace personnel\n- Statistiques et métriques\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section3": {
+            "context": {},
+            "options": {
+                "markdown": "# 3. Accès à l'application\n\n## Page d'accueil\n\nAprès connexion à Splunk, accédez à OMNI depuis le menu des applications.\n\nLa page d'accueil vous propose deux actions principales :\n\n### 1. Ajouter une maintenance\nCréer une nouvelle politique de maintenance\n\n### 2. Rechercher une maintenance\nTrouver et consulter vos maintenances existantes\n\n## Menu de navigation\n\nL'application est organisée en sections :\n\n### Maintenance\n\n- **Search** : Rechercher des maintenances\n- **Add** : Ajouter une nouvelle maintenance\n- **Target** : Voir la portée d'une maintenance\n\n### Profil\n\n- **My Own Maintenance** : Vos maintenances personnelles\n- **Maintenance Logs** : Historique des modifications\n- **Dashboards** : Tableaux de bord personnalisés\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section4a": {
+            "context": {},
+            "options": {
+                "markdown": "# 4. Gestion des maintenances\n\n## Ajouter une maintenance\n\nLe processus se déroule en **4 étapes** guidées :\n\n### Étape 1 : Sélection des Services\n\nChoisissez le type de sélection :\n\n- **All** : Tous les services\n- **List** : Sélection multiple dans une liste\n- **Wildcard** : Utilisation de motifs (ex: *prod*)\n\n### Étape 2 : Sélection des KPIs\n\nMême principe que pour les services. Les KPIs affichés sont filtrés selon les services sélectionnés.\n\n### Étape 3 : Sélection des Entités\n\nSélectionnez les entités concernées par la maintenance. Les entités sont également filtrées selon vos choix précédents.\n\n### Étape 4 : Configuration de la période\n\nDéfinissez la ou les périodes de maintenance.\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section4b": {
+            "context": {},
+            "options": {
+                "markdown": "## Types de périodes disponibles\n\n### Date à date\n- Date de début et heure de début\n- Date de fin et heure de fin\n\n### Hebdomadaire\n- Jours de la semaine (ex: Lundi, Mercredi, Vendredi)\n- Heure de début et de fin\n\n### Mensuel\n- Jours du mois (ex: 1, 15, 30)\n- Heure de début et de fin\n\n### Spécifique\n- Premier/Deuxième/Troisième/Quatrième/Dernier du mois\n- Jour de la semaine\n- Heure de début et de fin\n\n> **Astuce :** Vous pouvez ajouter plusieurs périodes en cliquant sur le bouton d'ajout de période.\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section4c": {
+            "context": {},
+            "options": {
+                "markdown": "## Options finales\n\n- **Commentaire** : Ajoutez un ticket de référence ou une description\n- **Email de notification** : Recevez un récapitulatif par email\n\n## Modifier une maintenance\n\n1. Recherchez la maintenance à modifier\n2. Cliquez sur l'icône \"Modifier\"\n3. Suivez les mêmes étapes que pour la création\n4. Validez les modifications\n\n> **Important :** La modification crée une nouvelle version de la maintenance\n\n## Supprimer une maintenance\n\n1. Recherchez la maintenance à supprimer\n2. Cliquez sur l'icône \"Supprimer\"\n3. Confirmez la suppression\n\n> **Note :** La suppression est tracée et conservée dans l'historique\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section5a": {
+            "context": {},
+            "options": {
+                "markdown": "# 5. Recherche et consultation\n\n## Recherche simple\n\nUtilisez la barre de recherche comme un moteur de recherche classique :\n\n- Tapez n'importe quel mot-clé (équipement, commentaire, auteur, ticket...)\n- Les résultats affichent toutes les maintenances correspondantes\n\n### Exemples de recherche\n\n```\nSRVPROD01\n```\nTrouve les maintenances mentionnant ce serveur\n\n```\nR-287656\n```\nTrouve les maintenances liées à ce ticket\n\n```\ndupont maintenance\n```\nCombine plusieurs critères\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section5b": {
+            "context": {},
+            "options": {
+                "markdown": "## Filtre par date\n\nUtilisez le sélecteur de date pour voir les maintenances :\n\n- **Actives** à une date donnée (indicateur vert)\n- **Inactives** à une date donnée (indicateur rouge)\n\nCochez \"Maintenance en cours\" pour filtrer uniquement les maintenances actives.\n\n## Détails d'une maintenance\n\nPour chaque maintenance trouvée, vous pouvez :\n\n- **Voir les détails** : Service, KPI, entités concernés\n- **Analyser la portée** : Nombre d'éléments impactés\n- **Consulter les informations** : Périodes, commentaires, auteur\n- **Accéder aux actions** : Modifier, supprimer, voir l'historique\n\n## Portée d'une maintenance\n\nCliquez sur l'icône \"Portée\" pour visualiser :\n\n- Nombre de services concernés\n- Nombre de KPIs impactés\n- Nombre d'entités en maintenance\n- Liste détaillée de chaque élément\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section6a": {
+            "context": {},
+            "options": {
+                "markdown": "# 6. Suivi et traçabilité\n\n## My Own Maintenance\n\nVotre espace personnel affiche :\n\n- **Vos maintenances actives**\n- **Vos maintenances supprimées**\n- **Statistiques personnelles**\n\n### Indicateurs\n\n| Indicateur | Signification |\n|------------|---------------|\n| Propriétaire | Vous avez créé la maintenance |\n| Modificateur | Vous avez modifié la maintenance |\n| Mise à jour externe | Un autre utilisateur l'a modifiée |\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section6b": {
+            "context": {},
+            "options": {
+                "markdown": "## Maintenance Logs\n\nConsultez l'historique complet des modifications :\n\n- Date et heure de l'action\n- Type d'action (Ajout, Modification, Suppression)\n- Auteur de l'action\n- Détails des changements\n\n### Filtres disponibles\n\n- Par service\n- Par KPI\n- Par entité\n- Par auteur\n- Par ID de maintenance\n\n### Légende des actions\n\n| Action | Description |\n|--------|-------------|\n| Ajout | Nouvelle maintenance créée |\n| Modification | Maintenance mise à jour |\n| Obsolète | Ancienne version remplacée |\n| Suppression | Maintenance supprimée |\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section7a": {
+            "context": {},
+            "options": {
+                "markdown": "# 7. Bonnes pratiques\n\n## Lors de la création\n\n1. **Soyez précis dans vos sélections** : Évitez \"All\" si possible\n2. **Ajoutez toujours un commentaire** : Référence ticket, description claire\n3. **Vérifiez les dates et heures** : Attention aux fuseaux horaires\n4. **Utilisez des wildcards intelligemment** : *prod* plutôt que *\n\n## Organisation\n\n1. **Convention de nommage** : Établissez des standards d'équipe\n2. **Commentaires structurés** : Ticket + description courte\n3. **Revue régulière** : Nettoyez les maintenances obsolètes\n4. **Documentation** : Notez les maintenances récurrentes importantes\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section7b": {
+            "context": {},
+            "options": {
+                "markdown": "## Gestion des périodes\n\n1. **Préférez des périodes courtes et précises** : Plus facile à gérer\n2. **Utilisez les récurrences** : Pour les maintenances planifiées\n3. **Anticipez les chevauchements** : Vérifiez les maintenances existantes\n4. **Testez sur un périmètre réduit** : Avant de généraliser\n\n## Sécurité et traçabilité\n\n1. **Ne supprimez pas sans raison** : Modifiez plutôt que supprimer\n2. **Consultez l'historique** : Avant toute modification importante\n3. **Utilisez les notifications email** : Pour les actions critiques\n4. **Vérifiez la portée** : Avant de valider\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_section8": {
+            "context": {},
+            "options": {
+                "markdown": "# 8. Support\n\n## Contact\n\nPour toute question ou assistance :\n\n**Email** : observability@otchee.fr\n\n## Aide contextuelle\n\nUn assistant est disponible dans l'interface (icône d'aide) pour vous guider selon le contexte.\n\n## Version actuelle\n\n**Version** : 1.0.27\n\nPour connaître les nouveautés et améliorations, consultez les notes de version de l'application.\n\n---\n\n## Documentation\n\nDocumentation OMNI - Application Splunk pour la gestion des maintenances ITSI\n\nCopyright © Otchee - Tous droits réservés\n\n---"
+            },
+            "type": "splunk.markdown"
+        },
+        "viz_toc": {
+            "context": {},
+            "options": {
+                "markdown": "## Table des matières\n\n### Section 1 - Présentation générale\nDécouvrez OMNI et ses objectifs\n\n### Section 2 - Fonctionnalités principales\nLes capacités clés de l'application\n\n### Section 3 - Accès à l'application\nNavigation et organisation\n\n### Section 4 - Gestion des maintenances\nCréer, modifier et supprimer\n\n### Section 5 - Recherche et consultation\nTrouver et analyser vos maintenances\n\n### Section 6 - Suivi et traçabilité\nHistorique et logs\n\n### Section 7 - Bonnes pratiques\nRecommandations et conseils\n\n### Section 8 - Support\nObtenir de l'aide\n\n---"
+            },
+            "type": "splunk.markdown"
+        }
+    },
+    "dataSources": {},
+    "layout": {
+        "globalInputs": [],
+        "layoutDefinitions": {
+            "layout_1": {
+                "options": {
+                    "backgroundColor": "#f5f6f7",
+                    "display": "auto-scale",
+                    "height": 4800,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "h": 120,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 20
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_toc",
+                        "position": {
+                            "h": 320,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 160
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section1",
+                        "position": {
+                            "h": 450,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 500
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section2",
+                        "position": {
+                            "h": 380,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 970
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section3",
+                        "position": {
+                            "h": 350,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 1370
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section4a",
+                        "position": {
+                            "h": 350,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 1740
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section4b",
+                        "position": {
+                            "h": 350,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 2110
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section4c",
+                        "position": {
+                            "h": 320,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 2480
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section5a",
+                        "position": {
+                            "h": 320,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 2820
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section5b",
+                        "position": {
+                            "h": 320,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 3160
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section6a",
+                        "position": {
+                            "h": 280,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 3500
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section6b",
+                        "position": {
+                            "h": 300,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 3800
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section7a",
+                        "position": {
+                            "h": 280,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 4120
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section7b",
+                        "position": {
+                            "h": 240,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 4420
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_section8",
+                        "position": {
+                            "h": 280,
+                            "w": 1400,
+                            "x": 20,
+                            "y": 4680
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "Nouvel onglet",
+                    "layoutId": "layout_1"
+                }
+            ]
+        }
+    }
+}

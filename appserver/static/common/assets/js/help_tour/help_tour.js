@@ -1,4 +1,4 @@
-const APP_NAME = 'otche_app_omni';
+const APP_NAME = 'otchee_app_omni';
 var scriptName = "help_tour";
 var scriptVersion = "1.0.2";
 var Author = "Sylvain.Berthaud@otchee.fr";

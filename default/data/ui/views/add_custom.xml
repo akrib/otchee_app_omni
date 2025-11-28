@@ -1,10 +1,11 @@
-<form version="1.1" theme="light" script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js,simple_xml_examples:showtokens.js" hideEdit="true">
+<form version="1.1" theme="light" script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js,simple_xml_examples:showtokens.js,common/assets/js/help_tour/help_tour.js" hideEdit="true">
   <label>ITSI : Add Maintenance_v3</label>
   <init>
     <set token="toast_message">information incomplete</set>
-    <unset token="service_selected"></unset>
-    <unset token="kpi_selected"></unset>
-    <unset token="entity_selected"></unset>
+    <set token="service_selected">*</set>
+    <set token="kpi_selected">*</set>
+    <set token="entity_selected">*</set>
+    <set token="step_opt">000</set>
     <!--<unset token="service_select_input_type"></unset>-->
     <set token="hide">1</set>
     <!--<eval token="email">$env:user_email$</eval>-->
@@ -12,6 +13,18 @@
     <set token="field_sup">0</set>
   </init>
   <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel>
+      <html>
+        <h2 style="font-size:16px !important;">
+          <a href="./accueil">
+            <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
+            <strong>Revenir à l'écran "Menu des Maintenances"</strong>
+          </a>
+        </h2>
+      </html>
+    </panel>
+  </row>
   <row>
     <panel>
       <html>
@@ -32,7 +45,7 @@
     <panel>
       <html>
        <div id="step_control_wizard_holder"/>
-           <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="export"/> 
+           <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="dt_filter_selected"/> 
            <p id="swc_step_1" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
            <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
         <div id="step-control-wizard"/>
@@ -48,7 +61,7 @@
   </row>
   <row depends="$step_0$">
     <panel id="custom_left_01">
-      <input type="checkbox" token="show_custom_field_sup">
+      <input type="checkbox" token="show_custom_field_sup" id="show_sup">
         <label></label>
         <choice value="1">Ajouter un deuxieme champs custom</choice>
         <delimiter> </delimiter>
@@ -69,7 +82,7 @@
         <delimiter> </delimiter>
         <default></default>
       </input>
-      <input type="text" token="field_name_1">
+      <input type="text" token="field_name_1" id="field_name_1">
         <label>Nom du champ Custom 1</label>
         <default></default>
       </input>
@@ -98,7 +111,7 @@
 | stats count as _c by filter</query>
         </search>
       </input>
-      <input type="text" token="field_value_1">
+      <input type="text" token="field_value_1" id="field_value_1">
         <label>Valeur du champ 1</label>
         <default></default>
       </input>
@@ -106,7 +119,7 @@
   </row>
   <row depends="$step_0$,$show_custom_field_sup$">
     <panel id="custom_left_02" depends="$show_custom_field_sup$">
-      <input type="dropdown" token="operator">
+      <input type="dropdown" token="operator" id="operator">
         <label>Choisissez l'operateur</label>
         <choice value="AND">AND</choice>
         <choice value="OR">OR</choice>
@@ -158,7 +171,7 @@
   </row>
   <row depends="$step_0$">
     <panel>
-      <table>
+      <table id="show_results">
         <search>
           <query>|makeresults 
 |eval 
@@ -184,7 +197,7 @@
           <earliest>$earliest$</earliest>
           <latest>$latest$</latest>
     <done>
-      <eval token="export">if(len($result.export$)>0 AND "$result.is_valid$"="valide",$result.export$,null())</eval>
+      <eval token="dt_filter_selected">if(len($result.export$)>0 AND "$result.is_valid$"="valide",$result.export$,null())</eval>
     </done>
         </search>
         <option name="refresh.display">progressbar</option>
@@ -202,7 +215,7 @@
   </row>
   <row depends="$step_1$">
     <panel>
-      <input type="checkbox" token="sendingEmail">
+      <input type="checkbox" token="sendingEmail" id="input_user_email">
         <label></label>
         <choice value="1">Cocher pour envoyer un email recapitulatif</choice>
       </input>
@@ -213,6 +226,36 @@
       </input>
     </panel>
   </row>
+<row depends="$hide$">
+  <html>
+    
+    
+    
+<div id="help_tour_00" data-element=".omni-title-second-part" data-title="Bienvenue" data-description="Bienvenue sur le dashboard d'ajout de filtre custom" data-side="left" data-align="start"></div>    
+<div id="help_tour_01" data-element="#show_sup" data-title="Ajouter un champ" data-description="Ce bouton permet d'avoir un deuxième champ personnalisé pour affiner le filtre" data-side="left" data-align="start"></div>
+<div id="help_tour_02" data-element="#field_not_1" data-title="Négation du filtre" data-description="Permet d'appliquer le NOT au paramètre du filtre. Exemple &lt;br/&gt;| where NOT number=8" data-side="left" data-align="start"></div>
+<div id="help_tour_03" data-element="#field_name_1" data-title="Nom du champ" data-description="Le nom du champ qui sera utilisé comme filtre" data-side="left" data-align="start"></div>
+<div id="help_tour_04" data-element="#field_select_1_1" data-title="Type de valeur" data-description="Le type de la valeur à comparer au champ. Il peut être un autre champ, une chaîne de caractères ou un nombre" data-side="left" data-align="start"></div>
+<div id="help_tour_05" data-element="#field_select_1_2" data-title="Type de comparaison" data-description="Le type de comparaison qui sera effectué entre le champ et la valeur" data-side="left" data-align="start"></div>
+<div id="help_tour_06" data-element="#field_value_1" data-title="Valeur de comparaison" data-description="La valeur de comparaison sera comparée au champ pour filtrer les événements" data-side="left" data-align="start"></div>
+<div id="help_tour_07" data-element="#operator" data-title="Opérateur" data-description="L'opérateur indique si le deuxième champ de filtre doit s'appliquer avec un AND ou un OR" data-side="left" data-align="start"></div>
+<div id="help_tour_08" data-element="#show_results" data-title="Résultats" data-description="Valeur finale du filtre qui sera ajoutée au kvstore. Le champ is_valid doit être égal à valide, sinon il sera impossible de passer à l'étape suivante" data-side="left" data-align="start"></div>
+<div id="help_tour_09" data-element="#downtime" data-title="Planificateur de maintenance" data-description="Cet onglet permet de configurer une ou plusieurs périodes de maintenance pour le filtre créé plus tôt" data-side="left" data-align="start"></div>
+<div id="help_tour_10" data-element="#tab-Periode1" data-title="Onglet de période" data-description="Chaque onglet est unique et peut avoir une planification différente" data-side="left" data-align="start"></div>
+<div id="help_tour_10" data-element="#tAdd" data-title="Ajouter une période" data-description="Permet d'ajouter d'autres périodes à la maintenance" data-side="left" data-align="start"></div> 
+<div id="help_tour_11" data-element="#form-tab-Periode1 input:nth-child(1)" data-title="Entre deux dates" data-description="Permet d'ajouter une période de maintenance entre deux dates. La date de fin doit obligatoirement être supérieure à la date de début" data-side="left" data-align="start"></div>
+<div id="help_tour_12" data-element="datepicker_begin-tab-Periode1" data-title="Datepicker" data-description="Des datepickers sont positionnés sur ces champs pour aider à la planification" data-side="left" data-align="start"></div>
+<div id="help_tour_13" data-element="#form-tab-Periode1 input:nth-child(2)" data-title="Hebdomadaire" data-description="Planification se basant sur le jour de la semaine" data-side="left" data-align="start"></div>
+<div id="help_tour_14" data-element="#form-tab-Periode1 input:nth-child(3)" data-title="Mensuel" data-description="Planification se basant sur le jour du mois" data-side="left" data-align="start"></div>
+<div id="help_tour_15" data-element="#form-tab-Periode1 input:nth-child(4)" data-title="Spécifique" data-description="Planification se basant sur un jour de la semaine et sur son occurrence dans le mois" data-side="left" data-align="start"></div> 
+<div id="help_tour_16" data-element="#commentaire" data-title="Commentaire" data-description="Ajout d'un commentaire pour préciser un numéro de ticket ou la raison de la période de maintenance. Ce champ est obligatoire et, pour éviter les problèmes d'enregistrement du commentaire, tous les accents sont retirés" data-side="left" data-align="start"></div>
+<div id="help_tour_18" data-element="#input_user_email" data-title="Adresse e-mail" data-description="Permet d'envoyer un e-mail récapitulatif de la période de maintenance. Par défaut, l'adresse est celle de l'utilisateur en cours, mais elle peut être modifiée pour mettre une boîte générique ou une autre adresse e-mail" data-side="left" data-align="start"></div> 
+<div id="help_tour_19" data-element="#VALID_button" data-title="Validation finale" data-description="Permet d'enregistrer la règle dans le kvstore. Si aucune fenêtre pop-up n'apparaît, c'est sans doute que l'enregistrement a échoué. Veuillez vérifier dans le tableau de bord de recherche si la période a bien été créée, dans le cas contraire veuillez recommencer la manipulation" data-side="left" data-align="start"></div>
+
+  </html>
+  
+  
+</row>
   <row depends="$hide_style$">
     <panel>
       <html>
@@ -460,7 +503,7 @@ min-width: 150px !important;
 max-width: 250px !important;
 }
 #custom_right_01, #custom_right_02{
-width: 150px !important;
+width: 90% !important;
 }
 
 #field_not_1, #field_not_2{
@@ -489,7 +532,9 @@ max-height: 0px !important;
 padding-left: 0 !important;
 opacity: 0 !important;
 }
-
+#HELP_TOUR_BUTTON{
+color:white !important;
+}
 </style>
       </html>
     </panel>

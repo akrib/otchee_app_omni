@@ -1,39 +1,602 @@
-<dashboard version="1.1" theme="light" hideEdit="true">
-    <label>Page d'Aide - Omni</label>
-    <description>
-        Ceci est la page d'aide pour l'application Omni, conçue pour gérer les périodes de maintenance sur ITSI.
-        Veuillez trouver ci-dessous des informations utiles et des liens pour vous aider à utiliser l'application.
-    </description>
-
-    <row>
-        <panel>
-            <html>
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h1 style="color: #0072c6; text-align: center;">Bienvenue sur la page d'aide de l'application Omni</h1>
-                    <p style="font-size: 16px; color: #555;">L'application Omni vous permet de gérer et planifier des périodes de maintenance pour les services dans ITSI. Utilisez cette page pour en savoir plus sur les fonctionnalités et l'utilisation de l'application.</p>
-                    
-                    <h2 style="color: #0072c6;">Fonctionnalités principales :</h2>
-                    <ul style="font-size: 16px; color: #333;">
-                        <li>Planification des périodes de maintenance</li>
-                        <li>Suivi et gestion des services pendant la maintenance</li>
-                        <li>Intégration avec ITSI pour des alertes et rapports améliorés</li>
-                    </ul>
-
-                    <h2 style="color: #0072c6;">Liens utiles :</h2>
-                    <ul style="font-size: 16px; color: #333;">
-                        <li><a href="#" style="color: #1E90FF;">Guide d'utilisation de l'application Omni</a></li>
-                        <li><a href="#" style="color: #1E90FF;">FAQ - Questions fréquentes</a></li>
-                        <li><a href="#" style="color: #1E90FF;">Support technique Splunk</a></li>
-                    </ul>
-
-                    <h2 style="color: #0072c6;">Support :</h2>
-                    <p style="font-size: 16px; color: #555;">Si vous rencontrez des problèmes ou avez des questions, n'hésitez pas à contacter notre équipe de support à l'adresse <a href="mailto:observability@otchee.fr" style="color: #0072c6;">observability@otchee.fr</a>.</p>
-
-                    <div style="text-align: center; margin-top: 40px;">
-                        <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Logo de l'entreprise" style="width: 150px;"/>
-                    </div>
-                </div>
-            </html>
-        </panel>
-    </row>
+<dashboard version="1.1" theme="light">
+  <label>Documentation OMNI - Guide Utilisateur</label>
+  <description>Observability Maintenance Natural Interface - Documentation complète</description>
+  
+  <row>
+    <panel>
+      <html>
+        <style>
+          .doc-container {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .doc-header {
+            background: linear-gradient(135deg, #0072c6 0%, #23579d 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+          }
+          .doc-header h1 {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 300;
+          }
+          .doc-header p {
+            margin: 10px 0 0 0;
+            font-size: 18px;
+            opacity: 0.9;
+          }
+          .doc-section {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .doc-section h2 {
+            color: #0072c6;
+            font-size: 28px;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+          }
+          .doc-section h3 {
+            color: #23579d;
+            font-size: 22px;
+            margin-top: 25px;
+          }
+          .doc-section h4 {
+            color: #555;
+            font-size: 18px;
+            margin-top: 20px;
+            font-weight: 600;
+          }
+          .doc-list {
+            margin: 15px 0;
+            padding-left: 25px;
+          }
+          .doc-list li {
+            margin: 8px 0;
+          }
+          .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #0072c6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+          }
+          .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+          }
+          .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+          }
+          .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+          }
+          .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+          }
+          .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+          }
+          .feature-card h4 {
+            color: #0072c6;
+            margin-top: 0;
+          }
+          .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+          }
+          .toc h3 {
+            color: #23579d;
+            margin-top: 0;
+          }
+          .toc ul {
+            list-style: none;
+            padding-left: 0;
+          }
+          .toc li {
+            margin: 8px 0;
+          }
+          .toc a {
+            color: #0072c6;
+            text-decoration: none;
+            font-weight: 500;
+          }
+          .toc a:hover {
+            text-decoration: underline;
+          }
+          .example-box {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+          }
+          .button-style {
+            display: inline-block;
+            background: #0072c6;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin: 5px;
+          }
+          table.doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          table.doc-table th {
+            background: #0072c6;
+            color: white;
+            padding: 12px;
+            text-align: left;
+          }
+          table.doc-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          .step-number {
+            display: inline-block;
+            background: #0072c6;
+            color: white;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+          }
+        </style>
+        
+        <div class="doc-container">
+          
+          <!-- Header -->
+          <div class="doc-header">
+            <h1>Documentation OMNI</h1>
+            <p>Observability Maintenance Natural Interface</p>
+          </div>
+          
+          <!-- Table of Contents -->
+          <div class="toc">
+            <h3>Table des matières</h3>
+            <ul>
+              <li><a href="#presentation">1. Présentation générale</a></li>
+              <li><a href="#fonctionnalites">2. Fonctionnalités principales</a></li>
+              <li><a href="#acces">3. Accès à l'application</a></li>
+              <li><a href="#gestion">4. Gestion des maintenances</a></li>
+              <li><a href="#recherche">5. Recherche et consultation</a></li>
+              <li><a href="#suivi">6. Suivi et traçabilité</a></li>
+              <li><a href="#bonnes-pratiques">7. Bonnes pratiques</a></li>
+              <li><a href="#support">8. Support</a></li>
+            </ul>
+          </div>
+          
+          <!-- Section 1: Présentation -->
+          <div class="doc-section" id="presentation">
+            <h2>1. Présentation générale</h2>
+            
+            <h3>Qu'est-ce qu'OMNI ?</h3>
+            <p><strong>OMNI (Observability Maintenance Natural Interface)</strong> est une application Splunk dédiée à la gestion avancée des périodes de maintenance pour <strong>Splunk IT Service Intelligence (ITSI)</strong>.</p>
+            
+            <h3>À quoi sert OMNI ?</h3>
+            <p>OMNI vous permet de :</p>
+            <ul class="doc-list">
+              <li><strong>Planifier</strong> vos périodes de maintenance de manière centralisée</li>
+              <li><strong>Gérer</strong> les maintenances pour vos services, KPIs et entités ITSI</li>
+              <li><strong>Automatiser</strong> les récurrences (hebdomadaires, mensuelles, spécifiques)</li>
+              <li><strong>Tracer</strong> toutes les modifications apportées aux maintenances</li>
+              <li><strong>Rechercher</strong> rapidement vos politiques de maintenance existantes</li>
+            </ul>
+            
+            <h3>Pourquoi utiliser OMNI ?</h3>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <h4>Interface intuitive</h4>
+                <p>Gestion simplifiée en quelques clics</p>
+              </div>
+              <div class="feature-card">
+                <h4>Flexibilité</h4>
+                <p>Planification simple ou avancée selon vos besoins</p>
+              </div>
+              <div class="feature-card">
+                <h4>Intégration native</h4>
+                <p>Compatible avec ITSI sans configuration complexe</p>
+              </div>
+              <div class="feature-card">
+                <h4>Traçabilité complète</h4>
+                <p>Historique détaillé de toutes les actions</p>
+              </div>
+              <div class="feature-card">
+                <h4>Gestion centralisée</h4>
+                <p>Un seul point d'entrée pour toutes vos maintenances</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Section 2: Fonctionnalités -->
+          <div class="doc-section" id="fonctionnalites">
+            <h2>2. Fonctionnalités principales</h2>
+            
+            <h3>1. Piloter en un point unique</h3>
+            <p>Gérez toutes vos maintenances depuis une interface unifiée qui couvre l'ensemble de votre Système d'Information.</p>
+            
+            <h3>2. Interface de gestion avancée</h3>
+            <p>Planifiez vos maintenances selon différents modes :</p>
+            <ul class="doc-list">
+              <li><strong>Date à date</strong> : Période spécifique avec début et fin</li>
+              <li><strong>Hebdomadaire</strong> : Récurrence sur des jours de la semaine</li>
+              <li><strong>Mensuel</strong> : Récurrence sur des jours du mois</li>
+              <li><strong>Spécifique</strong> : Premier/dernier lundi du mois, etc.</li>
+            </ul>
+            
+            <h3>3. Intégration transparente avec ITSI</h3>
+            <p>Mettez en maintenance vos :</p>
+            <ul class="doc-list">
+              <li><strong>Services</strong> ITSI</li>
+              <li><strong>KPIs</strong> (indicateurs de performance)</li>
+              <li><strong>Entités</strong> (serveurs, applications, etc.)</li>
+            </ul>
+            
+            <h3>4. Rapports et tableaux de bord dédiés</h3>
+            <p>Accédez à :</p>
+            <ul class="doc-list">
+              <li>Recherche avancée de maintenances</li>
+              <li>Consultation des historiques</li>
+              <li>Votre espace personnel</li>
+              <li>Statistiques et métriques</li>
+            </ul>
+          </div>
+          
+          <!-- Section 3: Accès -->
+          <div class="doc-section" id="acces">
+            <h2>3. Accès à l'application</h2>
+            
+            <h3>Page d'accueil</h3>
+            <p>Après connexion à Splunk, accédez à OMNI depuis le menu des applications.</p>
+            <p>La page d'accueil vous propose deux actions principales :</p>
+            <div class="highlight-box">
+              <p><strong>1. Ajouter une maintenance</strong> : Créer une nouvelle politique de maintenance</p>
+              <p><strong>2. Rechercher une maintenance</strong> : Trouver et consulter vos maintenances existantes</p>
+            </div>
+            
+            <h3>Menu de navigation</h3>
+            <p>L'application est organisée en sections :</p>
+            
+            <h4>Maintenance :</h4>
+            <ul class="doc-list">
+              <li>Search : Rechercher des maintenances</li>
+              <li>Add : Ajouter une nouvelle maintenance</li>
+              <li>Target : Voir la portée d'une maintenance</li>
+            </ul>
+            
+            <h4>Profil :</h4>
+            <ul class="doc-list">
+              <li>My Own Maintenance : Vos maintenances personnelles</li>
+              <li>Maintenance Logs : Historique des modifications</li>
+              <li>Dashboards : Tableaux de bord personnalisés</li>
+            </ul>
+          </div>
+          
+          <!-- Section 4: Gestion -->
+          <div class="doc-section" id="gestion">
+            <h2>4. Gestion des maintenances</h2>
+            
+            <h3>Ajouter une maintenance</h3>
+            <p>Le processus se déroule en <strong>4 étapes</strong> guidées :</p>
+            
+            <h4><span class="step-number">1</span>Sélection des Services</h4>
+            <p>Choisissez le type de sélection :</p>
+            <ul class="doc-list">
+              <li><strong>All</strong> : Tous les services</li>
+              <li><strong>List</strong> : Sélection multiple dans une liste</li>
+              <li><strong>Wildcard</strong> : Utilisation de motifs (ex: *prod*)</li>
+            </ul>
+            
+            <h4><span class="step-number">2</span>Sélection des KPIs</h4>
+            <p>Même principe que pour les services. Les KPIs affichés sont filtrés selon les services sélectionnés.</p>
+            
+            <h4><span class="step-number">3</span>Sélection des Entités</h4>
+            <p>Sélectionnez les entités concernées par la maintenance. Les entités sont également filtrées selon vos choix précédents.</p>
+            
+            <h4><span class="step-number">4</span>Configuration de la période</h4>
+            <p>Définissez la ou les périodes de maintenance :</p>
+            
+            <div class="highlight-box">
+              <h4>Date à date :</h4>
+              <ul class="doc-list">
+                <li>Date de début et heure de début</li>
+                <li>Date de fin et heure de fin</li>
+              </ul>
+            </div>
+            
+            <div class="highlight-box">
+              <h4>Hebdomadaire :</h4>
+              <ul class="doc-list">
+                <li>Jours de la semaine (ex: Lundi, Mercredi, Vendredi)</li>
+                <li>Heure de début et de fin</li>
+              </ul>
+            </div>
+            
+            <div class="highlight-box">
+              <h4>Mensuel :</h4>
+              <ul class="doc-list">
+                <li>Jours du mois (ex: 1, 15, 30)</li>
+                <li>Heure de début et de fin</li>
+              </ul>
+            </div>
+            
+            <div class="highlight-box">
+              <h4>Spécifique :</h4>
+              <ul class="doc-list">
+                <li>Premier/Deuxième/Troisième/Quatrième/Dernier du mois</li>
+                <li>Jour de la semaine</li>
+                <li>Heure de début et de fin</li>
+              </ul>
+            </div>
+            
+            <div class="info-box">
+              <strong>Astuce :</strong> Vous pouvez ajouter plusieurs périodes en cliquant sur le bouton d'ajout de période.
+            </div>
+            
+            <h4>Options finales</h4>
+            <ul class="doc-list">
+              <li><strong>Commentaire</strong> : Ajoutez un ticket de référence ou une description</li>
+              <li><strong>Email de notification</strong> : Recevez un récapitulatif par email</li>
+            </ul>
+            
+            <h3>Modifier une maintenance</h3>
+            <ol class="doc-list">
+              <li>Recherchez la maintenance à modifier</li>
+              <li>Cliquez sur l'icône "Modifier"</li>
+              <li>Suivez les mêmes étapes que pour la création</li>
+              <li>Validez les modifications</li>
+            </ol>
+            
+            <div class="warning-box">
+              <strong>Important :</strong> La modification crée une nouvelle version de la maintenance
+            </div>
+            
+            <h3>Supprimer une maintenance</h3>
+            <ol class="doc-list">
+              <li>Recherchez la maintenance à supprimer</li>
+              <li>Cliquez sur l'icône "Supprimer"</li>
+              <li>Confirmez la suppression</li>
+            </ol>
+            
+            <div class="info-box">
+              <strong>Note :</strong> La suppression est tracée et conservée dans l'historique
+            </div>
+          </div>
+          
+          <!-- Section 5: Recherche -->
+          <div class="doc-section" id="recherche">
+            <h2>5. Recherche et consultation</h2>
+            
+            <h3>Recherche simple</h3>
+            <p>Utilisez la barre de recherche comme un moteur de recherche classique :</p>
+            <ul class="doc-list">
+              <li>Tapez n'importe quel mot-clé (équipement, commentaire, auteur, ticket...)</li>
+              <li>Les résultats affichent toutes les maintenances correspondantes</li>
+            </ul>
+            
+            <div class="example-box">
+              <strong>Exemples de recherche :</strong><br/>
+              - SRVPROD01 : Trouve les maintenances mentionnant ce serveur<br/>
+              - R-287656 : Trouve les maintenances liées à ce ticket<br/>
+              - dupont maintenance : Combine plusieurs critères
+            </div>
+            
+            <h3>Filtre par date</h3>
+            <p>Utilisez le sélecteur de date pour voir les maintenances :</p>
+            <ul class="doc-list">
+              <li><strong>Actives</strong> à une date donnée (indicateur vert)</li>
+              <li><strong>Inactives</strong> à une date donnée (indicateur rouge)</li>
+            </ul>
+            <p>Cochez "Maintenance en cours" pour filtrer uniquement les maintenances actives.</p>
+            
+            <h3>Détails d'une maintenance</h3>
+            <p>Pour chaque maintenance trouvée, vous pouvez :</p>
+            <ul class="doc-list">
+              <li><strong>Voir les détails</strong> : Service, KPI, entités concernés</li>
+              <li><strong>Analyser la portée</strong> : Nombre d'éléments impactés</li>
+              <li><strong>Consulter les informations</strong> : Périodes, commentaires, auteur</li>
+              <li><strong>Accéder aux actions</strong> : Modifier, supprimer, voir l'historique</li>
+            </ul>
+            
+            <h3>Portée d'une maintenance</h3>
+            <p>Cliquez sur l'icône "Portée" pour visualiser :</p>
+            <ul class="doc-list">
+              <li>Nombre de services concernés</li>
+              <li>Nombre de KPIs impactés</li>
+              <li>Nombre d'entités en maintenance</li>
+              <li>Liste détaillée de chaque élément</li>
+            </ul>
+          </div>
+          
+          <!-- Section 6: Suivi -->
+          <div class="doc-section" id="suivi">
+            <h2>6. Suivi et traçabilité</h2>
+            
+            <h3>My Own Maintenance</h3>
+            <p>Votre espace personnel affiche :</p>
+            <ul class="doc-list">
+              <li><strong>Vos maintenances actives</strong></li>
+              <li><strong>Vos maintenances supprimées</strong></li>
+              <li><strong>Statistiques personnelles</strong></li>
+            </ul>
+            
+            <p>Informations affichées :</p>
+            <table class="doc-table">
+              <tr>
+                <th>Indicateur</th>
+                <th>Signification</th>
+              </tr>
+              <tr>
+                <td>Propriétaire</td>
+                <td>Vous avez créé la maintenance</td>
+              </tr>
+              <tr>
+                <td>Modificateur</td>
+                <td>Vous avez modifié la maintenance</td>
+              </tr>
+              <tr>
+                <td>Mise à jour externe</td>
+                <td>Un autre utilisateur l'a modifiée</td>
+              </tr>
+            </table>
+            
+            <h3>Maintenance Logs</h3>
+            <p>Consultez l'historique complet des modifications :</p>
+            <ul class="doc-list">
+              <li>Date et heure de l'action</li>
+              <li>Type d'action (Ajout, Modification, Suppression)</li>
+              <li>Auteur de l'action</li>
+              <li>Détails des changements</li>
+            </ul>
+            
+            <h4>Filtres disponibles :</h4>
+            <ul class="doc-list">
+              <li>Par service</li>
+              <li>Par KPI</li>
+              <li>Par entité</li>
+              <li>Par auteur</li>
+              <li>Par ID de maintenance</li>
+            </ul>
+            
+            <h4>Légende des actions :</h4>
+            <table class="doc-table">
+              <tr>
+                <th>Action</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td>Ajout</td>
+                <td>Nouvelle maintenance créée</td>
+              </tr>
+              <tr>
+                <td>Modification</td>
+                <td>Maintenance mise à jour</td>
+              </tr>
+              <tr>
+                <td>Obsolète</td>
+                <td>Ancienne version remplacée</td>
+              </tr>
+              <tr>
+                <td>Suppression</td>
+                <td>Maintenance supprimée</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Section 7: Bonnes pratiques -->
+          <div class="doc-section" id="bonnes-pratiques">
+            <h2>7. Bonnes pratiques</h2>
+            
+            <h3>Lors de la création</h3>
+            <div class="success-box">
+              <ol class="doc-list">
+                <li><strong>Soyez précis dans vos sélections</strong> : Évitez "All" si possible</li>
+                <li><strong>Ajoutez toujours un commentaire</strong> : Référence ticket, description claire</li>
+                <li><strong>Vérifiez les dates et heures</strong> : Attention aux fuseaux horaires</li>
+                <li><strong>Utilisez des wildcards intelligemment</strong> : *prod* plutôt que *</li>
+              </ol>
+            </div>
+            
+            <h3>Organisation</h3>
+            <div class="success-box">
+              <ol class="doc-list">
+                <li><strong>Convention de nommage</strong> : Établissez des standards d'équipe</li>
+                <li><strong>Commentaires structurés</strong> : Ticket + description courte</li>
+                <li><strong>Revue régulière</strong> : Nettoyez les maintenances obsolètes</li>
+                <li><strong>Documentation</strong> : Notez les maintenances récurrentes importantes</li>
+              </ol>
+            </div>
+            
+            <h3>Gestion des périodes</h3>
+            <div class="success-box">
+              <ol class="doc-list">
+                <li><strong>Préférez des périodes courtes et précises</strong> : Plus facile à gérer</li>
+                <li><strong>Utilisez les récurrences</strong> : Pour les maintenances planifiées</li>
+                <li><strong>Anticipez les chevauchements</strong> : Vérifiez les maintenances existantes</li>
+                <li><strong>Testez sur un périmètre réduit</strong> : Avant de généraliser</li>
+              </ol>
+            </div>
+            
+            <h3>Sécurité et traçabilité</h3>
+            <div class="success-box">
+              <ol class="doc-list">
+                <li><strong>Ne supprimez pas sans raison</strong> : Modifiez plutôt que supprimer</li>
+                <li><strong>Consultez l'historique</strong> : Avant toute modification importante</li>
+                <li><strong>Utilisez les notifications email</strong> : Pour les actions critiques</li>
+                <li><strong>Vérifiez la portée</strong> : Avant de valider</li>
+              </ol>
+            </div>
+          </div>
+          
+          <!-- Section 8: Support -->
+          <div class="doc-section" id="support">
+            <h2>8. Support</h2>
+            
+            <p>Pour toute question ou assistance :</p>
+            
+            <div class="highlight-box">
+              <h4>Email</h4>
+              <p><a href="mailto:observability@otchee.fr">observability@otchee.fr</a></p>
+            </div>
+            
+            <h3>Aide contextuelle</h3>
+            <p>Un assistant est disponible dans l'interface (icône d'aide) pour vous guider selon le contexte.</p>
+            
+            <h3>Version actuelle</h3>
+            <div class="info-box">
+              <p><strong>Version :</strong> 1.0.27</p>
+              <p>Pour connaître les nouveautés et améliorations, consultez les notes de version de l'application.</p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="doc-section" style="text-align: center; background: #f8f9fa;">
+            <p style="margin: 0; color: #666;">
+              Documentation OMNI - Application Splunk pour la gestion des maintenances ITSI
+            </p>
+            <p style="margin: 10px 0 0 0; color: #999; font-size: 14px;">
+              Copyright © Otchee - Tous droits réservés
+            </p>
+          </div>
+          
+        </div>
+      </html>
+    </panel>
+  </row>
 </dashboard>

@@ -51,8 +51,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 KPI: 5,
                 ENTITY_TYPE: 6,
                 ENTITY: 7,
-                COMMENTARY: 8,
-                VERSION: 9
+                DT_FILTER: 8,
+                COMMENTARY: 9,
+                VERSION: 10
             },
             WEEK_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
             MONTH_DAYS: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
@@ -696,12 +697,13 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var service_selected = TokenManager.get('service_selected');
                 var kpi_selected = TokenManager.get('kpi_selected');
                 var entity_selected = TokenManager.get('entity_selected');
-
+                var dt_filterToken = TokenManager.get('dt_filter_selected');
                 var selectionDescHtml = `
                     <table id="selection_desc_table" width="100%">
                         <tr><td>Service(s)</td><td width=100/><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
                         <tr><td>Kpi(s)</td><td width=100/><td>${TextTransformer.toVisualTags(kpi_selected)}</td></tr>
                         <tr><td>Entity(s)</td><td width=100/><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
+                        <tr><td>Custom filter(s)</td><td width=100/><td>${TextTransformer.toVisualTags(dt_filterToken)}</td></tr>
                     </table>
                 `;
 
@@ -721,7 +723,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         service=mvjoin(service,";"),
                         kpi=mvjoin(kpi,";"),
                         entity=mvjoin(entity,";")
-                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,commentary,version`;
+                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,commentary,version`;
             },
 
             createAdd(arr) {
@@ -744,6 +746,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     | eval service=split("${arr['service']},";"),
                         kpi=split("${arr['kpi']}",";"),
                         entity=split("${arr['entity']}",";"),
+                        dt_filter="${arr['dt_filter']}",
                         downtime=split("${arr['downtimeFields']}",","),
                         creator="${arr['username']}",
                         commentary="${arr['commentary']}",
@@ -771,6 +774,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
                     var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
                     var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
+                    var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
                     var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
                     var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
                     var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
@@ -783,7 +787,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     DataManager.setTypeTokens('service', service, service_type, dashboardType);
                     DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
                     DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
-
+                    TokenManager.set('dt_filter', dt_filter);
                     if (dashboardType == "update") {
                         DataManager.updatePeriods(downtime, commentary);
                         TokenManager.set('update_full_loading', 1);
@@ -882,6 +886,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected');
                 selected['downtimeFields'] = [];
                 
                 // Version
@@ -929,6 +934,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected');
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 
                 return [selected, 0, ''];
@@ -1039,8 +1045,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var serviceToken = TokenManager.get('service_type');
                 var kpiToken = TokenManager.get('kpi_type');
                 var entityToken = TokenManager.get('entity_type');
-                
-                if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken)) {
+                var dt_filterToken = TokenManager.get('dt_filter_type');
+                if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken) && Utils.isNotNull(dt_filterToken)) {
                     return serviceToken.toString() + kpiToken.toString() + entityToken.toString();
                 }
                 
