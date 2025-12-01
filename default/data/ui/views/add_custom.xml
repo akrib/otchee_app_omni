@@ -199,7 +199,7 @@
  field_close_parenthesis_2=if("$field_operator_2$"="isnull()" OR "$field_operator_2$"="isnotnull()",")",""),
  export=not_1+if(len(not_1)=0,""," ")+field_name_1+field_operator_1+value_quote_1+field_value_1+value_quote_1+field_close_parenthesis_1+if(coalesce("$field_sup$","")="1"," "+operator+" "+not_2+if(len(not_1)=0,""," ")+field_name_2+field_operator_2+value_quote_2+field_value_2+value_quote_2+field_close_parenthesis_2,"")
  | eval is_valid=if(match(export, "^(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\))(?:\\s+(?:AND|OR)\\s+(?:NOT\\s+)?[a-zA-Z_][a-zA-Z0-9_]*(?:\\s*(?:=|!=|&lt;=|&gt;=|&lt;|&gt;|LIKE)\\s*(?:\"[^\"]*\"|[a-zA-Z_][a-zA-Z0-9_]*|\\d+(?:\\.\\d+)?)|isnull\\(\\)|isnotnull\\(\\)))?$") OR len(export)=0, "Valide", "Invalide")
-|table export, is_valid, priority</query>
+|table export, is_valid</query>
           <earliest>$earliest$</earliest>
           <latest>$latest$</latest>
     <done>
