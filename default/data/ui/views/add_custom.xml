@@ -47,7 +47,8 @@
       <html>
        <div id="step_control_wizard_holder"/>
            <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="dt_filter_selected"/> 
-           <p id="swc_step_1" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
+           <p id="swc_step_1" data-label="Pattern" data-validateToken="dt_pattern" data-showNextButton="false"/>   
+           <p id="swc_step_2" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>     
            <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
         <div id="step-control-wizard"/>
         </html>
@@ -88,8 +89,7 @@
         <default></default>
       </input>
       <input type="dropdown" token="field_type_1" id="field_select_1_1">
-        <label>Operateur</label>
-        <choice value="other_field">un autre champ</choice>
+        <label>Type de valeur du champ</label>
         <choice value="string">string</choice>
         <choice value="number">number</choice>
         <default>string</default>
@@ -103,13 +103,16 @@
         <label>Operateur</label>
         <default>=</default>
         <initialValue>=</initialValue>
-        <fieldForLabel>filter</fieldForLabel>
-        <fieldForValue>filter</fieldForValue>
+        <fieldForLabel>label</fieldForLabel>
+        <fieldForValue>value</fieldForValue>
         <search>
           <query>
 | makeresults 
-| eval filter=split(case("$field_type_1$"="other_field","=,!=", "$field_type_1$"="string","=,!=,inull(),isnotnul(), LIKE ","$field_type_1$"="number","=,!=,&lt;=,&gt;=,&lt;,&gt;,isnull(),isnotnull()",true(),"="),",")
-| stats count as _c by filter</query>
+| eval filter=split(case("$field_type_1$"="string","Egal à#=#0,Différent de#!=#1,Est vide#inull()#2,N'est pas vide#isnotnul()#3,Contient# LIKE #4,Commence par# LIKE ```commence```#5,Fini par# LIKE ```fini```#6","$field_type_1$"="number","Egal à#=#0,Différent de#!=#1,Plus petit ou égal à#&lt;=#2,Plus grand ou égal à#&gt;=#3,Plus petit que#&lt;#4,Plus grand que#&gt;#5,Est vide#inull()#6,N'est pas vide#isnotnul()#7",true(),"="),",")
+| stats count as _c by filter
+| eval filter=split(filter,"#"), label=mvindex(filter,0), value=mvindex(filter,1), order=mvindex(filter,2)
+| sort order
+</query>
         </search>
       </input>
       <input type="text" token="field_value_1" id="field_value_1">
@@ -140,7 +143,7 @@
         <default></default>
       </input>
       <input type="dropdown" token="field_type_2" id="field_select_2_1">
-        <label>Operateur</label>
+        <label>Type de valeur du champ</label>
         <choice value="other_field">un autre champ</choice>
         <choice value="string">string</choice>
         <choice value="number">number</choice>
@@ -155,13 +158,16 @@
         <label>Operateur</label>
         <default>=</default>
         <initialValue>=</initialValue>
-        <fieldForLabel>filter</fieldForLabel>
-        <fieldForValue>filter</fieldForValue>
+        <fieldForLabel>label</fieldForLabel>
+        <fieldForValue>value</fieldForValue>
         <search>
           <query>
 | makeresults 
-| eval filter=split(case("$field_type_2$"="other_field","=,!=", "$field_type_2$"="string","=,!=,inull(),isnotnul(), LIKE ","$field_type_2$"="number","=,!=,&lt;=,&gt;=,&lt;,&gt;,isnull(),isnotnull()",true(),"="),",")
-| stats count as _c by filter</query>
+| eval filter=split(case("$field_type_2$"="string","Egal à#=#0,Différent de#!=#1,Est vide#inull()#2,N'est pas vide#isnotnul()#3,Contient# LIKE #4,Commence par# LIKE ```commence```#5,Fini par# LIKE ```fini```#6","$field_type_2$"="number","Egal à#=#0,Différent de#!=#1,Plus petit ou égal à#&lt;=#2,Plus grand ou égal à#&gt;=#3,Plus petit que#&lt;#4,Plus grand que#&gt;#5,Est vide#inull()#6,N'est pas vide#isnotnul()#7",true(),"="),",")
+| stats count as _c by filter
+| eval filter=split(filter,"#"), label=mvindex(filter,0), value=mvindex(filter,1), order=mvindex(filter,2)
+| sort order
+</query>
         </search>
       </input>
       <input type="text" token="field_value_2">
@@ -211,6 +217,50 @@
   </row>
   <row depends="$step_1$">
     <panel>
+      <input type="dropdown" token="pattern_type">
+        <label>pattern type</label>
+        <choice value="exist">pattern existant</choice>
+        <choice value="new">Nouveau pattern</choice>
+        <change>
+          <condition match="$pattern_type$=&quot;exist&quot;">
+            <set token="pattern_exist">1</set>
+            <unset token="pattern_new"></unset>
+            <unset token="dt_pattern_selected"></unset>
+            <unset token="dt_patern_select"></unset>
+            <unset token="dt_pattern_text"></unset>
+          </condition>
+          <condition match="$pattern_type$=&quot;new&quot;">
+            <set token="pattern_new">1</set>
+            <unset token="pattern_exist"></unset>
+            <unset token="dt_pattern"></unset>
+            <unset token="dt_patern_select"></unset>
+            <unset token="dt_pattern_text"></unset>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
+        <label>Downtime Pattern</label>
+        <change>
+          <set token="dt_pattern_selected">$dt_patern_select$</set>
+        </change>
+        <fieldForLabel>dt_pattern</fieldForLabel>
+        <fieldForValue>dt_pattern</fieldForValue>
+        <search>
+          <query>inputlookup omni_kv_def | stats count as _c by dt_pattern
+| appendpipe[ stats count | where count=0 | eval dt_pattern="-"|table dt_pattern]</query>
+        </search>
+      </input>
+      <input type="text" token="dt_pattern_text" depends="$pattern_new$">
+        <label>downtime pattern</label>
+        <default></default>
+        <change>
+          <set token="dt_pattern_selected">$dt_pattern_text$</set>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_2$">
+    <panel>
       <html>
         <center>
           <div id="downtime"/>
@@ -218,7 +268,7 @@
       </html>
     </panel>
   </row>
-  <row depends="$step_1$">
+  <row depends="$step_2$">
     <panel>
       <input type="checkbox" token="sendingEmail" id="input_user_email">
         <label></label>
