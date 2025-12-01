@@ -47,7 +47,7 @@
       <html>
        <div id="step_control_wizard_holder"/>
            <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="dt_filter_selected"/> 
-           <p id="swc_step_1" data-label="Pattern" data-validateToken="dt_pattern" data-showNextButton="false"/>   
+           <p id="swc_step_1" data-label="Pattern" data-validateToken="dt_pattern_selected" data-showNextButton="false"/>   
            <p id="swc_step_2" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>     
            <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
         <div id="step-control-wizard"/>
@@ -211,6 +211,8 @@
       </condition>
     </done>
         </search>
+        <option name="count">1</option>
+        <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
       </table>
     </panel>
