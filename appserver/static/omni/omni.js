@@ -762,31 +762,51 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return QueryBuilder.createQuery(arr, 'delete');
             },
 
-            createQuery(arr, action) {
-                var dt_update = new Date().getTime();
-                var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
-                
-                var baseQuery = `| stats count as service
-                    | eval service=split("${arr['service']}",";"),
-                        kpi=split("${arr['kpi']}",";"),
-                        entity=split("${arr['entity']}",";"),
-                        dt_filter="${arr['dt_filter']}",
-                        downtime=split("${arr['downtimeFields']}",","),
-                        creator="${arr['username']}",
-                        commentary="${arr['commentary']}",
-                        version="${arr['version']}",
-                        ID="${arr['ID']}",
-                        dt_update=${dt_update},
-                        step_opt="${arr['step_opt']}",
-                        status=split("${array_status}",",")`;
+createQuery(arr, action) {
+    var dt_update = new Date().getTime();
+    var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
+    
+    // Transformation des downtimeFields en objets JSON
+    var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
+        var parts = field.split('#');
+        return {
+            id: arr['ID'] + '_' + (index + 1),
+            dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
+            begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
+            end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
+            begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
+            end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
+            dt_filter: arr['dt_filter']
+        };
+    });
+    
+    // Conversion en chaîne JSON échappée pour SPL
+    var downtimeJsonString = JSON.stringify(downtimeJsonArray)
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"');
+    
+    var baseQuery = `| stats count as service
+        | eval service=split("${arr['service']}",";"),
+            kpi=split("${arr['kpi']}",";"),
+            entity=split("${arr['entity']}",";"),
+            dt_filter="${arr['dt_filter']}",
+            downtime="${downtimeJsonString}",
+            creator="${arr['username']}",
+            commentary="${arr['commentary']}",
+            version="${arr['version']}",
+            ID="${arr['ID']}",
+            dt_update=${dt_update},
+            step_opt="${arr['step_opt']}",
+            status=split("${array_status}",",")`;
 
-                if (action !== 'add') {
-                    baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
-                        | eval key="${arr['key']}",`);
-                }
-                Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
-                return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
-            }
+    if (action !== 'add') {
+        baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
+            | eval key="${arr['key']}",`);
+    }
+    
+    Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
+    return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
+}
         };
 
         // ==================== GESTION DES DONNÉES ====================
