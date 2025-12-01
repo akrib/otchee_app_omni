@@ -11,6 +11,7 @@ import datetime
 import json
 import os
 import sys
+import re
 
 sys.stdin.reconfigure(errors='ignore') # noqa python 3.7 and after
 
@@ -419,6 +420,84 @@ def parse_downtime_data(downtime_str):
         }
 
 
+def evaluate_filter(record, filter_expression, logger):
+    """
+    Évalue si un événement correspond à une expression de filtre
+    
+    Supporte les opérateurs: =, !=, <, >, <=, >=
+    Supporte les opérateurs logiques: AND, OR
+    
+    Args:
+        record: L'enregistrement Splunk
+        filter_expression: L'expression de filtre à évaluer
+        logger: Logger pour les erreurs
+        
+    Returns:
+        bool: True si le filtre correspond, False sinon
+    """
+    try:
+        # Si pas de filtre, on retourne True
+        if not filter_expression or filter_expression.strip() == '':
+            return True
+            
+        # Pattern pour trouver les comparaisons
+        pattern = r'(\w+)\s*(<=|>=|!=|=|<|>)\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[\d.]+)'
+        
+        def evaluate_comparison(match):
+            field_name = match.group(1)
+            operator = match.group(2)
+            expected_value = match.group(3).strip('"\'')
+            
+            # Récupérer la valeur du champ dans l'événement
+            actual_value = record.get(field_name, '')
+            
+            # Convertir en nombres si possible
+            try:
+                expected_num = float(expected_value)
+                actual_num = float(actual_value)
+                is_numeric = True
+            except (ValueError, TypeError):
+                is_numeric = False
+            
+            # Évaluer la comparaison
+            if is_numeric:
+                if operator == '=': return actual_num == expected_num
+                elif operator == '!=': return actual_num != expected_num
+                elif operator == '<': return actual_num < expected_num
+                elif operator == '>': return actual_num > expected_num
+                elif operator == '<=': return actual_num <= expected_num
+                elif operator == '>=': return actual_num >= expected_num
+            else:
+                actual_str = str(actual_value)
+                expected_str = str(expected_value)
+                if operator == '=': return actual_str == expected_str
+                elif operator == '!=': return actual_str != expected_str
+                elif operator == '<': return actual_str < expected_str
+                elif operator == '>': return actual_str > expected_str
+                elif operator == '<=': return actual_str <= expected_str
+                elif operator == '>=': return actual_str >= expected_str
+            
+            return False
+        
+        # Trouver toutes les comparaisons et les évaluer
+        comparisons = re.finditer(pattern, filter_expression)
+        result_expr = filter_expression
+        
+        for match in comparisons:
+            comparison_result = evaluate_comparison(match)
+            result_expr = result_expr.replace(match.group(0), str(comparison_result))
+        
+        # Remplacer AND et OR par leurs équivalents Python
+        result_expr = result_expr.replace(' AND ', ' and ').replace(' OR ', ' or ')
+        
+        # Évaluer l'expression booléenne finale
+        return eval(result_expr)
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'évaluation du filtre '{filter_expression}': {str(e)}")
+        return False  # En cas d'erreur, on considère que le filtre ne match pas
+
+
 @Configuration()
 class DLTDowntimeCalculationCommand(StreamingCommand):
     """ Check if a timeperiod is in downtime
@@ -608,32 +687,59 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                     modified_downtimes.append(downtime)
                     continue
                 
-                # Ajouter le résultat au total
-                record[outputfield] += current_downtime_result
+                # Variable pour stocker le résultat de l'évaluation du filtre
+                in_filter = 0
+                
+                # Si in_dt est à 1, on teste le filtre
+                if current_downtime_result == 1:
+                    self.logger.error("----------DowntimeCalculationCommand => in_dt=1, testing filter: %s", dt_filter)
+                    
+                    # Si pas de filtre défini, on considère que le filtre est validé
+                    if not dt_filter or dt_filter.strip() == '':
+                        in_filter = 1
+                        self.logger.error("----------DowntimeCalculationCommand => No filter defined, in_filter=1")
+                    else:
+                        # Évaluer le filtre
+                        filter_result = evaluate_filter(record, dt_filter, self.logger)
+                        in_filter = 1 if filter_result else 0
+                        self.logger.error("----------DowntimeCalculationCommand => Filter evaluation result: %s (in_filter=%d)", filter_result, in_filter)
+                else:
+                    # Si in_dt est à 0, on ne teste pas le filtre
+                    in_filter = 0
+                    self.logger.error("----------DowntimeCalculationCommand => in_dt=0, skipping filter test")
                 
                 # Modifier le downtime selon le format
                 if parsed_dt.get('format') == 'json':
-                    # Créer une copie du JSON original et ajouter le champ outputfield
+                    # Créer une copie du JSON original et ajouter les champs
                     downtime_with_result = parsed_dt['original_json'].copy()
                     downtime_with_result[outputfield] = current_downtime_result
+                    downtime_with_result['in_filter'] = in_filter
                     modified_downtimes.append(json.dumps(downtime_with_result))
                     
-                    # Si c'est le premier match trouvé, ajouter les infos au record
-                    if current_downtime_result > 0 and not found_match:
+                    # Si in_dt ET in_filter sont à 1, on a trouvé un match complet
+                    if current_downtime_result == 1 and in_filter == 1 and not found_match:
                         found_match = True
+                        record[outputfield] = 1
                         if dt_filter:
                             record['dt_filter'] = dt_filter
                         if dt_pattern:
                             record['dt_pattern'] = dt_pattern
                         if dt_id:
                             record['dt_id'] = dt_id
+                        self.logger.error("----------DowntimeCalculationCommand => MATCH FOUND! in_dt=1 AND in_filter=1")
+                        # On break car on a trouvé un match complet
+                        break
+                    else:
+                        # Si pas de match complet, on continue à chercher
+                        self.logger.error("----------DowntimeCalculationCommand => No complete match (in_dt=%d, in_filter=%d), continuing...", current_downtime_result, in_filter)
                 else:
                     # Format legacy - garder tel quel
+                    # Pour le legacy, on garde le comportement original (pas de test de filtre)
                     modified_downtimes.append(downtime)
-                
-                # Break si on a trouvé un match
-                if record[outputfield] > 0:
-                    break
+                    if current_downtime_result > 0 and not found_match:
+                        found_match = True
+                        record[outputfield] = 1
+                        break
             
             # Remplacer le champ dtfield par la version modifiée
             if len(modified_downtimes) == 1:
