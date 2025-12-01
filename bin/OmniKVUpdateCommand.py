@@ -1,277 +1,598 @@
 #!/usr/bin/env python
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
+# coding: utf-8
+"""
+OmniKVUpdateCommand - Custom Splunk command for managing downtime records in KVStore
+
+This command handles add, update, and delete operations for the omni_kv collection.
+Compatible with latest splunklib version.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 import sys
 import json
 import datetime
-import splunklib
-# applib = os.path.abspath(os.path.join(__file__, "..", "..", "lib"))
-# sys.path.append(applib)
 
-# splunkhome = os.environ["SPLUNK_HOME"]
-# sys.path.append(
-#     os.path.join(splunkhome, "etc", "apps", "otchee_app_omni", "lib")
-# )
-
-# import results
+import splunklib.client as client
 import splunklib.results as results
-from splunklib.searchcommands import (Configuration, Option, StreamingCommand, dispatch)  # noqa
+from splunklib.searchcommands import (
+    Configuration,
+    Option,
+    StreamingCommand,
+    dispatch,
+    validators
+)
 
-appname = "otchee_app_omni"
-collection = "omni_kv"
-lookup = "omni_kv"
-kvlog = "omni_kv_trace_log"
+# Application configuration
+APPNAME = "otchee_app_omni"
+COLLECTION = "omni_kv"
+LOOKUP = "omni_kv"
+KVLOG = "omni_kv_trace_log"
 
 
 class KVStoreClient:
-    def __init__(self, APPNAME, COLLECTION, LOOKUP, service):
-        self.APPNAME = APPNAME
-        self.COLLECTION = COLLECTION
-        self.LOOKUP = LOOKUP
+    """
+    Client pour interagir avec le KVStore de Splunk
+    Compatible avec les dernières versions de splunklib
+    """
+    
+    def __init__(self, app_name, collection_name, lookup_name, service):
+        """
+        Initialise le client KVStore
+        
+        Args:
+            app_name: Nom de l'application Splunk
+            collection_name: Nom de la collection KVStore
+            lookup_name: Nom du lookup
+            service: Instance du service Splunk
+        """
+        self.app_name = app_name
+        self.collection_name = collection_name
+        self.lookup_name = lookup_name
         self.service = service
-        self.path = "storage/collections/data/%s" % (self.COLLECTION)
+        self.path = f"storage/collections/data/{self.collection_name}"
         self.headers = [('content-type', 'application/json')]
 
-    def get_all(self, key=None):
-        rData = self.service.get(
-            self.path, 
-            # method="GET",
-            headers=self.headers,
-            owner='nobody',
-            app=self.APPNAME
-        )
-        rData = json.loads(rData['body'].read())
-
-        return rData
+    def get_all(self):
+        """
+        Récupère tous les enregistrements de la collection
+        
+        Returns:
+            list: Liste des enregistrements
+        """
+        try:
+            response = self.service.get(
+                self.path,
+                headers=self.headers,
+                owner='nobody',
+                app=self.app_name
+            )
+            return json.loads(response['body'].read())
+        except Exception as e:
+            raise Exception(f"Error getting all records: {str(e)}")
 
     def get_by_field(self, field, value):
+        """
+        Récupère les enregistrements par champ
+        
+        Args:
+            field: Nom du champ
+            value: Valeur à rechercher
+            
+        Returns:
+            list: Liste des enregistrements correspondants
+        """
         records = []
-        allByField = self.service.jobs.create(
-            "|inputlookup %s | search %s=%s" % (
-                self.LOOKUP, field, str(value)
-            ),
-            **{"exec_mode": "blocking"}
-        )
-        allByField = allByField.results(count=0,output_mode='json')
-        #for record in results.ResultsReader(allByField):
-        for record in results.JSONResultsReader(allByField):
-            if isinstance(record, dict):
-                records.append(record)
-            elif isinstance(record, results.Message):
-                print("Message: %s" % record)
-
+        try:
+            search_query = f"|inputlookup {self.lookup_name} | search {field}=\"{value}\""
+            job = self.service.jobs.create(
+                search_query,
+                **{"exec_mode": "blocking"}
+            )
+            
+            # Attendre que le job soit terminé
+            while not job.is_done():
+                pass
+            
+            # Récupérer les résultats
+            results_stream = job.results(count=0, output_mode='json')
+            reader = results.JSONResultsReader(results_stream)
+            
+            for record in reader:
+                if isinstance(record, dict):
+                    records.append(record)
+                elif isinstance(record, results.Message):
+                    # Log des messages si nécessaire
+                    pass
+                    
+            job.cancel()  # Nettoyer le job
+            
+        except Exception as e:
+            raise Exception(f"Error getting records by field {field}: {str(e)}")
+            
         return records
 
     def get_by_key(self, key):
-        allByKey = self.service.jobs.create(
-            "|inputlookup %s | rename _key AS key | search key=%s" % (
-                self.LOOKUP, key
-            ),
-            **{"exec_mode": "blocking"}
-        )
-        allByKey = allByKey.results(count=0,output_mode='json')
-
-        return next(record in results.JSONResultsReader(allByKey), None)
+        """
+        Récupère un enregistrement par sa clé
+        
+        Args:
+            key: Clé de l'enregistrement
+            
+        Returns:
+            dict: Enregistrement ou None
+        """
+        try:
+            search_query = f"|inputlookup {self.lookup_name} | rename _key AS key | search key=\"{key}\""
+            job = self.service.jobs.create(
+                search_query,
+                **{"exec_mode": "blocking"}
+            )
+            
+            while not job.is_done():
+                pass
+            
+            results_stream = job.results(count=0, output_mode='json')
+            reader = results.JSONResultsReader(results_stream)
+            
+            record = None
+            for result in reader:
+                if isinstance(result, dict):
+                    record = result
+                    break
+                    
+            job.cancel()
+            return record
+            
+        except Exception as e:
+            raise Exception(f"Error getting record by key {key}: {str(e)}")
 
     def delete_by_field(self, field, value):
+        """
+        Supprime les enregistrements par champ
+        
+        Args:
+            field: Nom du champ
+            value: Valeur à rechercher
+            
+        Returns:
+            list: Liste des enregistrements supprimés
+        """
         records = self.get_by_field(field, value)
-
+        
         for record in records:
-            self.delete_key(record['_key'])
-
+            if '_key' in record:
+                self.delete_key(record['_key'])
+                
         return records
 
     def delete_key(self, key):
-        deleted = self.service.delete(
-            self.path+'/'+key,
-            # headers=self.headers,
-            owner='nobody',
-            app=self.APPNAME
-        )
-        return deleted
+        """
+        Supprime un enregistrement par sa clé
+        
+        Args:
+            key: Clé de l'enregistrement
+            
+        Returns:
+            Response object
+        """
+        try:
+            deleted = self.service.delete(
+                f"{self.path}/{key}",
+                owner='nobody',
+                app=self.app_name
+            )
+            return deleted
+        except Exception as e:
+            raise Exception(f"Error deleting key {key}: {str(e)}")
 
     def add(self, content):
-        newKey = self.service.post(
-            self.path,
-            headers=self.headers,
-            owner='nobody',
-            app=self.APPNAME,
-            body=json.dumps(content)
-        )
-        return json.loads(newKey['body'].read())['_key']
+        """
+        Ajoute un nouvel enregistrement
+        
+        Args:
+            content: Dictionnaire contenant les données
+            
+        Returns:
+            str: Clé du nouvel enregistrement
+        """
+        try:
+            response = self.service.post(
+                self.path,
+                headers=self.headers,
+                owner='nobody',
+                app=self.app_name,
+                body=json.dumps(content)
+            )
+            return json.loads(response['body'].read())['_key']
+        except Exception as e:
+            raise Exception(f"Error adding record: {str(e)}")
 
     def update(self, key, content):
-        updated = self.service.post(
-            self.path + "/%s" % (key),
-            headers=self.headers,
-            owner='nobody',
-            app=self.APPNAME,
-            body=json.dumps(content)
-        )
-        return updated
+        """
+        Met à jour un enregistrement existant
+        
+        Args:
+            key: Clé de l'enregistrement
+            content: Dictionnaire contenant les nouvelles données
+            
+        Returns:
+            Response object
+        """
+        try:
+            updated = self.service.post(
+                f"{self.path}/{key}",
+                headers=self.headers,
+                owner='nobody',
+                app=self.app_name,
+                body=json.dumps(content)
+            )
+            return updated
+        except Exception as e:
+            raise Exception(f"Error updating key {key}: {str(e)}")
 
 
-def isNull(value):
-    if type(value) == type("string"):
-        return len(value) == 0
-    elif (value is None
-          or not bool(value)
-          or value == "0"
+def is_null(value):
+    """
+    Vérifie si une valeur est nulle ou vide
+    
+    Args:
+        value: Valeur à vérifier
+        
+    Returns:
+        bool: True si la valeur est nulle/vide
+    """
+    if isinstance(value, str):
+        return len(value.strip()) == 0
+    elif (value is None 
+          or value == 0 
+          or value == "0" 
           or value == "undefined"
-          ):
+          or (isinstance(value, bool) and not value)):
+        return True
+    return False
+
+
+def is_null_optional(value):
+    """
+    Vérifie si une valeur optionnelle est nulle (accepte les chaînes vides)
+    
+    Args:
+        value: Valeur à vérifier
+        
+    Returns:
+        bool: True si la valeur est None ou "undefined"
+    """
+    if value is None or value == "undefined":
         return True
     return False
 
 
 @Configuration()
-class omnikvupdate(StreamingCommand):
-    """ manage the DLTkv_store
-    ##Syntax
-    .. code-block::
-        | omnikvupdate
-            action=("add"|"update"|"delete") debug=(true|false)
-    .. code-block::
-        | table ID,client,site,host,hostgroup,host_criticity,downtime
-        | omnikvupdate action="add"
+class OmniKVUpdate(StreamingCommand):
     """
-
+    Commande personnalisée Splunk pour gérer le KVStore omni_kv
+    
+    Syntaxe:
+        | omnikvupdate action=("add"|"update"|"delete")
+    
+    Exemple:
+        | makeresults 
+        | eval service="web", kpi="availability", entity="server01"
+        | omnikvupdate action="add"
+    
+    Champs requis:
+        - action: Type d'action (add, update, delete)
+        - service: Service(s) concerné(s)
+        - kpi: KPI(s) concerné(s)
+        - entity: Entité(s) concernée(s)
+        - commentary: Commentaire
+        - creator: Créateur du downtime
+        - downtime: Configuration du downtime (JSON ou format legacy)
+        - dt_update: Timestamp de mise à jour
+        - ID: Identifiant unique
+        - version: Version du downtime
+        - step_opt: Options d'étape
+        - dt_filter: Filtre de downtime
+    
+    Champs optionnels:
+        - dt_pattern: Pattern de downtime (peut être vide)
+    """
+    
     action = Option(
         doc="""
         **Syntax:** **action=***("add"|"update"|"delete")*
-        **Description:** action type""",
+        **Description:** Type d'action à effectuer sur le KVStore
+        **Required:** True
+        """,
         require=True,
+        validate=validators.Set('add', 'update', 'delete')
     )
 
     def stream(self, records):
-        """ Computes sum(fieldname, 1, n) and stores the result in 'total' """
+        """
+        Traite chaque enregistrement et effectue l'action demandée
+        
+        Args:
+            records: Générateur d'enregistrements Splunk
+            
+        Yields:
+            dict: Enregistrement avec le résultat de l'opération
+        """
         for record in records:
-            result = str("")
+            result = ""
+            
             try:
                 result = "omnikvupdate: "
+                
                 if self.action == "add":
-                    error = 0
-                    errorOutput = ""
-                    add = ['service',
-                           'kpi',
-                           'entity',
-                           'commentary',
-                           'creator',
-                           'downtime',
-                           'dt_update',
-                           'ID',
-                           'version',
-                           'step_opt'
-                           ]
-                    for addField in add:
-                        if isNull(record[addField]):
-                            error += 1
-                            errorOutput += addField + " field is Null;"
-
+                    error, error_output = self._validate_add_fields(record)
+                    
                     if error == 0:
-                        result += str(self.add(record))
+                        result += self._add_record(record)
                     else:
-                        result = str("ERREUR: " + errorOutput)
-
+                        result = f"ERREUR: {error_output}"
+                        
                 elif self.action == "update":
-                    error = 0
-                    errorOutput = ""
-                    add = ['key',
-                           'service',
-                           'kpi',
-                           'entity',
-                           'commentary',
-                           'creator',
-                           'downtime',
-                           'dt_update',
-                           'ID',
-                           'version',
-                           'step_opt'
-                           ]
-                    for addField in add:
-                        if isNull(record[addField]):
-                            error += 1
-                            errorOutput += addField + " field is Null;"
-
+                    error, error_output = self._validate_update_fields(record)
+                    
                     if error == 0:
-                        result += str(self.update(record))
+                        result += self._update_record(record)
                     else:
-                        result = str("ERREUR: " + errorOutput)
-
+                        result = f"ERREUR: {error_output}"
+                        
                 elif self.action == "delete":
-                    error = 0
-                    errorOutput = ""
-                    if isNull(record['key']):
-                        error += 1
-                        errorOutput += "key field is Null;"
+                    error, error_output = self._validate_delete_fields(record)
+                    
                     if error == 0:
-                        result += str(self.delete(record))
+                        result += self._delete_record(record)
                     else:
-                        result = str("ERREUR: " + errorOutput)
+                        result = f"ERREUR: {error_output}"
                 else:
-                    result += str("Action incorecte, "
-                                  + " les actions possibles sont"
-                                  + " (en muniscule):"
-                                  + " add, update ou delete")
-            except ValueError:
-                result = str(" Erreur inconnue " + str(ValueError))
+                    result += ("Action incorrecte, les actions possibles sont "
+                              "(en minuscule): add, update ou delete")
+                              
+            except Exception as e:
+                result = f"Erreur inconnue: {str(e)}"
+                self.logger.error(f"Error in stream: {str(e)}")
+                
             record["result"] = str(result)
             yield record
 
-    def add(self, record):
-        try:
-            record["action"] = str("add")
-            kv = KVStoreClient(appname, collection, lookup, self.service)
-            kv.add(record)
-            trace_log = KVStoreClient(appname, kvlog, kvlog, self.service)
-            #record["action"] = str("add")
-            trace_log.add(record)
-            return str(" Ajout OK")
-        except ValueError:
-            return str(" Ajout interrompu " + str(ValueError))
+    def _validate_add_fields(self, record):
+        """
+        Valide les champs requis pour l'ajout
+        
+        Args:
+            record: Enregistrement à valider
             
-    def update(self, record):
+        Returns:
+            tuple: (nombre d'erreurs, message d'erreur)
+        """
+        error = 0
+        error_output = ""
+        
+        # Champs obligatoires
+        required_fields = [
+            'service',
+            'kpi',
+            'entity',
+            'commentary',
+            'creator',
+            'downtime',
+            'dt_update',
+            'ID',
+            'version',
+            'step_opt',
+            'dt_filter'
+        ]
+        
+        # Champs optionnels (peuvent être vides mais doivent exister)
+        optional_fields = ['dt_pattern']
+        
+        # Validation des champs obligatoires
+        for field in required_fields:
+            if field not in record or is_null(record[field]):
+                error += 1
+                error_output += f"{field} field is Null or missing; "
+        
+        # Ajout des champs optionnels s'ils n'existent pas
+        for field in optional_fields:
+            if field not in record:
+                record[field] = ''  # Valeur par défaut
+            elif is_null_optional(record[field]):
+                record[field] = ''  # Normaliser les valeurs null
+                
+        return error, error_output
+
+    def _validate_update_fields(self, record):
+        """
+        Valide les champs requis pour la mise à jour
+        
+        Args:
+            record: Enregistrement à valider
+            
+        Returns:
+            tuple: (nombre d'erreurs, message d'erreur)
+        """
+        error = 0
+        error_output = ""
+        
+        # Champs obligatoires (inclut 'key' pour l'update)
+        required_fields = [
+            'key',
+            'service',
+            'kpi',
+            'entity',
+            'commentary',
+            'creator',
+            'downtime',
+            'dt_update',
+            'ID',
+            'version',
+            'step_opt',
+            'dt_filter'
+        ]
+        
+        # Champs optionnels
+        optional_fields = ['dt_pattern']
+        
+        # Validation des champs obligatoires
+        for field in required_fields:
+            if field not in record or is_null(record[field]):
+                error += 1
+                error_output += f"{field} field is Null or missing; "
+        
+        # Ajout des champs optionnels s'ils n'existent pas
+        for field in optional_fields:
+            if field not in record:
+                record[field] = ''
+            elif is_null_optional(record[field]):
+                record[field] = ''
+                
+        return error, error_output
+
+    def _validate_delete_fields(self, record):
+        """
+        Valide les champs requis pour la suppression
+        
+        Args:
+            record: Enregistrement à valider
+            
+        Returns:
+            tuple: (nombre d'erreurs, message d'erreur)
+        """
+        error = 0
+        error_output = ""
+        
+        if 'key' not in record or is_null(record['key']):
+            error += 1
+            error_output += "key field is Null or missing; "
+            
+        return error, error_output
+
+    def _add_record(self, record):
+        """
+        Ajoute un nouvel enregistrement dans le KVStore
+        
+        Args:
+            record: Enregistrement à ajouter
+            
+        Returns:
+            str: Message de confirmation
+        """
         try:
-            kv = KVStoreClient(appname, collection, lookup, self.service)
-            kv.update(record["key"], record)
-            trace_log = KVStoreClient(appname, kvlog, kvlog, self.service)
-            record["action"] = str("update")
+            # Ajouter dans la collection principale
+            kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
+            new_key = kv.add(record)
+            
+            # Ajouter dans le log de traçabilité
+            trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
+            record["action"] = "add"
+            record["trace_timestamp"] = datetime.datetime.now().isoformat()
             trace_log.add(record)
-            record["action"] = str("obsolete")
-            record["downtime"] = str("between_date#"
-                                     +str(datetime.date.today())
-                                     +"#"
-                                     +str(datetime.date.today())
-                                     +"#00:00:00#00:00:00")
-            record["version"] = int(record["version"]) - 1
-            record["version"]
+            
+            self.logger.info(f"Record added successfully with key: {new_key}")
+            return f"Ajout OK (key: {new_key})"
+            
+        except Exception as e:
+            error_msg = f"Ajout interrompu: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg
 
-            trace_log.add(record)
-            return str(" Mise a jour OK")
-        except ValueError:
-            return str(" Mise a jour interrompue " + str(ValueError))
-
-    def delete(self, record):
+    def _update_record(self, record):
+        """
+        Met à jour un enregistrement existant dans le KVStore
+        
+        Args:
+            record: Enregistrement à mettre à jour
+            
+        Returns:
+            str: Message de confirmation
+        """
         try:
-            kv = KVStoreClient(appname, collection, lookup, self.service)
-            kv.delete_key(record["key"])
-            trace_log = KVStoreClient(appname, kvlog, kvlog, self.service)
-            record["action"] = str("delete")
-            record["version"] = 99999
-            record["creator"] = self._metadata.searchinfo.username
-            # record["downtime"] = str("between_date#"
-            #                          +str(datetime.date.today())
-            #                          +"#"
-            #                          +str(datetime.date.today())
-            #                          +"#00:00:00#00:00:00")
-            trace_log.add(record)
-            return str(" Suppression OK")
-        except ValueError:
-            return str(" Suppression interrompue " + str(ValueError))
+            key = record["key"]
+            
+            # Mise à jour dans la collection principale
+            kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
+            kv.update(key, record)
+            
+            # Traçabilité - Enregistrement de la mise à jour
+            trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
+            
+            # Log de l'action update
+            trace_record = record.copy()
+            trace_record["action"] = "update"
+            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+            trace_log.add(trace_record)
+            
+            # Log de l'ancienne version (obsolète)
+            obsolete_record = record.copy()
+            obsolete_record["action"] = "obsolete"
+            obsolete_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+            obsolete_record["downtime"] = (
+                f"between_date#{datetime.date.today()}#"
+                f"{datetime.date.today()}#00:00:00#00:00:00"
+            )
+            
+            # Décrémenter la version pour l'obsolète
+            try:
+                obsolete_record["version"] = int(record["version"]) - 1
+            except (ValueError, KeyError):
+                obsolete_record["version"] = 0
+                
+            trace_log.add(obsolete_record)
+            
+            self.logger.info(f"Record updated successfully with key: {key}")
+            return f"Mise à jour OK (key: {key})"
+            
+        except Exception as e:
+            error_msg = f"Mise à jour interrompue: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg
+
+    def _delete_record(self, record):
+        """
+        Supprime un enregistrement du KVStore
+        
+        Args:
+            record: Enregistrement à supprimer
+            
+        Returns:
+            str: Message de confirmation
+        """
+        try:
+            key = record["key"]
+            
+            # Suppression de la collection principale
+            kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
+            kv.delete_key(key)
+            
+            # Traçabilité - Enregistrement de la suppression
+            trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
+            trace_record = record.copy()
+            trace_record["action"] = "delete"
+            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+            trace_record["version"] = 99999
+            
+            # Récupérer le nom d'utilisateur depuis les métadonnées
+            try:
+                trace_record["creator"] = self._metadata.searchinfo.username
+            except AttributeError:
+                # Fallback si les métadonnées ne sont pas disponibles
+                pass
+                
+            trace_log.add(trace_record)
+            
+            self.logger.info(f"Record deleted successfully with key: {key}")
+            return f"Suppression OK (key: {key})"
+            
+        except Exception as e:
+            error_msg = f"Suppression interrompue: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg
 
 
-dispatch(omnikvupdate, sys.argv, sys.stdin, sys.stdout, __name__)
+# Point d'entrée de la commande
+dispatch(OmniKVUpdate, sys.argv, sys.stdin, sys.stdout, __name__)
