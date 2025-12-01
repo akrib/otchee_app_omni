@@ -89,7 +89,7 @@
         <default></default>
       </input>
       <input type="dropdown" token="field_type_1" id="field_select_1_1">
-        <label>Type de valeur du champ</label>
+        <label>Type de champ</label>
         <choice value="string">string</choice>
         <choice value="number">number</choice>
         <default>string</default>
@@ -143,7 +143,7 @@
         <default></default>
       </input>
       <input type="dropdown" token="field_type_2" id="field_select_2_1">
-        <label>Type de valeur du champ</label>
+        <label>Type de champ</label>
         <choice value="other_field">un autre champ</choice>
         <choice value="string">string</choice>
         <choice value="number">number</choice>
