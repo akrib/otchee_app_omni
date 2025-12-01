@@ -8,14 +8,11 @@ from __future__ import (
 ) # noqa
 
 import datetime
+import json
 import os
 import sys
 
 sys.stdin.reconfigure(errors='ignore') # noqa python 3.7 and after
-# applib = os.path.abspath(os.path.join(__file__, "..", "..", "lib")) # noqa
-# sys.path.append(applib) # noqa
-# splunkhome = os.environ["SPLUNK_HOME"] # noqa
-# sys.path.append(os.path.join(splunkhome, "etc", "apps", "searchcommands_app", "lib"))# noqa
 
 from splunklib.searchcommands import (
     Configuration,
@@ -25,8 +22,6 @@ from splunklib.searchcommands import (
     validators
 )  # noqa
 
-# import locale
-# locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 import locale
 try:
     locale.setlocale(locale.LC_ALL, '')
@@ -372,6 +367,58 @@ def downtime_date_last_in_month(
     return in_downtime
 
 
+def parse_downtime_data(downtime_str):
+    """
+    Parse le downtime qu'il soit au format legacy (# separé) ou JSON
+    
+    Args:
+        downtime_str: String contenant soit le format legacy soit un JSON
+        
+    Returns:
+        dict: Dictionnaire avec les clés dt_type, begin_date, end_date, begin_time, end_time, dt_filter, dt_pattern, id
+    """
+    try:
+        # Tentative de parsing JSON
+        downtime_json = json.loads(downtime_str)
+        
+        # Format JSON détecté
+        return {
+            'id': downtime_json.get('id', ''),
+            'dt_type': downtime_json.get('dt_type', ''),
+            'begin_date': downtime_json.get('begin_date', ''),
+            'end_date': downtime_json.get('end_date', ''),
+            'begin_time': downtime_json.get('begin_time', ''),
+            'end_time': downtime_json.get('end_time', ''),
+            'dt_filter': downtime_json.get('dt_filter', ''),
+            'dt_pattern': downtime_json.get('dt_pattern', ''),
+            'format': 'json',
+            'original_json': downtime_json,
+            'original_str': downtime_str
+        }
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Format legacy avec séparateur #
+        data_downtime = downtime_str.split('#')
+        
+        if len(data_downtime) != 5:
+            return {
+                'error': f"-999 : Invalid format, expected 5 parts, got {len(data_downtime)}",
+                'format': 'error'
+            }
+        
+        return {
+            'id': '',
+            'dt_type': data_downtime[0],
+            'begin_date': data_downtime[1],
+            'end_date': data_downtime[2],
+            'begin_time': data_downtime[3],
+            'end_time': data_downtime[4],
+            'dt_filter': '',
+            'dt_pattern': '',
+            'format': 'legacy',
+            'original_str': downtime_str
+        }
+
+
 @Configuration()
 class DLTDowntimeCalculationCommand(StreamingCommand):
     """ Check if a timeperiod is in downtime
@@ -413,72 +460,78 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
         require=True,
         validate=validators.Fieldname(),
     )
-    # @Configuration()
-    def stream(self, records):
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.argv: %s", sys.argv)
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.stdin.encoding: %s", sys.stdin.encoding)
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.stdout.encoding: %s", sys.stdout.encoding)
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.stdout.isatty(): %s", sys.stdout.isatty())
-        # self.logger.error("----------DowntimeCalculationCommand: => locale.getpreferredencoding(): %s", locale.getpreferredencoding())
-        # self.logger.error("----------DowntimeCalculationCommand: => locale.getdefaultlocale(): %s", locale.getdefaultlocale())
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.getfilesystemencoding(): %s", sys.getfilesystemencoding())
-        # self.logger.error("----------DowntimeCalculationCommand: => os.environ[\"PYTHONIOENCODING\"]: %s", os.environ["PYTHONIOENCODING"])
-        # self.logger.error("----------DowntimeCalculationCommand: => sys.version_info.major: %s", sys.version_info.major)
-        # self.logger.error("----------DownDowntimeCalculationCommandtimeCalculation => epoctime Field name: %s", self.epoctime)
-        # self.logger.error("----------DowntimeCalculationCommand => downtime Field name: %s", self.dtfield)
-        # self.logger.error("----------DowntimeCalculationCommand => output Field name: %s", self.outputfield)
-        # self.logger.error("----------DowntimeCalculationCommand => records: %s", str(records))
 
+    def stream(self, records):
         epoctime = str(self.epoctime).rstrip()
         dtfield = str(self.dtfield).rstrip()
         outputfield = str(self.outputfield).rstrip()
 
-        # if dtfield not in records.keys():
-
         for record in records:
             record[outputfield] = 0
+            
             if (record[dtfield] == ""
                 or record[dtfield] is None
                 or record[dtfield] == 0
                 or record[dtfield] == "0"
-            ):  # nopep8
-
+            ):
                 yield record
                 continue
+                
             try:
                 event_time = int(float(record[epoctime]))
             except ValueError:
                 event_time = 0
+                
             self.logger.error("----------DowntimeCalculationCommand => event Value: %s", datetime.datetime.fromtimestamp(event_time))
             self.logger.error("----------DowntimeCalculationCommand => epoctime Value: %s", record[epoctime])
+            
             if(type(record[dtfield]) is not list):
                 downtime_field = [record[dtfield]]
             else:
                 downtime_field = record[dtfield]
+                
             self.logger.error("----------DowntimeCalculationCommand => downtime_field: %s", record[dtfield])
+            
+            # Liste pour stocker les downtimes modifiés
+            modified_downtimes = []
+            found_match = False
+            
             for downtime in downtime_field:
-                data_downtime = None
                 if (
                     len(downtime) == 0
                     or downtime is None
                     or downtime == 0
                     or downtime == "0"
                 ):
-                    yield record
+                    # Ajouter tel quel si vide
+                    modified_downtimes.append(downtime)
                     continue
                 
-                data_downtime = downtime.split('#')
-                if len(data_downtime) != 5:
-                    record["DT_ERROR"] = str("-999 : len(data_downtime) !=5 : value=" + str(len(data_downtime)))  # nopep8
+                # Parse le downtime (JSON ou legacy)
+                parsed_dt = parse_downtime_data(downtime)
+                
+                # Gestion des erreurs de parsing
+                if parsed_dt.get('format') == 'error':
+                    record["DT_ERROR"] = parsed_dt.get('error')
+                    modified_downtimes.append(downtime)
                     continue
-                downtime_type = data_downtime[0]
-                begin_dt_days = data_downtime[1]
-                end_dt_days = data_downtime[2]
-                begin_dt_hours = data_downtime[3]
-                end_dt_hours = data_downtime[4]
+                
+                # Extraction des données parsées
+                downtime_type = parsed_dt['dt_type']
+                begin_dt_days = parsed_dt['begin_date']
+                end_dt_days = parsed_dt['end_date']
+                begin_dt_hours = parsed_dt['begin_time']
+                end_dt_hours = parsed_dt['end_time']
+                dt_filter = parsed_dt['dt_filter']
+                dt_pattern = parsed_dt['dt_pattern']
+                dt_id = parsed_dt['id']
+                
+                # Variable pour stocker le résultat du test de downtime actuel
+                current_downtime_result = 0
 
+                # Calcul du downtime selon le type
                 if downtime_type == "weekly":
-                    record[outputfield] += int(downtime_weekly(
+                    current_downtime_result = int(downtime_weekly(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -492,7 +545,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                     self.logger.error("----------DowntimeCalculationCommand => begin_dt_hours: %s", begin_dt_hours)
                     self.logger.error("----------DowntimeCalculationCommand => end_dt_days: %s", end_dt_days)
                     self.logger.error("----------DowntimeCalculationCommand => end_dt_hours: %s", end_dt_hours)
-                    record[outputfield] += int(downtime_between_days(
+                    current_downtime_result = int(downtime_between_days(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -500,7 +553,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "monthly":
-                    record[outputfield] += int(downtime_monthly(
+                    current_downtime_result = int(downtime_monthly(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -508,7 +561,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "special_date_first_in_month":
-                    record[outputfield] += int(downtime_date_first_in_month(
+                    current_downtime_result = int(downtime_date_first_in_month(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -516,7 +569,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "special_date_second_in_month":
-                    record[outputfield] += int(downtime_date_second_in_month(
+                    current_downtime_result = int(downtime_date_second_in_month(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -524,7 +577,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "special_date_third_in_month":
-                    record[outputfield] += int(downtime_date_third_in_month(
+                    current_downtime_result = int(downtime_date_third_in_month(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -532,7 +585,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "special_date_fourth_in_month":
-                    record[outputfield] += int(downtime_date_fourth_in_month(
+                    current_downtime_result = int(downtime_date_fourth_in_month(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -540,7 +593,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         end_dt_hours,
                     ))
                 elif downtime_type == "special_date_last_in_month":
-                    record[outputfield] += int(downtime_date_last_in_month(
+                    current_downtime_result = int(downtime_date_last_in_month(
                         event_time,
                         begin_dt_days,
                         begin_dt_hours,
@@ -552,7 +605,42 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         "-999 : downtime_type not in the list : value = "
                         + str(downtime_type)
                     )
+                    modified_downtimes.append(downtime)
+                    continue
+                
+                # Ajouter le résultat au total
+                record[outputfield] += current_downtime_result
+                
+                # Modifier le downtime selon le format
+                if parsed_dt.get('format') == 'json':
+                    # Créer une copie du JSON original et ajouter le champ outputfield
+                    downtime_with_result = parsed_dt['original_json'].copy()
+                    downtime_with_result[outputfield] = current_downtime_result
+                    modified_downtimes.append(json.dumps(downtime_with_result))
+                    
+                    # Si c'est le premier match trouvé, ajouter les infos au record
+                    if current_downtime_result > 0 and not found_match:
+                        found_match = True
+                        if dt_filter:
+                            record['dt_filter'] = dt_filter
+                        if dt_pattern:
+                            record['dt_pattern'] = dt_pattern
+                        if dt_id:
+                            record['dt_id'] = dt_id
+                else:
+                    # Format legacy - garder tel quel
+                    modified_downtimes.append(downtime)
+                
+                # Break si on a trouvé un match
                 if record[outputfield] > 0:
                     break
+            
+            # Remplacer le champ dtfield par la version modifiée
+            if len(modified_downtimes) == 1:
+                record[dtfield] = modified_downtimes[0]
+            elif len(modified_downtimes) > 1:
+                record[dtfield] = modified_downtimes
+                    
             yield record
+
 dispatch(DLTDowntimeCalculationCommand,  sys.argv, sys.stdin, sys.stdout, __name__)
