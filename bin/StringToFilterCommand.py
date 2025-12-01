@@ -34,7 +34,8 @@ class StringToFilterCommand(StreamingCommand):
     
     filter_field = Option(
         doc='''Nom du champ dont la valeur sera utilisée comme filtre pour afficher ou non l'événement''',
-        require=True
+        require=True,
+        validate=validators.Fieldname()
     )
     
     def stream(self, records):
@@ -43,35 +44,28 @@ class StringToFilterCommand(StreamingCommand):
         """
         try:
             for record in records:
-                # Récupérer la valeur du champ filter_field
                 filter_value = record.get(self.filter_field, '')
                 
-                # Si le champ existe et n'est pas vide, on l'utilise comme filtre
                 if filter_value:
                     try:
-                        # Parser la valeur du champ comme une expression de filtre
                         parsed_filter = self.parse_filter_string(str(filter_value))
                         
-                        # Ajouter les champs de transformation
                         record['_original_filter_string'] = str(filter_value)
                         record['_transformed_filter'] = parsed_filter
                         record['_spl_query'] = f'| where {parsed_filter}'
                         
-                        # Évaluer si l'événement correspond au filtre
                         if self.evaluate_filter(record, parsed_filter):
                             record['_filter_matched'] = 'true'
                             yield record
                         else:
-                            # L'événement ne correspond pas au filtre, on ne le retourne pas
                             record['_filter_matched'] = 'false'
                             continue
                     except Exception as e:
-                        # En cas d'erreur de parsing, on garde l'événement mais on log l'erreur
                         record['_filter_error'] = str(e)
                         record['_filter_matched'] = 'error'
+                        self.logger.error(f"Erreur lors du parsing du filtre: {str(e)}")
                         yield record
                 else:
-                    # Si le champ filter_field n'existe pas ou est vide, on retourne l'événement
                     record['_filter_matched'] = 'no_filter_value'
                     yield record
                     
@@ -87,10 +81,15 @@ class StringToFilterCommand(StreamingCommand):
         
         Supporte les opérateurs: =, !=, <, >, <=, >=
         Supporte les opérateurs logiques: AND, OR
+        
+        Args:
+            record: L'enregistrement Splunk
+            filter_expression: L'expression de filtre à évaluer
+            
+        Returns:
+            bool: True si le filtre correspond, False sinon
         """
         try:
-            # Remplacer les valeurs des champs dans l'expression
-            # Pattern pour trouver les comparaisons
             pattern = r'(\w+)\s*(<=|>=|!=|=|<|>)\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[\d.]+)'
             
             def evaluate_comparison(match):
@@ -98,10 +97,8 @@ class StringToFilterCommand(StreamingCommand):
                 operator = match.group(2)
                 expected_value = match.group(3).strip('"\'')
                 
-                # Récupérer la valeur du champ dans l'événement
                 actual_value = record.get(field_name, '')
                 
-                # Convertir en nombres si possible
                 try:
                     expected_num = float(expected_value)
                     actual_num = float(actual_value)
@@ -109,27 +106,37 @@ class StringToFilterCommand(StreamingCommand):
                 except (ValueError, TypeError):
                     is_numeric = False
                 
-                # Évaluer la comparaison
                 if is_numeric:
-                    if operator == '=': return actual_num == expected_num
-                    elif operator == '!=': return actual_num != expected_num
-                    elif operator == '<': return actual_num < expected_num
-                    elif operator == '>': return actual_num > expected_num
-                    elif operator == '<=': return actual_num <= expected_num
-                    elif operator == '>=': return actual_num >= expected_num
+                    if operator == '=': 
+                        return actual_num == expected_num
+                    elif operator == '!=': 
+                        return actual_num != expected_num
+                    elif operator == '<': 
+                        return actual_num < expected_num
+                    elif operator == '>': 
+                        return actual_num > expected_num
+                    elif operator == '<=': 
+                        return actual_num <= expected_num
+                    elif operator == '>=': 
+                        return actual_num >= expected_num
                 else:
                     actual_str = str(actual_value)
                     expected_str = str(expected_value)
-                    if operator == '=': return actual_str == expected_str
-                    elif operator == '!=': return actual_str != expected_str
-                    elif operator == '<': return actual_str < expected_str
-                    elif operator == '>': return actual_str > expected_str
-                    elif operator == '<=': return actual_str <= expected_str
-                    elif operator == '>=': return actual_str >= expected_str
+                    if operator == '=': 
+                        return actual_str == expected_str
+                    elif operator == '!=': 
+                        return actual_str != expected_str
+                    elif operator == '<': 
+                        return actual_str < expected_str
+                    elif operator == '>': 
+                        return actual_str > expected_str
+                    elif operator == '<=': 
+                        return actual_str <= expected_str
+                    elif operator == '>=': 
+                        return actual_str >= expected_str
                 
                 return False
             
-            # Trouver toutes les comparaisons et les évaluer
             comparisons = re.finditer(pattern, filter_expression)
             result_expr = filter_expression
             
@@ -137,15 +144,13 @@ class StringToFilterCommand(StreamingCommand):
                 comparison_result = evaluate_comparison(match)
                 result_expr = result_expr.replace(match.group(0), str(comparison_result))
             
-            # Remplacer AND et OR par leurs équivalents Python
             result_expr = result_expr.replace(' AND ', ' and ').replace(' OR ', ' or ')
             
-            # Évaluer l'expression booléenne finale
             return eval(result_expr)
             
         except Exception as e:
             self.logger.error(f"Erreur lors de l'évaluation du filtre: {str(e)}")
-            return True  # En cas d'erreur, on garde l'événement
+            return True
     
     def parse_filter_string(self, filter_str):
         """
@@ -155,13 +160,15 @@ class StringToFilterCommand(StreamingCommand):
         - Simple: field_name="value"
         - Multiple avec AND/OR: field1="value1" AND field2="value2"
         - Opérateurs: =, !=, <, >, <=, >=
+        
+        Args:
+            filter_str: String de filtrage à parser
+            
+        Returns:
+            str: Expression de filtre transformée
         """
-        # Nettoyer la string
         filter_str = filter_str.strip()
         
-        # Pattern pour capturer field_name="field_value" ou field_name=value
-        # Supporte également les autres opérateurs (!=, <, >, etc.)
-        # Important: mettre les opérateurs composés (<=, >=, !=) AVANT les simples
         pattern = r'(\w+)\s*(<=|>=|!=|=|<|>)\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|\S+)'
         
         def replace_match(match):
@@ -169,9 +176,7 @@ class StringToFilterCommand(StreamingCommand):
             operator = match.group(2)
             value = match.group(3)
             
-            # Garder les guillemets si présents, sinon ajouter si nécessaire
             if not (value.startswith('"') or value.startswith("'")):
-                # Si c'est un nombre, on ne met pas de guillemets
                 try:
                     float(value)
                     return f'{field}{operator}{value}'
@@ -180,10 +185,10 @@ class StringToFilterCommand(StreamingCommand):
             
             return f'{field}{operator}{value}'
         
-        # Remplacer tous les patterns
         result = re.sub(pattern, replace_match, filter_str)
         
         return result
 
 
-dispatch(StringToFilterCommand, sys.argv, sys.stdin, sys.stdout, __name__)
+if __name__ == '__main__':
+    dispatch(StringToFilterCommand, sys.argv, sys.stdin, sys.stdout, __name__)
