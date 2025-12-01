@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.5.0'; // Version avec dt_pattern
+var scriptVersion = '0.5.1'; // Version avec amélioration selection_desc
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -723,22 +723,116 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var service_selected = TokenManager.get('service_selected');
                 var kpi_selected = TokenManager.get('kpi_selected');
                 var entity_selected = TokenManager.get('entity_selected');
-                var dt_filterToken = TokenManager.get('dt_filter_selected');
-                var dt_patternToken = TokenManager.get('dt_pattern_selected');
+                var dt_filterToken = TokenManager.get('dt_filter_selected') || '';
+                var dt_patternToken = TokenManager.get('dt_pattern_selected') || '';
+                var dashboardType = $('#dashboardType').html();
                 
+                // Construction du HTML de base avec les sélections
                 var selectionDescHtml = `
                     <table id="selection_desc_table" width="100%">
-                        <tr><td>Service(s)</td><td width=100/><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
-                        <tr><td>Kpi(s)</td><td width=100/><td>${TextTransformer.toVisualTags(kpi_selected)}</td></tr>
-                        <tr><td>Entity(s)</td><td width=100/><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
-                        <tr><td>Custom filter(s)</td><td width=100/><td>${TextTransformer.toVisualTags(dt_filterToken)}</td></tr>
-                        <tr><td>Pattern(s)</td><td width=100/><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>
-                    </table>
+                        <tr><td width="150"><strong>Service(s)</strong></td><td width="20"></td><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
+                        <tr><td><strong>KPI(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(kpi_selected)}</td></tr>
+                        <tr><td><strong>Entity(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
                 `;
+                
+                // Ajout des filtres personnalisés si présents
+                if (Utils.isNotNull(dt_filterToken) && dt_filterToken !== '') {
+                    selectionDescHtml += `<tr><td><strong>Custom filter(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_filterToken)}</td></tr>`;
+                }
+                
+                // Ajout des patterns si présents
+                if (Utils.isNotNull(dt_patternToken) && dt_patternToken !== '') {
+                    selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>`;
+                }
+                
+                // Ajout des périodes seulement si ce n'est pas un delete
+                if (dashboardType !== 'delete') {
+                    var periodsHtml = UIManager.buildPeriodsDescription();
+                    if (periodsHtml !== '') {
+                        selectionDescHtml += `<tr><td colspan="3"><br/><strong>Périodes de maintenance :</strong></td></tr>`;
+                        selectionDescHtml += periodsHtml;
+                    }
+                }
+                
+                selectionDescHtml += `</table>`;
 
                 if (Utils.isNotNull(selectionDescHtml)) {
                     $('#selection_desc').html(selectionDescHtml);
                 }
+            },
+
+            buildPeriodsDescription() {
+                var periodsHtml = '';
+                var periodNumber = 1;
+                
+                $('[id^=content-tab-Period]').each(function() {
+                    var periodDesc = '';
+                    var periodType = '';
+                    
+                    // Détection du type de période
+                    if ($(this).find('[periodID=radioD]').is(':checked')) {
+                        var dateBegin = $(this).find('[id^=datepicker_begin]').val();
+                        var dateEnd = $(this).find('[id^=datepicker_end]').val();
+                        var timeBegin = $(this).find('.inputPeriodBegin').val();
+                        var timeEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        if (dateBegin && dateEnd) {
+                            periodType = 'Date à date';
+                            periodDesc = `Du <strong>${dateBegin} ${timeBegin}</strong> au <strong>${dateEnd} ${timeEnd}</strong>`;
+                        }
+                    } 
+                    else if ($(this).find('[periodID=radioW]').is(':checked')) {
+                        var days = [];
+                        $(this).find('.ui-selected').each(function() {
+                            days.push($(this).html());
+                        });
+                        var timeBegin = $(this).find('.inputPeriodBegin').val();
+                        var timeEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        if (days.length > 0) {
+                            periodType = 'Hebdomadaire';
+                            periodDesc = `Les <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                        }
+                    }
+                    else if ($(this).find('[periodID=radioM]').is(':checked')) {
+                        var days = [];
+                        $(this).find('.ui-selected').each(function() {
+                            days.push($(this).html());
+                        });
+                        var timeBegin = $(this).find('.inputPeriodBegin').val();
+                        var timeEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        if (days.length > 0) {
+                            periodType = 'Mensuel';
+                            periodDesc = `Les jours <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                        }
+                    }
+                    else if ($(this).find('[periodID=radioS]').is(':checked')) {
+                        var day = $(this).find('#select_day').val();
+                        var type = $(this).find('#select_type option:selected').text();
+                        var timeBegin = $(this).find('.inputPeriodBegin').val();
+                        var timeEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        if (day && type) {
+                            periodType = 'Spécifique';
+                            periodDesc = `<strong>${type}</strong> <strong>${day}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                        }
+                    }
+                    
+                    // Ajout de la période si elle est valide
+                    if (periodDesc !== '') {
+                        periodsHtml += `
+                            <tr>
+                                <td style="padding-left: 20px;"><em>Période ${periodNumber}</em></td>
+                                <td></td>
+                                <td><span class="description_item">${periodType}</span> ${periodDesc}</td>
+                            </tr>
+                        `;
+                        periodNumber++;
+                    }
+                });
+                
+                return periodsHtml;
             }
         };
 
