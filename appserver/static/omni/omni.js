@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.4.0'; // Version optimisée
+var scriptVersion = '0.5.0'; // Version avec dt_pattern
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -53,7 +53,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 ENTITY: 7,
                 DT_FILTER: 8,
                 COMMENTARY: 9,
-                VERSION: 10
+                VERSION: 10,
+                DT_PATTERN: 11
             },
             WEEK_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
             MONTH_DAYS: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
@@ -130,6 +131,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var yy = today.getFullYear();
                 return yy + '-' + mm + '-' + dd;
             },
+
             escapeSPLString(value) {
                 if (this.isNull(value)) {
                     return '';
@@ -722,12 +724,15 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var kpi_selected = TokenManager.get('kpi_selected');
                 var entity_selected = TokenManager.get('entity_selected');
                 var dt_filterToken = TokenManager.get('dt_filter_selected');
+                var dt_patternToken = TokenManager.get('dt_pattern_selected');
+                
                 var selectionDescHtml = `
                     <table id="selection_desc_table" width="100%">
                         <tr><td>Service(s)</td><td width=100/><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
                         <tr><td>Kpi(s)</td><td width=100/><td>${TextTransformer.toVisualTags(kpi_selected)}</td></tr>
                         <tr><td>Entity(s)</td><td width=100/><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
                         <tr><td>Custom filter(s)</td><td width=100/><td>${TextTransformer.toVisualTags(dt_filterToken)}</td></tr>
+                        <tr><td>Pattern(s)</td><td width=100/><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>
                     </table>
                 `;
 
@@ -747,7 +752,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         service=mvjoin(service,";"),
                         kpi=mvjoin(kpi,";"),
                         entity=mvjoin(entity,";")
-                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,commentary,version`;
+                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_pattern,commentary,version`;
             },
 
             createAdd(arr) {
@@ -762,51 +767,53 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return QueryBuilder.createQuery(arr, 'delete');
             },
 
-createQuery(arr, action) {
-    var dt_update = new Date().getTime();
-    var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
-    
-    // Transformation des downtimeFields en objets JSON
-    var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
-        var parts = field.split('#');
-        return {
-            id: arr['ID'] + '_' + (index + 1),
-            dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
-            begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
-            end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
-            begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
-            end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
-            dt_filter: arr['dt_filter']
-        };
-    });
-    
-    // Conversion en chaîne JSON échappée pour SPL
-    var downtimeJsonString = JSON.stringify(downtimeJsonArray)
-        .replace(/\\/g, '\\\\')
-        .replace(/"/g, '\\"');
-    
-    var baseQuery = `| stats count as service
-        | eval service=split("${arr['service']}",";"),
-            kpi=split("${arr['kpi']}",";"),
-            entity=split("${arr['entity']}",";"),
-            dt_filter="${arr['dt_filter']}",
-            downtime="${downtimeJsonString}",
-            creator="${arr['username']}",
-            commentary="${arr['commentary']}",
-            version="${arr['version']}",
-            ID="${arr['ID']}",
-            dt_update=${dt_update},
-            step_opt="${arr['step_opt']}",
-            status=split("${array_status}",",")`;
+            createQuery(arr, action) {
+                var dt_update = new Date().getTime();
+                var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
+                
+                // Transformation des downtimeFields en objets JSON
+                var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
+                    var parts = field.split('#');
+                    return {
+                        id: arr['ID'] + '_' + (index + 1),
+                        dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
+                        begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
+                        end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
+                        begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
+                        end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
+                        dt_filter: arr['dt_filter'],
+                        dt_pattern: arr['dt_pattern'] || ''
+                    };
+                });
+                
+                // Conversion en chaîne JSON échappée pour SPL
+                var downtimeJsonString = JSON.stringify(downtimeJsonArray)
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"');
+                
+                var baseQuery = `| stats count as service
+                    | eval service=split("${arr['service']}",";"),
+                        kpi=split("${arr['kpi']}",";"),
+                        entity=split("${arr['entity']}",";"),
+                        dt_filter="${arr['dt_filter']}",
+                        dt_pattern="${arr['dt_pattern'] || ''}",
+                        downtime="${downtimeJsonString}",
+                        creator="${arr['username']}",
+                        commentary="${arr['commentary']}",
+                        version="${arr['version']}",
+                        ID="${arr['ID']}",
+                        dt_update=${dt_update},
+                        step_opt="${arr['step_opt']}",
+                        status=split("${array_status}",",")`;
 
-    if (action !== 'add') {
-        baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
-            | eval key="${arr['key']}",`);
-    }
-    
-    Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
-    return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
-}
+                if (action !== 'add') {
+                    baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
+                        | eval key="${arr['key']}",`);
+                }
+                
+                Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
+                return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
+            }
         };
 
         // ==================== GESTION DES DONNÉES ====================
@@ -819,6 +826,7 @@ createQuery(arr, action) {
                     var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
                     var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
                     var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
+                    var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
                     var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
                     var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
                     var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
@@ -832,6 +840,8 @@ createQuery(arr, action) {
                     DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
                     DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
                     TokenManager.set('dt_filter', dt_filter);
+                    TokenManager.set('dt_pattern', dt_pattern);
+                    
                     if (dashboardType == "update") {
                         DataManager.updatePeriods(downtime, commentary);
                         TokenManager.set('update_full_loading', 1);
@@ -931,6 +941,7 @@ createQuery(arr, action) {
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
+                selected['dt_pattern'] = Utils.escapeSPLString(TokenManager.get('dt_pattern_selected') || '');
                 selected['downtimeFields'] = [];
                 
                 // Version
@@ -979,6 +990,7 @@ createQuery(arr, action) {
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
+                selected['dt_pattern'] = Utils.escapeSPLString(TokenManager.get('dt_pattern_selected') || '');
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 
                 return [selected, 0, ''];
