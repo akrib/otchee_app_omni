@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.5.1'; // Version avec amélioration selection_desc
+var scriptVersion = '0.5.2'; // Version avec amélioration debugging et gestion d'erreurs
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -68,7 +68,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== UTILITAIRES ====================
         const Utils = {
-            // Logging
+            // Logging amélioré
             log(obj, titre = '', level = 0) {
                 if (debugMode != 1) return;
                 
@@ -132,62 +132,81 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return yy + '-' + mm + '-' + dd;
             },
 
+            // Échappement amélioré pour SPL
             escapeSPLString(value) {
-                if (this.isNull(value)) {
+                try {
+                    if (this.isNull(value)) {
+                        return '';
+                    }
+                    
+                    // Convertir en string si ce n'est pas déjà le cas
+                    var str = String(value);
+                    
+                    // Échapper les backslashes d'abord (important de le faire en premier)
+                    str = str.replace(/\\/g, '\\\\');
+                    
+                    // Échapper les guillemets doubles
+                    str = str.replace(/"/g, '\\"');
+                    
+                    // Échapper les retours à la ligne
+                    str = str.replace(/\n/g, '\\n');
+                    str = str.replace(/\r/g, '\\r');
+                    
+                    // Échapper les tabulations
+                    str = str.replace(/\t/g, '\\t');
+                    
+                    return str;
+                } catch (error) {
+                    this.log(error, 'Erreur dans escapeSPLString', 2);
                     return '';
                 }
-                
-                // Convertir en string si ce n'est pas déjà le cas
-                var str = String(value);
-                
-                // Échapper les backslashes d'abord (important de le faire en premier)
-                str = str.replace(/\\/g, '\\\\');
-                
-                // Échapper les guillemets doubles
-                str = str.replace(/"/g, '\\"');
-                
-                // Optionnel : échapper les retours à la ligne
-                str = str.replace(/\n/g, '\\n');
-                str = str.replace(/\r/g, '\\r');
-                
-                // Optionnel : échapper les tabulations
-                str = str.replace(/\t/g, '\\t');
-                
-                return str;
             }
         };
 
         // ==================== GESTION DES TOKENS ====================
         const TokenManager = {
             set(tokenName, tokenValue, updateForm = false) {
-                var defaultTokenModel = mvc.Components.get('default', { create: true });
-                var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
-                
-                defaultTokenModel.set(tokenName, tokenValue);
-                submittedTokenModel.set(tokenName, tokenValue);
-                
-                if (updateForm) {
-                    defaultTokenModel.set('form.' + tokenName, tokenValue);
-                    submittedTokenModel.set('form.' + tokenName, tokenValue);
+                try {
+                    var defaultTokenModel = mvc.Components.get('default', { create: true });
+                    var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
+                    
+                    defaultTokenModel.set(tokenName, tokenValue);
+                    submittedTokenModel.set(tokenName, tokenValue);
+                    
+                    if (updateForm) {
+                        defaultTokenModel.set('form.' + tokenName, tokenValue);
+                        submittedTokenModel.set('form.' + tokenName, tokenValue);
+                    }
+                } catch (error) {
+                    Utils.log(error, 'Erreur TokenManager.set', 2);
                 }
             },
 
             unset(tokenName) {
-                var defaultTokenModel = mvc.Components.get('default', { create: true });
-                var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
-                
-                defaultTokenModel.unset(tokenName);
-                submittedTokenModel.unset(tokenName);
+                try {
+                    var defaultTokenModel = mvc.Components.get('default', { create: true });
+                    var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
+                    
+                    defaultTokenModel.unset(tokenName);
+                    submittedTokenModel.unset(tokenName);
+                } catch (error) {
+                    Utils.log(error, 'Erreur TokenManager.unset', 2);
+                }
             },
 
             get(tokenName) {
-                var defaultTokenModel = mvc.Components.get('default', { create: true });
-                var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
-                
-                var def = defaultTokenModel.get(tokenName);
-                var sub = submittedTokenModel.get(tokenName);
-                
-                return Utils.isNotNull(def) ? def : (Utils.isNotNull(sub) ? sub : null);
+                try {
+                    var defaultTokenModel = mvc.Components.get('default', { create: true });
+                    var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
+                    
+                    var def = defaultTokenModel.get(tokenName);
+                    var sub = submittedTokenModel.get(tokenName);
+                    
+                    return Utils.isNotNull(def) ? def : (Utils.isNotNull(sub) ? sub : null);
+                } catch (error) {
+                    Utils.log(error, 'Erreur TokenManager.get', 2);
+                    return null;
+                }
             }
         };
 
@@ -275,10 +294,16 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var errorMessages = '';
                 var periodNumber = 1;
                 
+                Utils.log('Début validation datepickers', 'allDatepickers');
+                
                 $('[id^=content-tab-Period]').each(function () {
+                    Utils.log('Validation période ' + periodNumber, 'allDatepickers');
+                    
                     if ($(this).find('[periodID=radioD]').is(':checked')) {
                         var dateBegin = $(this).find('[id^=datepicker_begin]').val();
                         var dateEnd = $(this).find('[id^=datepicker_end]').val();
+                        
+                        Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates période ' + periodNumber);
                         
                         var dateFormatRegex = /^\d{4}-\d{2}-\d{2}$/;
                         
@@ -310,6 +335,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 if (errorMessages) {
                     errorMessages = '<b>Impossible de valider le downtime :</b><br /><br />' + errorMessages;
                 }
+                
+                Utils.log(errorMessages, 'Résultat validation datepickers');
                 
                 return errorMessages;
             }
@@ -437,7 +464,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return null;
                 }
             }
-
         };
 
         // ==================== SPINNER DE CHARGEMENT ====================
@@ -862,51 +888,87 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             },
 
             createQuery(arr, action) {
-                var dt_update = new Date().getTime();
-                var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
-                
-                // Transformation des downtimeFields en objets JSON
-                var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
-                    var parts = field.split('#');
-                    return {
-                        id: arr['ID'] + '_' + (index + 1),
-                        dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
-                        begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
-                        end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
-                        begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
-                        end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
-                        dt_filter: arr['dt_filter'],
-                        dt_pattern: arr['dt_pattern'] || ''
-                    };
-                });
-                
-                // Conversion en chaîne JSON échappée pour SPL
-                var downtimeJsonString = JSON.stringify(downtimeJsonArray)
-                    .replace(/\\/g, '\\\\')
-                    .replace(/"/g, '\\"');
-                
-                var baseQuery = `| stats count as service
-                    | eval service=split("${arr['service']}",";"),
-                        kpi=split("${arr['kpi']}",";"),
-                        entity=split("${arr['entity']}",";"),
-                        dt_filter="${arr['dt_filter']}",
-                        dt_pattern="${arr['dt_pattern'] || ''}",
-                        downtime="${downtimeJsonString}",
-                        creator="${arr['username']}",
-                        commentary="${arr['commentary']}",
-                        version="${arr['version']}",
-                        ID="${arr['ID']}",
-                        dt_update=${dt_update},
-                        step_opt="${arr['step_opt']}",
-                        status=split("${array_status}",",")`;
+                try {
+                    Utils.log('Début createQuery', 'QueryBuilder');
+                    Utils.log({arr: arr, action: action}, 'Paramètres createQuery');
+                    
+                    var dt_update = new Date().getTime();
+                    var array_status = arr['downtimeFields'].map(() => action === 'delete' ? 'disabled' : 'enabled');
+                    
+                    Utils.log(arr['downtimeFields'], 'downtimeFields avant transformation');
+                    
+                    // Transformation des downtimeFields en objets JSON
+                    var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
+                        var parts = field.split('#');
+                        return {
+                            id: arr['ID'] + '_' + (index + 1),
+                            dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
+                            begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
+                            end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
+                            begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
+                            end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
+                            dt_filter: arr['dt_filter'] || '',
+                            dt_pattern: arr['dt_pattern'] || ''
+                        };
+                    });
+                    
+                    Utils.log(downtimeJsonArray, 'downtimeJsonArray créé');
+                    
+                    // Conversion en chaîne JSON - SANS double échappement
+                    var downtimeJsonString = JSON.stringify(downtimeJsonArray);
+                    Utils.log(downtimeJsonString, 'JSON string avant échappement');
+                    
+                    // Échapper pour SPL (une seule fois)
+                    downtimeJsonString = downtimeJsonString
+                        .replace(/\\/g, '\\\\')
+                        .replace(/"/g, '\\"');
+                    
+                    Utils.log(downtimeJsonString, 'JSON string après échappement');
+                    
+                    var baseQuery = `| stats count as service
+            | eval service=split("${Utils.escapeSPLString(arr['service'])}",";"),
+                kpi=split("${Utils.escapeSPLString(arr['kpi'])}",";"),
+                entity=split("${Utils.escapeSPLString(arr['entity'])}",";"),
+                dt_filter="${Utils.escapeSPLString(arr['dt_filter'])}",
+                dt_pattern="${Utils.escapeSPLString(arr['dt_pattern'] || '')}",
+                downtime="${downtimeJsonString}",
+                creator="${Utils.escapeSPLString(arr['username'])}",
+                commentary="${Utils.escapeSPLString(arr['commentary'])}",
+                version="${arr['version']}",
+                ID="${arr['ID']}",
+                dt_update=${dt_update},
+                step_opt="${arr['step_opt']}",
+                status=split("${array_status}",",")`;
 
-                if (action !== 'add') {
-                    baseQuery = baseQuery.replace('| stats count as service', `| stats count as service
-                        | eval key="${arr['key']}",`);
+                    if (action !== 'add') {
+                        baseQuery = `| stats count as service
+            | eval key="${arr['key']}",
+                service=split("${Utils.escapeSPLString(arr['service'])}",";"),
+                kpi=split("${Utils.escapeSPLString(arr['kpi'])}",";"),
+                entity=split("${Utils.escapeSPLString(arr['entity'])}",";"),
+                dt_filter="${Utils.escapeSPLString(arr['dt_filter'])}",
+                dt_pattern="${Utils.escapeSPLString(arr['dt_pattern'] || '')}",
+                downtime="${downtimeJsonString}",
+                creator="${Utils.escapeSPLString(arr['username'])}",
+                commentary="${Utils.escapeSPLString(arr['commentary'])}",
+                version="${arr['version']}",
+                ID="${arr['ID']}",
+                dt_update=${dt_update},
+                step_opt="${arr['step_opt']}",
+                status=split("${array_status}",",")`;
+                    }
+                    
+                    var finalQuery = `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
+                    
+                    Utils.log(finalQuery, '=== QUERY FINALE GÉNÉRÉE ===', 0);
+                    
+                    return finalQuery;
+                    
+                } catch (error) {
+                    Utils.log(error, 'ERREUR CRITIQUE dans createQuery', 2);
+                    console.error('Stack trace:', error.stack);
+                    throw error;
                 }
-                
-                Utils.log(`${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`, 'baseQuery', 1);
-                return `${baseQuery} | OmniKVUpdate action="${action}" ${arr['sendEmail']}`;
             }
         };
 
@@ -1000,12 +1062,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             },
 
             getSelectedInDashboard() {
-                Utils.log('', 'getSelectedInDashboard');
+                Utils.log('', 'getSelectedInDashboard - START');
                 
                 var selected = {};
                 var errors = 0;
                 var errorOutput = 'Impossible de valider le downtime :<br />';
                 var dashboardType = $('#dashboardType').html();
+                
+                Utils.log(dashboardType, 'Dashboard type');
                 
                 // Configuration email
                 var sendingEmail = TokenManager.get("sendingEmail");
@@ -1020,6 +1084,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
 
                 if (dashboardType == "delete") {
+                    Utils.log('Mode DELETE détecté', 'getSelectedInDashboard');
                     return DataManager.getDeleteData(selected, sendEmail);
                 }
 
@@ -1034,9 +1099,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
-                selected['dt_pattern'] = Utils.escapeSPLString(TokenManager.get('dt_pattern_selected') || '');
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
                 selected['downtimeFields'] = [];
+                
+                Utils.log(selected, 'Données de base collectées');
                 
                 // Version
                 if (dashboardType == "add") {
@@ -1046,10 +1113,13 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
 
                 // Récupération des périodes
+                Utils.log('Collecte des périodes', 'getSelectedInDashboard');
                 var periodData = DataManager.collectPeriods();
                 selected['downtimeFields'] = periodData.downtimeFields;
                 errors += periodData.errors;
                 errorOutput += periodData.errorOutput;
+                
+                Utils.log(periodData, 'Données des périodes');
 
                 // Validations finales
                 if (Utils.isNull(selected['service'])) {
@@ -1069,6 +1139,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
                 }
 
+                Utils.log({errors: errors, errorOutput: errorOutput}, 'Résultat validation finale');
+                
                 return [selected, errors, errorOutput];
             },
 
@@ -1083,36 +1155,52 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = Utils.escapeSPLString(TokenManager.get('dt_filter_selected'));
-                selected['dt_pattern'] = Utils.escapeSPLString(TokenManager.get('dt_pattern_selected') || '');
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+                selected['version'] = TokenManager.get('selected_version') || 99999;
+                
+                Utils.log(selected, 'Delete data collectée');
                 
                 return [selected, 0, ''];
             },
 
             collectPeriods() {
+                Utils.log('Début collectPeriods', 'collectPeriods');
+                
                 var checkedBegin = [], checkedEnd = [], beginHours = [], endHours = [], type = [];
                 var downtimeFields = [];
                 var errors = 0;
                 var errorOutput = '';
                 var atLeastOne = 0;
+                var periodCount = 0;
 
                 $('[id^=content-tab-Period]').each(function () {
+                    periodCount++;
+                    Utils.log('Traitement période ' + periodCount, 'collectPeriods');
+                    
                     var dateBegin = '', dateEnd = '', hoursBegin = '', hoursEnd = '';
+                    var periodValid = false;
 
                     if ($(this).find('[periodID=radioD]').is(':checked')) {
+                        Utils.log('Type: Date à date', 'collectPeriods');
                         dateBegin = $(this).find('[id^=datepicker_begin]').val();
                         dateEnd = $(this).find('[id^=datepicker_end]').val();
+                        Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates collectées');
+                        
                         if (dateBegin.length == 10 && dateEnd.length == 10) {
                             atLeastOne = 1;
+                            periodValid = true;
                             checkedBegin.push(dateBegin);
                             checkedEnd.push(dateEnd);
                             type.push('between_date');
                         }
                     } else if ($(this).find('[periodID=radioW]').is(':checked')) {
+                        Utils.log('Type: Hebdomadaire', 'collectPeriods');
                         dateBegin = [];
                         dateEnd = [];
                         atLeastOne = 1;
+                        periodValid = true;
                         $(this).find('.ui-selected').each(function () {
                             dateBegin.push($(this).html());
                             dateEnd.push($(this).html());
@@ -1121,9 +1209,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         checkedEnd.push(dateEnd.join(';'));
                         type.push('weekly');
                     } else if ($(this).find('[periodID=radioM]').is(':checked')) {
+                        Utils.log('Type: Mensuel', 'collectPeriods');
                         dateBegin = [];
                         dateEnd = [];
                         atLeastOne = 1;
+                        periodValid = true;
                         $(this).find('.ui-selected').each(function () {
                             dateBegin.push($(this).html());
                             dateEnd.push($(this).html());
@@ -1132,7 +1222,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         checkedEnd.push(dateEnd.join(';'));
                         type.push('monthly');
                     } else if ($(this).find('[periodID=radioS]').is(':checked')) {
+                        Utils.log('Type: Spécifique', 'collectPeriods');
                         atLeastOne = 1;
+                        periodValid = true;
                         dateBegin = $(this).find('#select_day').val();
                         dateEnd = $(this).find('#select_day').val();
                         checkedBegin.push(dateBegin);
@@ -1141,9 +1233,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         type.push('special_date_' + selectedType + '_in_month');
                     }
 
-                    if (atLeastOne == 1) {
+                    if (periodValid) {
                         hoursBegin = $(this).find('.inputPeriodBegin').val();
                         hoursEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        Utils.log({hoursBegin: hoursBegin, hoursEnd: hoursEnd}, 'Heures collectées');
                         
                         if (!Validator.timeFormat(hoursBegin)) {
                             errors++;
@@ -1161,25 +1255,32 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             errors++;
                             errorOutput += '- L\'heure de début ne peut être supérieure à l\'heure de fin<br />';
                         }
+                    } else {
+                        // Si aucune période n'est configurée, on met des valeurs par défaut
+                        hoursBegin = '00:00';
+                        hoursEnd = '00:00';
                     }
 
                     beginHours.push(hoursBegin);
                     endHours.push(hoursEnd);
                     
-                    downtimeFields.push(
-                        DataManager.transformDowntimeField(
-                            type[type.length - 1],
-                            TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1])),
-                            TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1])),
-                            beginHours[beginHours.length - 1] + ':00',
-                            endHours[endHours.length - 1] + ':00'
-                        )
+                    var downtimeField = DataManager.transformDowntimeField(
+                        type[type.length - 1] || 'between_date',
+                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1] || '')),
+                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1] || '')),
+                        (beginHours[beginHours.length - 1] || '00:00') + ':00',
+                        (endHours[endHours.length - 1] || '00:00') + ':00'
                     );
+                    
+                    downtimeFields.push(downtimeField);
+                    Utils.log(downtimeField, 'Downtime field créé');
                 });
 
                 if (errors > 0) {
                     errorOutput += '- Au moins une période ne respecte pas les pré-requis<br />';
                 }
+                
+                Utils.log({downtimeFields: downtimeFields, errors: errors}, 'Résultat collectPeriods');
 
                 return { downtimeFields, errors, errorOutput };
             },
@@ -1252,48 +1353,79 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             },
 
             sendData(sendingType) {
-                Utils.log(sendingType, 'sendData');
+                Utils.log(sendingType, '============ sendData - START ============');
                 
-                LoadSpinner.changeMsg('Verification des données en entrée');
-                LoadSpinner.state('ON');
-                
-                // Validation des datepickers
-                var dateValidationErrors = Validator.allDatepickers();
-                if (dateValidationErrors.length > 0) {
-                    LoadSpinner.state('OFF');
-                    TokenManager.set('modal_header', 'ERREUR');
-                    TokenManager.set('modal_content', dateValidationErrors);
-                    $('#modal_link')[0].click();
-                    return;
-                }
-                
-                var [selected, errors, errorOutput] = DataManager.getSelectedInDashboard();
-                var dashboardType = $('#dashboardType').html();
-                
-                Utils.log(selected, 'selected');
-                Utils.log(errors, 'errors');
-                
-                if (errors > 0) {
-                    LoadSpinner.state('OFF');
-                    TokenManager.set('modal_header', 'ERREUR');
-                    TokenManager.set('modal_content', errorOutput);
-                    $('#modal_link')[0].click();
-                } else {
+                try {
+                    LoadSpinner.changeMsg('Verification des données en entrée');
+                    LoadSpinner.state('ON');
+                    
+                    // Validation des datepickers
+                    Utils.log('Validation des datepickers', 'sendData');
+                    var dateValidationErrors = Validator.allDatepickers();
+                    Utils.log(dateValidationErrors, 'Erreurs de validation dates');
+                    
+                    if (dateValidationErrors.length > 0) {
+                        Utils.log('Erreurs de validation détectées', 'sendData', 1);
+                        LoadSpinner.state('OFF');
+                        TokenManager.set('modal_header', 'ERREUR');
+                        TokenManager.set('modal_content', dateValidationErrors);
+                        $('#modal_link')[0].click();
+                        return;
+                    }
+                    
+                    Utils.log('Collecte des données du dashboard', 'sendData');
+                    var [selected, errors, errorOutput] = DataManager.getSelectedInDashboard();
+                    var dashboardType = $('#dashboardType').html();
+                    
+                    Utils.log(selected, 'Selected data');
+                    Utils.log(errors, 'Nombre d\'erreurs');
+                    Utils.log(errorOutput, 'Messages d\'erreur');
+                    
+                    if (errors > 0) {
+                        Utils.log('Erreurs de validation des données', 'sendData', 1);
+                        LoadSpinner.state('OFF');
+                        TokenManager.set('modal_header', 'ERREUR');
+                        TokenManager.set('modal_content', errorOutput);
+                        $('#modal_link')[0].click();
+                        return;
+                    }
+                    
                     // Cacher les boutons
                     $('input#VALID_button').hide();
                     $('input#CANCEL_button').hide();
                     LoadSpinner.changeMsg('Mise à jour 0%');
                     
                     var query = '';
-                    if (dashboardType == 'add') {
-                        query = QueryBuilder.createAdd(selected);
-                    } else if (dashboardType == 'update') {
-                        query = QueryBuilder.createUpdate(selected);
-                    } else if (dashboardType == 'delete') {
-                        query = QueryBuilder.createDelete(selected);
+                    try {
+                        Utils.log('Création de la query', 'sendData');
+                        if (dashboardType == 'add') {
+                            Utils.log('Création query ADD', 'Dashboard type');
+                            query = QueryBuilder.createAdd(selected);
+                        } else if (dashboardType == 'update') {
+                            Utils.log('Création query UPDATE', 'Dashboard type');
+                            query = QueryBuilder.createUpdate(selected);
+                        } else if (dashboardType == 'delete') {
+                            Utils.log('Création query DELETE', 'Dashboard type');
+                            query = QueryBuilder.createDelete(selected);
+                        }
+                        
+                        Utils.log(query, '========== QUERY FINALE GÉNÉRÉE ==========', 0);
+                        
+                    } catch (queryError) {
+                        Utils.log(queryError, 'ERREUR lors de la création de la query', 2);
+                        console.error('Stack trace:', queryError.stack);
+                        LoadSpinner.state('OFF');
+                        $('input#VALID_button').show();
+                        $('input#CANCEL_button').show();
+                        TokenManager.set('modal_header', 'ERREUR');
+                        TokenManager.set('modal_content', 'Erreur lors de la génération de la requête: ' + queryError.message);
+                        $('#modal_link')[0].click();
+                        return;
                     }
                     
                     if (sendingType == 'valid') {
+                        Utils.log('Lancement de la recherche Splunk', 'SendingType valid');
+                        
                         var omni_kv = new SearchManager({
                             id: 'omni_kv' + selected['ID'],
                             preview: false,
@@ -1302,7 +1434,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         });
                         
                         omni_kv.on('search:done', function (properties) {
-                            Utils.log(properties, 'omni_kv done');
+                            Utils.log(properties, 'omni_kv search done');
                             
                             var closingLink = dashboardType == 'add' 
                                 ? '<a href="/app/' + app_path + '/' + viewName + '">Fermer la fenêtre</a>'
@@ -1310,7 +1442,40 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             
                             Dashboard.showSuccessMessage('Information', 'Mise à jour de la base des downtimes OK', closingLink);
                         });
+                        
+                        omni_kv.on('search:failed', function(properties) {
+                            Utils.log(properties, 'omni_kv search FAILED', 2);
+                            LoadSpinner.state('OFF');
+                            $('input#VALID_button').show();
+                            $('input#CANCEL_button').show();
+                            TokenManager.set('modal_header', 'ERREUR');
+                            TokenManager.set('modal_content', 'La recherche Splunk a échoué. Vérifiez les logs.');
+                            $('#modal_link')[0].click();
+                        });
+                        
+                        omni_kv.on('search:error', function(properties) {
+                            Utils.log(properties, 'omni_kv search ERROR', 2);
+                            LoadSpinner.state('OFF');
+                            $('input#VALID_button').show();
+                            $('input#CANCEL_button').show();
+                        });
+                    } else {
+                        Utils.log('Mode test - query générée mais non exécutée', 'sendData');
+                        LoadSpinner.state('OFF');
+                        $('input#VALID_button').show();
+                        $('input#CANCEL_button').show();
                     }
+                    
+                } catch (error) {
+                    Utils.log(error, 'ERREUR CRITIQUE dans sendData', 2);
+                    console.error('Erreur complète:', error);
+                    console.error('Stack trace:', error.stack);
+                    LoadSpinner.state('OFF');
+                    $('input#VALID_button').show();
+                    $('input#CANCEL_button').show();
+                    TokenManager.set('modal_header', 'ERREUR CRITIQUE');
+                    TokenManager.set('modal_content', 'Une erreur inattendue s\'est produite: ' + error.message);
+                    $('#modal_link')[0].click();
                 }
             },
 
@@ -1351,17 +1516,24 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== INITIALISATION ====================
         $(document).ready(function () {
+            Utils.log('Document ready', 'Initialisation');
+            
             UIManager.create();
             var downtimeID = TokenManager.get('DT_ID');
             var dashboardType = $('#dashboardType').html();
             
+            Utils.log({downtimeID: downtimeID, dashboardType: dashboardType}, 'Paramètres initialisation');
+            
             if (dashboardType == 'add') {
+                Utils.log('Mode ADD', 'Initialisation');
                 Dashboard.createAdd();
             } else if (dashboardType == 'update') {
+                Utils.log('Mode UPDATE', 'Initialisation');
                 if (Utils.isNotNull(downtimeID)) {
                     Dashboard.createUpdate(downtimeID);
                 }
             } else if (dashboardType == 'delete') {
+                Utils.log('Mode DELETE', 'Initialisation');
                 if (Utils.isNotNull(downtimeID)) {
                     Dashboard.createDelete(downtimeID);
                 }
@@ -1370,12 +1542,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== ÉVÉNEMENTS ====================
         $(document).on('click', '#tAdd', function () {
+            Utils.log('Click sur tAdd', 'Événements');
             UIManager.appendPeriodTab('tabs', 'Periode ' + numberTabs);
             $('[id^=selectable]').selectable();
             DatePickerManager.apply();
         });
 
         $(document).on('click', '.btnx', function () {
+            Utils.log('Click sur btnx', 'Événements');
             var cur = $(this).attr('id').replace('btnx', 'tab');
             var $tab = $('#' + cur);
             var $content = $('#content-' + cur);
@@ -1398,26 +1572,32 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
         });
 
         $(document).on('click', '.tab', function () {
+            Utils.log('Click sur tab', 'Événements');
             $('.tab-content').removeClass('current');
             var cur = 'content-' + $(this).attr('id');
             $('#' + cur).addClass('current');
         });
 
         $(document).on('click', 'input#VALID_button', function () {
+            Utils.log('========== CLICK SUR VALIDER ==========', 'Événements', 0);
             Dashboard.sendData('valid');
         });
 
         $(document).on('click', 'input#TEST_button', function () {
+            Utils.log('========== CLICK SUR TEST ==========', 'Événements', 0);
             Dashboard.sendData('test');
         });
 
         $(document).on('click', 'input#CANCEL_button', function () {
+            Utils.log('Click sur Cancel', 'Événements');
             window.location.href = '/app/' + app_path + '/' + viewName;
         });
 
         $('body').on('change', '.radiobasis', function () {
+            Utils.log('Change radiobasis', 'Événements');
             var cur = $(this).attr('id').replace('form-', '');
             var selected_value = $('input[name="basis-' + cur + '"]:checked').val();
+            Utils.log({cur: cur, selected_value: selected_value}, 'Radiobasis change');
             $('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value));
             $('[id^=selectable]').selectable();
             DatePickerManager.apply();
