@@ -302,15 +302,11 @@
             <set token="pattern_exist">1</set>
             <unset token="pattern_new"></unset>
             <unset token="dt_pattern_selected"></unset>
-            <unset token="dt_patern_select"></unset>
-            <unset token="dt_pattern_text"></unset>
           </condition>
           <condition match="$pattern_type$=&quot;new&quot;">
             <set token="pattern_new">1</set>
             <unset token="pattern_exist"></unset>
             <unset token="dt_pattern_selected"></unset>
-            <unset token="dt_patern_select"></unset>
-            <unset token="dt_pattern_text"></unset>
           </condition>
         </change>
       </input>

@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.8.0'; // Version corrigée
+var scriptVersion = '0.8.2'; // Version corrigée
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -753,7 +753,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 if (parsedFilter.hasNot1) {
                     TokenManager.set('not_1', 'NOT', true);
                 } else {
+                    //  FIX : Unset explicite au lieu de laisser undefined
                     TokenManager.unset('not_1');
+                    TokenManager.set('not_1', '', true);  // Définir comme chaîne vide
                 }
                 
                 var fieldName1 = parsedFilter.expression1.field || '';
@@ -783,7 +785,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     if (parsedFilter.hasNot2) {
                         TokenManager.set('not_2', 'NOT', true);
                     } else {
+                        //  FIX : Unset explicite
                         TokenManager.unset('not_2');
+                        TokenManager.set('not_2', '', true);  // Définir comme chaîne vide
                     }
                     
                     var fieldName2 = parsedFilter.expression2.field || '';
@@ -804,6 +808,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 } else {
                     TokenManager.unset('show_custom_field_sup');
                     TokenManager.set('field_sup', '0');
+                    
+                    //  FIX : Initialiser not_2 même si pas d'expression 2
+                    TokenManager.unset('not_2');
+                    TokenManager.set('not_2', '', true);
                 }
                 
                 Utils.log('Tokens définis avec succès', 'populateCustomFilterForm');
@@ -1380,32 +1388,66 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== GESTION DES DONNÉES ====================
         const DataManager = {
-            fillDashboard(downtimeData, dashboardType) {
-                Utils.log([downtimeData, dashboardType], 'fillDashboard');
+        fillDashboard(downtimeData, dashboardType) {
+            Utils.log([downtimeData, dashboardType], 'fillDashboard');
 
-                downtimeData.forEach(function (row) {
-                    var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
-                    var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
-                    var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
-                    var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
-                    var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
-                    var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
-                    var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
-                    var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
-                    var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
-                    var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
+            downtimeData.forEach(function (row) {
+                var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
+                var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
+                var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
+                var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
+                var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
+                var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
+                var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
+                var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
+                var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
+                var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
 
-                    TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
-                    TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
+                TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
+                TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
+                
+                DataManager.setTypeTokens('service', service, service_type, dashboardType);
+                DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
+                DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
+                TokenManager.set('dt_filter', dt_filter);
+                TokenManager.set('dt_filter_selected', dt_filter);
+                TokenManager.set('dt_pattern', dt_pattern);
+                
+                if (dashboardType == "update") {
+                    if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
+                        TokenManager.set('pattern_type', 'exist', true);
+                        TokenManager.set('pattern_exist', '1');
+                        TokenManager.set('dt_pattern_select', dt_pattern, true);
+                        TokenManager.set('dt_pattern_selected', dt_pattern);
+                        
+                        Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
+                    } else {
+                        TokenManager.set('pattern_type', 'new', true);
+                        TokenManager.set('pattern_new', '1');
+                        TokenManager.set('dt_pattern_selected', '');
+                        
+                        Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
+                    }
                     
-                    DataManager.setTypeTokens('service', service, service_type, dashboardType);
-                    DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
-                    DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
-                    TokenManager.set('dt_filter', dt_filter);
-                    TokenManager.set('dt_filter_selected', dt_filter);
-                    TokenManager.set('dt_pattern', dt_pattern);
-                    
-                    if (dashboardType == "update") {
+                    DataManager.updatePeriods(downtime, commentary);
+                    TokenManager.set('update_full_loading', 1);
+                } else if (dashboardType == "delete") {
+                    TokenManager.set("downtime_selected", downtime);
+                    try {
+                        $('#commentaire').val(commentary);
+                    } catch (error) {
+                        Utils.log(error, 'unable to write in #commentaire', 1);
+                    }
+                    UIManager.updateDescriptionDiv();
+                    TokenManager.set('update_full_loading', 1);
+                    TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+                    } else if (dashboardType == "update_custom") {
+                        Utils.log('Mode UPDATE_CUSTOM détecté', 'fillDashboard');
+                        
+                        TokenManager.set("downtime_selected", downtime);
+                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+                        
+                        // FIX : Initialisation du pattern (copié depuis le mode update)
                         if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
                             TokenManager.set('pattern_type', 'exist', true);
                             TokenManager.set('pattern_exist', '1');
@@ -1421,24 +1463,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
                         }
                         
-                        DataManager.updatePeriods(downtime, commentary);
-                        TokenManager.set('update_full_loading', 1);
-                    } else if (dashboardType == "delete") {
-                        TokenManager.set("downtime_selected", downtime);
-                        try {
-                            $('#commentaire').val(commentary);
-                        } catch (error) {
-                            Utils.log(error, 'unable to write in #commentaire', 1);
-                        }
-                        UIManager.updateDescriptionDiv();
-                        TokenManager.set('update_full_loading', 1);
-                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
-                    } else if (dashboardType == "update_custom") {
-                        Utils.log('Mode UPDATE_CUSTOM détecté', 'fillDashboard');
-                        
-                        TokenManager.set("downtime_selected", downtime);
-                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
-                        
                         var parsedFilter = CustomFilterParser.parse(dt_filter);
                         Utils.log(parsedFilter, 'Filtre parsé');
                         
@@ -1453,8 +1477,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         UIManager.updateDescriptionDiv();
                         TokenManager.set('update_full_loading', 1);
                     }
-                });
-            },
+            });
+        },
 
             setTypeTokens(prefix, value, type, dashboardType) {
                 TokenManager.set(prefix + '_selected', value);
@@ -1477,8 +1501,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 Utils.log({text: text, commentary: commentary, dashboardType: dashboardType}, 'updatePeriods - START');
                 
-                if (dashboardType === 'delete' || dashboardType === 'update_custom') {
-                    Utils.log('Mode delete/update_custom - stockage des données seulement', 'updatePeriods');
+                if (dashboardType === 'delete') {
+                    Utils.log('Mode delete - stockage des données seulement', 'updatePeriods');
                     TokenManager.set('downtime_selected', text);
                     
                     try {
@@ -1491,6 +1515,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return;
                 }
                 
+               
                 UIManager.create();
                 
                 var allPeriods = [];
@@ -1529,6 +1554,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     Utils.log(allPeriods, 'Périodes du format ancien');
                 }
                 
+                //  Stocker les périodes pour update_custom
+                if (dashboardType === 'update_custom') {
+                    TokenManager.set('downtime_selected', text);
+                }
+                
                 for (var i = 0; i < allPeriods.length; i++) {
                     var periodValue = allPeriods[i];
                     var periodNumber = (i + 1).toString();
@@ -1558,6 +1588,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     $('#commentaire').val(commentary);
                 } catch (error) {
                     Utils.log(error, 'unable to write in #commentaire', 1);
+                }
+                
+                //  Mettre à jour la description pour update_custom
+                if (dashboardType === 'update_custom') {
+                    UIManager.updateDescriptionDiv();
                 }
                 
                 Utils.log('updatePeriods - END', 'updatePeriods');
@@ -1692,7 +1727,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
                 
-                // ✅ FIX : Récupérer le dt_filter depuis les tokens
+                //  Récupérer le dt_filter depuis les tokens
                 selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
                 
                 Utils.log(selected, 'Update custom data collectée');
@@ -1706,7 +1741,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
                 }
                 
-                // ✅ FIX : Validation simple du dt_filter
                 if (Utils.isNull(selected['dt_filter'])) {
                     errors++;
                     errorOutput += '- Le filtre personnalisé est requis<br />';
@@ -1850,7 +1884,7 @@ downtimeFields.push(downtimeField);
             var tokenValue = TokenManager.get("step_opt_for_delete");
             if (Utils.isNotNull(tokenValue)) return tokenValue;
             
-            // ✅ FIX : Vérifier les deux noms de tokens possibles
+            //  FIX : Vérifier les deux noms de tokens possibles
             var serviceToken = TokenManager.get('service_select_input_type');
             var kpiToken = TokenManager.get('kpi_select_input_type');
             var entityToken = TokenManager.get('entity_select_input_type');
