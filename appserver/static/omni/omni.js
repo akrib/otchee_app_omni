@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.6.0'; // Version avec amélioration delete page et unification description
+var scriptVersion = '0.6.1'; // Version avec amélioration delete page et unification description
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -1146,42 +1146,63 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== GESTION DES DONNÉES ====================
         const DataManager = {
-            fillDashboard(downtimeData, dashboardType) {
-                Utils.log([downtimeData, dashboardType], 'fillDashboard');
+    fillDashboard(downtimeData, dashboardType) {
+        Utils.log([downtimeData, dashboardType], 'fillDashboard');
 
-                downtimeData.forEach(function (row) {
-                    var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
-                    var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
-                    var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
-                    var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
-                    var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
-                    var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
-                    var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
-                    var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
-                    var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
-                    var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
+        downtimeData.forEach(function (row) {
+            var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
+            var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
+            var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
+            var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
+            var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
+            var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
+            var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
+            var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
+            var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
+            var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
 
-                    TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
-                    TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
+            TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
+            TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
+            
+            DataManager.setTypeTokens('service', service, service_type, dashboardType);
+            DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
+            DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
+            TokenManager.set('dt_filter', dt_filter);
+            TokenManager.set('dt_pattern', dt_pattern);
+            
+            if (dashboardType == "update") {
+                // Initialiser le pattern_type à "exist" et sélectionner le pattern existant
+                if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
+                    // Cas 1: Pattern existant dans la maintenance
+                    TokenManager.set('pattern_type', 'exist', true);
+                    TokenManager.set('form.pattern_type', 'exist');
+                    TokenManager.set('pattern_exist', '1');
+                    TokenManager.set('dt_patern_select', dt_pattern, true);
+                    TokenManager.set('form.dt_patern_select', dt_pattern);
+                    TokenManager.set('dt_pattern_selected', dt_pattern);
                     
-                    DataManager.setTypeTokens('service', service, service_type, dashboardType);
-                    DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
-                    DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
-                    TokenManager.set('dt_filter', dt_filter);
-                    TokenManager.set('dt_pattern', dt_pattern);
+                    Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
+                } else {
+                    // Cas 2: Pas de pattern dans la maintenance
+                    TokenManager.set('pattern_type', 'new', true);
+                    TokenManager.set('form.pattern_type', 'new');
+                    TokenManager.set('pattern_new', '1');
+                    TokenManager.set('dt_pattern_selected', '');
                     
-                    if (dashboardType == "update") {
-                        DataManager.updatePeriods(downtime, commentary);
-                        TokenManager.set('update_full_loading', 1);
-                    } else if (dashboardType == "delete") {
-                        TokenManager.set("downtime_selected", downtime);
-                        DataManager.updatePeriods(downtime, commentary);
-                        UIManager.updateDescriptionDiv();
-                        TokenManager.set('update_full_loading', 1);
-                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
-                    }
-                });
-            },
+                    Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
+                }
+                
+                DataManager.updatePeriods(downtime, commentary);
+                TokenManager.set('update_full_loading', 1);
+            } else if (dashboardType == "delete") {
+                TokenManager.set("downtime_selected", downtime);
+                DataManager.updatePeriods(downtime, commentary);
+                UIManager.updateDescriptionDiv();
+                TokenManager.set('update_full_loading', 1);
+                TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+            }
+        });
+    },
 
             setTypeTokens(prefix, value, type, dashboardType) {
                 TokenManager.set(prefix + '_selected', value);

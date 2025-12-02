@@ -95,21 +95,7 @@
 | where valid&gt;0
     </query>
   </search>  
-  <!-- <row>
-    <panel ref="footer_mrspocv2"></panel>
-  </row> -->
   <fieldset submitButton="false"></fieldset>
-  <!--  <row>-->
-  <!--    <panel>-->
-  <!--      <html>-->
-  <!--        <center>-->
-  <!--<div id="header" class="bg-mrspoc">-->
-  <!--    <h1>MODIFIER UNE MAINTENANCE</h1>-->
-  <!--</div>-->
-  <!--</center>-->
-  <!--</html>-->
-  <!--    </panel>-->
-  <!--  </row>-->
   <row depends="$DT_ID$" rejects="$update_full_loading$">
     <panel>
       <html>
@@ -171,8 +157,8 @@
            <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
            <p id="swc_step_1" data-label="KPI" data-validateToken="kpi_selected"/>    
            <p id="swc_step_2" data-label="Entity" data-validateToken="entity_selected"/>
-           <p id="swc_step_3" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
-           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
+           <p id="swc_step_3" data-label="Pattern" data-validateToken="dt_pattern_selected"/>
+           <p id="swc_step_4" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
         <div id="step-control-wizard"/>
         </html>
     </panel>
@@ -650,13 +636,69 @@
   <row depends="$step_3$">
     <panel>
       <html>
+        <h1>PATTERN</h1>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_3$">
+    <panel>
+      <input type="dropdown" token="pattern_type">
+        <label>Pattern type</label>
+        <choice value="exist">Pattern existant</choice>
+        <choice value="new">Nouveau pattern</choice>
+        <default>exist</default>
+        <initialValue>exist</initialValue>
+        <change>
+          <condition match="$pattern_type$=&quot;exist&quot;">
+            <set token="pattern_exist">1</set>
+            <unset token="pattern_new"></unset>
+            <unset token="dt_pattern_text"></unset>
+          </condition>
+          <condition match="$pattern_type$=&quot;new&quot;">
+            <set token="pattern_new">1</set>
+            <unset token="pattern_exist"></unset>
+            <unset token="dt_patern_select"></unset>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
+        <label>Downtime Pattern</label>
+        <change>
+          <set token="dt_pattern_selected">$dt_patern_select$</set>
+        </change>
+        <fieldForLabel>dt_pattern</fieldForLabel>
+        <fieldForValue>dt_pattern</fieldForValue>
+        <search>
+          <query>
+| inputlookup omni_kv_def 
+| stats count as _c by dt_pattern
+| appendpipe
+[| stats count 
+ | where count=0
+ | eval dt_pattern="-"
+ | table dt_pattern]
+          </query>
+        </search>
+      </input>
+      <input type="text" token="dt_pattern_text" depends="$pattern_new$">
+        <label>Downtime pattern</label>
+        <default></default>
+        <change>
+          <set token="dt_pattern_selected">$dt_pattern_text$</set>
+        </change>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_4$">
+    <panel>
+      <html>
         <center>
           <div id="downtime"/>
         </center>
       </html>
     </panel>
   </row>
-  <row depends="$step_3$">
+  <row depends="$step_4$">
     <panel>
       <input type="checkbox" token="sendingEmail">
         <label></label>
