@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.7.1'; // Version avec update_custom
+var scriptVersion = '0.8.0'; // Version corrigée
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -60,7 +60,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             MONTH_DAYS: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
                 '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
                 '25', '26', '27', '28', '29', '30', '31'],
-            // Configuration des filtres personnalisés
             FILTER_OPERATORS: {
                 'EQUAL_NUM': { pattern: /^([^=!<>]+)=(\d+(?:\.\d+)?)$/, label: 'nombre égal à', type: 'number' },
                 'NOT_EQUAL_NUM': { pattern: /^([^=!<>]+)!=(\d+(?:\.\d+)?)$/, label: 'nombre différent de', type: 'number' },
@@ -84,7 +83,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== UTILITAIRES ====================
         const Utils = {
-            // Logging amélioré
             log(obj, titre = '', level = 0) {
                 if (debugMode != 1) return;
                 
@@ -107,7 +105,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 console.groupEnd();
             },
 
-            // Validation
             isNull(variable) {
                 return variable === "" || variable === null || variable === undefined || 
                        variable === false || variable === 0 || 
@@ -118,7 +115,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return !this.isNull(variable);
             },
 
-            // Génération d'ID unique
             createID() {
                 const crypto = window.crypto || window.msCrypto;
                 var array = new Uint32Array(1);
@@ -126,12 +122,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return (Date.now().toString(36) + crypto.getRandomValues(array).toString(36).substr(2, 5)).toUpperCase();
             },
 
-            // Validation email
             checkEmail(email) {
                 return CONFIG.EMAIL_REGEX.test(String(email).toLowerCase());
             },
 
-            // Pause
             applySleep(milliseconds) {
                 var start = new Date().getTime();
                 for (var i = 0; i < 1e7; i++) {
@@ -139,7 +133,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
             },
 
-            // Date du jour
             getTodayDate() {
                 var today = new Date();
                 var dd = String(today.getDate()).padStart(2, '0');
@@ -148,27 +141,17 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return yy + '-' + mm + '-' + dd;
             },
 
-            // Échappement amélioré pour SPL
             escapeSPLString(value) {
                 try {
                     if (this.isNull(value)) {
                         return '';
                     }
                     
-                    // Convertir en string si ce n'est pas déjà le cas
                     var str = String(value);
-                    
-                    // Échapper les backslashes d'abord (important de le faire en premier)
                     str = str.replace(/\\/g, '\\\\');
-                    
-                    // Échapper les guillemets doubles
                     str = str.replace(/"/g, '\\"');
-                    
-                    // Échapper les retours à la ligne
                     str = str.replace(/\n/g, '\\n');
                     str = str.replace(/\r/g, '\\r');
-                    
-                    // Échapper les tabulations
                     str = str.replace(/\t/g, '\\t');
                     
                     return str;
@@ -205,6 +188,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     
                     defaultTokenModel.unset(tokenName);
                     submittedTokenModel.unset(tokenName);
+                    defaultTokenModel.unset('form.' + tokenName);
+                    submittedTokenModel.unset('form.' + tokenName);
                 } catch (error) {
                     Utils.log(error, 'Erreur TokenManager.unset', 2);
                 }
@@ -215,6 +200,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     var defaultTokenModel = mvc.Components.get('default', { create: true });
                     var submittedTokenModel = mvc.Components.getInstance('submitted', { create: true });
                     
+                    // Essayer d'abord le token form.*
+                    var formToken = defaultTokenModel.get('form.' + tokenName) || submittedTokenModel.get('form.' + tokenName);
+                    if (Utils.isNotNull(formToken)) return formToken;
+                    
+                    // Puis le token normal
                     var def = defaultTokenModel.get(tokenName);
                     var sub = submittedTokenModel.get(tokenName);
                     
@@ -228,13 +218,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== TRANSFORMATIONS DE TEXTE ====================
         const TextTransformer = {
-            // Transformation pour KV Store
             forKV(value) {
                 if (!value) return value;
                 return value.replace(',', ';').replace('%', '*');
             },
 
-            // Retrait des accents
             removeAccents(text) {
                 const find = ['à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 
                     'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ',
@@ -255,7 +243,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return result.toLowerCase().trim();
             },
 
-            // Jours en anglais
             daysToEnglish(text) {
                 const translations = {
                     'Lundi': 'Monday', 'Mardi': 'Tuesday', 'Mercredi': 'Wednesday',
@@ -269,7 +256,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return result;
             },
 
-            // Tags visuels
             toVisualTags(itemString) {
                 try {
                     if (Utils.isNull(itemString)) return '';
@@ -287,10 +273,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== PARSEUR DE FILTRES PERSONNALISÉS ====================
         const CustomFilterParser = {
-            /**
-             * Parse une expression dt_filter complète
-             * Format: [NOT] expression1 [AND|OR [NOT] expression2]
-             */
             parse(dtFilterString) {
                 Utils.log(dtFilterString, 'CustomFilterParser.parse - Input');
                 
@@ -302,21 +284,18 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     raw: dtFilterString,
                     hasNot1: false,
                     expression1: null,
-                    logicalOperator: null, // 'AND' ou 'OR'
+                    logicalOperator: null,
                     hasNot2: false,
                     expression2: null
                 };
 
-                // Nettoyer la chaîne
                 var cleaned = dtFilterString.trim();
                 
-                // Détecter le premier NOT
                 if (cleaned.toUpperCase().startsWith('NOT ')) {
                     result.hasNot1 = true;
                     cleaned = cleaned.substring(4).trim();
                 }
 
-                // Chercher l'opérateur logique (AND ou OR)
                 var andMatch = cleaned.match(/\s+(AND)\s+/i);
                 var orMatch = cleaned.match(/\s+(OR)\s+/i);
                 
@@ -324,7 +303,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var logicalOpIndex = -1;
                 
                 if (andMatch && orMatch) {
-                    // Les deux existent, prendre le premier
                     logicalOpIndex = Math.min(andMatch.index, orMatch.index);
                     logicalOpMatch = andMatch.index < orMatch.index ? andMatch : orMatch;
                 } else if (andMatch) {
@@ -336,13 +314,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
 
                 if (logicalOpMatch) {
-                    // Il y a deux expressions
                     result.logicalOperator = logicalOpMatch[1].toUpperCase();
                     
                     var expr1String = cleaned.substring(0, logicalOpIndex).trim();
                     var expr2String = cleaned.substring(logicalOpIndex + logicalOpMatch[0].length).trim();
                     
-                    // Détecter le second NOT
                     if (expr2String.toUpperCase().startsWith('NOT ')) {
                         result.hasNot2 = true;
                         expr2String = expr2String.substring(4).trim();
@@ -351,7 +327,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     result.expression1 = this.parseExpression(expr1String);
                     result.expression2 = this.parseExpression(expr2String);
                 } else {
-                    // Une seule expression
                     result.expression1 = this.parseExpression(cleaned);
                 }
 
@@ -359,9 +334,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return result;
             },
 
-            /**
-             * Parse une expression individuelle
-             */
             parseExpression(exprString) {
                 Utils.log(exprString, 'parseExpression - Input');
                 
@@ -369,7 +341,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
                 var expr = exprString.trim();
                 
-                // Tester chaque pattern d'opérateur
                 for (var opKey in CONFIG.FILTER_OPERATORS) {
                     var operator = CONFIG.FILTER_OPERATORS[opKey];
                     var match = expr.match(operator.pattern);
@@ -400,38 +371,30 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 };
             },
 
-            /**
-             * Reconstruit la chaîne dt_filter depuis l'objet parsé
-             */
-            // reconstruct(parsedFilter) {
-            //     if (!parsedFilter || !parsedFilter.expression1) {
-            //         return '';
-            //     }
+            reconstruct(parsedFilter) {
+                if (!parsedFilter || !parsedFilter.expression1) {
+                    return '';
+                }
 
-            //     var result = '';
+                var result = '';
                 
-            //     // Expression 1
-            //     if (parsedFilter.hasNot1) {
-            //         result += 'NOT ';
-            //     }
-            //     result += this.reconstructExpression(parsedFilter.expression1);
+                if (parsedFilter.hasNot1) {
+                    result += 'NOT ';
+                }
+                result += this.reconstructExpression(parsedFilter.expression1);
                 
-            //     // Expression 2 si elle existe
-            //     if (parsedFilter.expression2) {
-            //         result += ' ' + parsedFilter.logicalOperator + ' ';
+                if (parsedFilter.expression2) {
+                    result += ' ' + parsedFilter.logicalOperator + ' ';
                     
-            //         if (parsedFilter.hasNot2) {
-            //             result += 'NOT ';
-            //         }
-            //         result += this.reconstructExpression(parsedFilter.expression2);
-            //     }
+                    if (parsedFilter.hasNot2) {
+                        result += 'NOT ';
+                    }
+                    result += this.reconstructExpression(parsedFilter.expression2);
+                }
                 
-            //     return result;
-            // },
+                return result;
+            },
 
-            /**
-             * Reconstruit une expression individuelle
-             */
             reconstructExpression(expr) {
                 if (!expr || !expr.field) {
                     return '';
@@ -475,12 +438,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== VALIDATION ====================
         const Validator = {
-            // Validation format heure
             timeFormat(timestr) {
                 return CONFIG.TIME_REGEX.test(timestr);
             },
 
-            // Vérification date de fin > date de début
             endAfterBegin(dayBegin, dayEnd, begin, end) {
                 if (String(dayBegin) !== String(dayEnd)) return false;
                 
@@ -493,7 +454,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return dateBegin.valueOf() > dateEnd.valueOf();
             },
 
-            // Validation complète des datepickers
             allDatepickers() {
                 var errorMessages = '';
                 var periodNumber = 1;
@@ -603,7 +563,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         }
                     });
                 
-                // Initialisation si valeur existante
                 var fromValue = from.val();
                 if (fromValue && fromValue.length > 0) {
                     try {
@@ -726,9 +685,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
                 var userName = Splunk.util.getConfigValue('USERNAME');
                 var dashboardType = $('#dashboardType').html();
-                var downtimeType = $('#downtimeType').html();
                 
-                // Interface simplifiée pour le mode delete
                 if (dashboardType === 'delete') {
                     var html = `
                         <div class="ui Omni_base">
@@ -754,7 +711,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return;
                 }
                 
-                // Interface normale pour add/update/update_custom
                 var html = `
                     <div class="ui Omni_base">
                         <table id="Omni_table">
@@ -786,91 +742,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 $('#username').html(userName);
             },
 
-            // setupCustomFilterListeners() {
-            //     // Toggle expression 2
-            //     $('#use_expr2').on('change', function() {
-            //         if ($(this).is(':checked')) {
-            //             $('#logical_operator_choice').show();
-            //             $('#expression2_container').show();
-            //         } else {
-            //             $('#logical_operator_choice').hide();
-            //             $('#expression2_container').hide();
-            //         }
-            //         UIManager.updateCustomFilterPreview();
-            //     });
-                
-            //     // Gestion de l'affichage du champ valeur selon l'opérateur
-            //     $('#expr1_operator').on('change', function() {
-            //         var operator = $(this).val();
-            //         if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
-            //             $('#expr1_value_container').hide();
-            //         } else {
-            //             $('#expr1_value_container').show();
-            //         }
-            //         UIManager.updateCustomFilterPreview();
-            //     });
-                
-            //     $('#expr2_operator').on('change', function() {
-            //         var operator = $(this).val();
-            //         if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
-            //             $('#expr2_value_container').hide();
-            //         } else {
-            //             $('#expr2_value_container').show();
-            //         }
-            //         UIManager.updateCustomFilterPreview();
-            //     });
-                
-            //     // Mise à jour de l'aperçu en temps réel
-            //     $('#expr1_not, #expr1_field, #expr1_value, #logical_operator, #expr2_not, #expr2_field, #expr2_value').on('input change', function() {
-            //         UIManager.updateCustomFilterPreview();
-            //     });
-            // },
-
-            // updateCustomFilterPreview() {
-            //     var preview = '';
-                
-            //     // Expression 1
-            //     var expr1Not = $('#expr1_not').is(':checked');
-            //     var expr1Field = $('#expr1_field').val().trim();
-            //     var expr1Operator = $('#expr1_operator').val();
-            //     var expr1Value = $('#expr1_value').val().trim();
-                
-            //     if (expr1Field && expr1Operator) {
-            //         if (expr1Not) preview += 'NOT ';
-                    
-            //         var expr1 = {
-            //             operatorKey: expr1Operator,
-            //             field: expr1Field,
-            //             value: expr1Value
-            //         };
-            //         preview += CustomFilterParser.reconstructExpression(expr1);
-            //     }
-                
-            //     // Expression 2 si activée
-            //     if ($('#use_expr2').is(':checked')) {
-            //         var logicalOp = $('#logical_operator').val();
-            //         var expr2Not = $('#expr2_not').is(':checked');
-            //         var expr2Field = $('#expr2_field').val().trim();
-            //         var expr2Operator = $('#expr2_operator').val();
-            //         var expr2Value = $('#expr2_value').val().trim();
-                    
-            //         if (expr2Field && expr2Operator && preview) {
-            //             preview += ' ' + logicalOp + ' ';
-                        
-            //             if (expr2Not) preview += 'NOT ';
-                        
-            //             var expr2 = {
-            //                 operatorKey: expr2Operator,
-            //                 field: expr2Field,
-            //                 value: expr2Value
-            //             };
-            //             preview += CustomFilterParser.reconstructExpression(expr2);
-            //         }
-            //     }
-                
-            //     $('#filter_preview').html(preview || 'Aucun filtre configuré');
-            // },
-
             populateCustomFilterForm(parsedFilter) {
                 Utils.log(parsedFilter, 'populateCustomFilterForm');
                 
@@ -879,18 +750,15 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 
                 // Expression 1
-                // Checkbox NOT 1
                 if (parsedFilter.hasNot1) {
                     TokenManager.set('not_1', 'NOT', true);
                 } else {
                     TokenManager.unset('not_1');
                 }
                 
-                // Champ nom 1
                 var fieldName1 = parsedFilter.expression1.field || '';
                 TokenManager.set('field_name_1', fieldName1, true);
                 
-                // Type de champ 1 (déterminer si c'est string ou number)
                 var fieldType1 = 'string';
                 var op1Key = parsedFilter.expression1.operatorKey;
                 if (['EQUAL_NUM', 'NOT_EQUAL_NUM', 'LTE', 'GTE', 'LT', 'GT'].indexOf(op1Key) !== -1) {
@@ -898,36 +766,29 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 TokenManager.set('field_type_1', fieldType1, true);
                 
-                // Opérateur 1 - convertir depuis l'operatorKey vers la valeur du dropdown
                 var operator1Value = UIManager.convertOperatorKeyToDropdownValue(op1Key);
                 TokenManager.set('field_operator_1', operator1Value, true);
                 
-                // Valeur 1
                 var fieldValue1 = parsedFilter.expression1.value || '';
                 TokenManager.set('field_value_1', fieldValue1, true);
                 
                 // Expression 2
                 if (parsedFilter.expression2) {
-                    // Activer le checkbox pour la 2ème expression
                     TokenManager.set('show_custom_field_sup', '1', true);
                     TokenManager.set('field_sup', '1');
                     
-                    // Opérateur logique
                     var logicalOp = parsedFilter.logicalOperator || 'AND';
                     TokenManager.set('operator', logicalOp, true);
                     
-                    // Checkbox NOT 2
                     if (parsedFilter.hasNot2) {
                         TokenManager.set('not_2', 'NOT', true);
                     } else {
                         TokenManager.unset('not_2');
                     }
                     
-                    // Champ nom 2
                     var fieldName2 = parsedFilter.expression2.field || '';
                     TokenManager.set('field_name_2', fieldName2, true);
                     
-                    // Type de champ 2
                     var fieldType2 = 'string';
                     var op2Key = parsedFilter.expression2.operatorKey;
                     if (['EQUAL_NUM', 'NOT_EQUAL_NUM', 'LTE', 'GTE', 'LT', 'GT'].indexOf(op2Key) !== -1) {
@@ -935,15 +796,12 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     }
                     TokenManager.set('field_type_2', fieldType2, true);
                     
-                    // Opérateur 2
                     var operator2Value = UIManager.convertOperatorKeyToDropdownValue(op2Key);
                     TokenManager.set('field_operator_2', operator2Value, true);
                     
-                    // Valeur 2
                     var fieldValue2 = parsedFilter.expression2.value || '';
                     TokenManager.set('field_value_2', fieldValue2, true);
                 } else {
-                    // Pas de 2ème expression
                     TokenManager.unset('show_custom_field_sup');
                     TokenManager.set('field_sup', '0');
                 }
@@ -951,9 +809,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log('Tokens définis avec succès', 'populateCustomFilterForm');
             },
 
-            /**
-             * Convertit un operatorKey (ex: 'EQUAL_STR') vers la valeur du dropdown (ex: '=')
-             */
             convertOperatorKeyToDropdownValue(operatorKey) {
                 var mapping = {
                     'EQUAL_NUM': '=',
@@ -973,49 +828,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 return mapping[operatorKey] || '=';
             },
-
-            // collectCustomFilterFromForm() {
-            //     var parsedFilter = {
-            //         hasNot1: $('#expr1_not').is(':checked'),
-            //         expression1: null,
-            //         logicalOperator: null,
-            //         hasNot2: false,
-            //         expression2: null
-            //     };
-                
-            //     // Expression 1
-            //     var expr1Field = $('#expr1_field').val().trim();
-            //     var expr1Operator = $('#expr1_operator').val();
-            //     var expr1Value = $('#expr1_value').val().trim();
-                
-            //     if (expr1Field && expr1Operator) {
-            //         parsedFilter.expression1 = {
-            //             operatorKey: expr1Operator,
-            //             field: expr1Field,
-            //             value: expr1Value
-            //         };
-            //     }
-                
-            //     // Expression 2
-            //     if ($('#use_expr2').is(':checked')) {
-            //         parsedFilter.logicalOperator = $('#logical_operator').val();
-            //         parsedFilter.hasNot2 = $('#expr2_not').is(':checked');
-                    
-            //         var expr2Field = $('#expr2_field').val().trim();
-            //         var expr2Operator = $('#expr2_operator').val();
-            //         var expr2Value = $('#expr2_value').val().trim();
-                    
-            //         if (expr2Field && expr2Operator) {
-            //             parsedFilter.expression2 = {
-            //                 operatorKey: expr2Operator,
-            //                 field: expr2Field,
-            //                 value: expr2Value
-            //             };
-            //         }
-            //     }
-                
-            //     return parsedFilter;
-            // },
 
             appendPeriodTab(tab, nombre, downtimeType = 'between_date', beginDays = '', beginHours = '00:00:00', endDays = '', endHours = '24:00:00') {
                 Utils.log([tab, nombre, downtimeType], 'appendPeriodTab');
@@ -1208,7 +1020,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return '';
             },
 
-            // FONCTION UNIFIÉE pour générer les périodes depuis JSON ou DOM
             buildPeriodsDescriptionFromSource() {
                 var periodsHtml = '';
                 var dashboardType = $('#dashboardType').html();
@@ -1216,8 +1027,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log('Début buildPeriodsDescriptionFromSource', 'buildPeriodsDescriptionFromSource');
                 Utils.log(dashboardType, 'Dashboard type');
                 
-                if (dashboardType === 'delete' ) {
-                    // Mode DELETE : lire depuis le JSON stocké
+                if (dashboardType === 'delete' || dashboardType === 'update_custom') {
                     var downtimeSelected = TokenManager.get('downtime_selected');
                     
                     if (Utils.isNull(downtimeSelected)) {
@@ -1226,7 +1036,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     }
                     
                     try {
-                        // Le downtime est stocké comme une chaîne JSON dans le token
                         var downtimeJson = JSON.parse(downtimeSelected);
                         
                         if (!Array.isArray(downtimeJson)) {
@@ -1240,7 +1049,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             var periodType = '';
                             var periodDesc = '';
                             
-                            // Déterminer le type de période et construire la description
                             if (period.dt_type === 'between_date') {
                                 periodType = 'Date à date';
                                 periodDesc = `Du <strong>${period.begin_date} ${period.begin_time.substr(0, 5)}</strong> au <strong>${period.end_date} ${period.end_time.substr(0, 5)}</strong>`;
@@ -1269,7 +1077,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                                 periodDesc = `<strong>${typeLabel}</strong> <strong>${period.begin_date}</strong> de <strong>${period.begin_time.substr(0, 5)}</strong> à <strong>${period.end_time.substr(0, 5)}</strong>`;
                             }
                             
-                            // Ajouter des informations supplémentaires si présentes
                             var additionalInfo = '';
                             if (period.dt_filter && period.dt_filter !== '') {
                                 additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Filter: <em>${period.dt_filter}</em></span>`;
@@ -1297,7 +1104,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         Utils.log(error, 'Erreur lors du parsing du JSON downtime', 2);
                         console.error('Erreur complète:', error);
                         
-                        // Fallback : essayer l'ancien format (chaîne avec séparateurs)
+                        // Fallback
                         try {
                             var allPeriods = downtimeSelected.split('£');
                             Utils.log(allPeriods, 'Tentative avec l\'ancien format');
@@ -1341,18 +1148,18 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             });
                         } catch (fallbackError) {
                             Utils.log(fallbackError, 'Erreur également dans le fallback', 2);
+                            return '';
                         }
                     }
                     
                 } else {
-                    // Mode ADD/UPDATE : lire depuis le DOM
+                    // Mode ADD/UPDATE
                     var periodNumber = 1;
                     
                     $('[id^=content-tab-Period]').each(function() {
                         var periodDesc = '';
                         var periodType = '';
                         
-                        // Détection du type de période
                         if ($(this).find('[periodID=radioD]').is(':checked')) {
                             var dateBegin = $(this).find('[id^=datepicker_begin]').val();
                             var dateEnd = $(this).find('[id^=datepicker_end]').val();
@@ -1402,7 +1209,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             }
                         }
                         
-                        // Ajout de la période si elle est valide
                         if (periodDesc !== '') {
                             periodsHtml += `
                                 <tr>
@@ -1432,7 +1238,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log('updateDescriptionDiv appelé', 'updateDescriptionDiv');
                 Utils.log({dashboardType: dashboardType, dt_id: dt_id}, 'Contexte');
                 
-                // Construction du HTML de base avec les sélections
                 var selectionDescHtml = `
                     <table id="selection_desc_table" width="100%">
                         <tr><td width="150"><strong>ID Downtime</strong></td><td width="20"></td><td><span class="description_item">${dt_id}</span></td></tr>
@@ -1441,17 +1246,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         <tr><td><strong>Entity(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
                 `;
                 
-                // Ajout des filtres personnalisés si présents
                 if (Utils.isNotNull(dt_filterToken) && dt_filterToken !== '') {
                     selectionDescHtml += `<tr><td><strong>Custom filter(s)</strong></td><td></td><td><code style="background: #f5f5f5; padding: 2px 5px;">${dt_filterToken}</code></td></tr>`;
                 }
                 
-                // Ajout des patterns si présents
                 if (Utils.isNotNull(dt_patternToken) && dt_patternToken !== '') {
                     selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>`;
                 }
                 
-                // Ajout des périodes via la fonction unifiée
                 var periodsHtml = UIManager.buildPeriodsDescriptionFromSource();
                 if (periodsHtml !== '') {
                     var periodTitle = dashboardType === 'delete' 
@@ -1504,7 +1306,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     
                     Utils.log(arr['downtimeFields'], 'downtimeFields avant transformation');
                     
-                    // Transformation des downtimeFields en objets JSON
                     var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
                         var parts = field.split('#');
                         return {
@@ -1521,11 +1322,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     
                     Utils.log(downtimeJsonArray, 'downtimeJsonArray créé');
                     
-                    // Conversion en chaîne JSON - SANS double échappement
                     var downtimeJsonString = JSON.stringify(downtimeJsonArray);
                     Utils.log(downtimeJsonString, 'JSON string avant échappement');
                     
-                    // Échapper pour SPL (une seule fois)
                     downtimeJsonString = downtimeJsonString
                         .replace(/\\/g, '\\\\')
                         .replace(/"/g, '\\"');
@@ -1607,9 +1406,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     TokenManager.set('dt_pattern', dt_pattern);
                     
                     if (dashboardType == "update") {
-                        // Initialiser le pattern_type à "exist" et sélectionner le pattern existant
                         if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
-                            // Cas 1: Pattern existant dans la maintenance
                             TokenManager.set('pattern_type', 'exist', true);
                             TokenManager.set('pattern_exist', '1');
                             TokenManager.set('dt_pattern_select', dt_pattern, true);
@@ -1617,7 +1414,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             
                             Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
                         } else {
-                            // Cas 2: Pas de pattern dans la maintenance
                             TokenManager.set('pattern_type', 'new', true);
                             TokenManager.set('pattern_new', '1');
                             TokenManager.set('dt_pattern_selected', '');
@@ -1629,7 +1425,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         TokenManager.set('update_full_loading', 1);
                     } else if (dashboardType == "delete") {
                         TokenManager.set("downtime_selected", downtime);
-                        // DataManager.updatePeriods(downtime, commentary);
                         try {
                             $('#commentaire').val(commentary);
                         } catch (error) {
@@ -1639,23 +1434,22 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         TokenManager.set('update_full_loading', 1);
                         TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
                     } else if (dashboardType == "update_custom") {
-                        // Mode update_custom - remplir le formulaire de filtre personnalisé
                         Utils.log('Mode UPDATE_CUSTOM détecté', 'fillDashboard');
                         
                         TokenManager.set("downtime_selected", downtime);
                         TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
                         
-                        // Parser le dt_filter
                         var parsedFilter = CustomFilterParser.parse(dt_filter);
                         Utils.log(parsedFilter, 'Filtre parsé');
                         
-                        // Remplir le formulaire
                         UIManager.populateCustomFilterForm(parsedFilter);
-                        DataManager.updatePeriods(downtime, commentary);
-                        // Remplir le commentaire
-
                         
-                        // Mettre à jour la description
+                        try {
+                            $('#commentaire').val(commentary);
+                        } catch (error) {
+                            Utils.log(error, 'unable to write in #commentaire', 1);
+                        }
+                        
                         UIManager.updateDescriptionDiv();
                         TokenManager.set('update_full_loading', 1);
                     }
@@ -1684,7 +1478,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log({text: text, commentary: commentary, dashboardType: dashboardType}, 'updatePeriods - START');
                 
                 if (dashboardType === 'delete' || dashboardType === 'update_custom') {
-                    // En mode delete ou update_custom, on stocke juste les données sans créer l'interface de périodes
                     Utils.log('Mode delete/update_custom - stockage des données seulement', 'updatePeriods');
                     TokenManager.set('downtime_selected', text);
                     
@@ -1694,17 +1487,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         Utils.log(error, 'unable to write in #commentaire', 1);
                     }
                     
-                    // Mettre à jour la description directement
                     UIManager.updateDescriptionDiv();
                     return;
                 }
                 
-                // Pour add/update, comportement normal
                 UIManager.create();
                 
                 var allPeriods = [];
                 
-                // Essayer de parser comme JSON d'abord
                 try {
                     Utils.log('Tentative de parsing JSON', 'updatePeriods');
                     var jsonPeriods = JSON.parse(text);
@@ -1715,7 +1505,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     
                     Utils.log(jsonPeriods, 'JSON parsé avec succès');
                     
-                    // Convertir le format JSON en format ancien pour appendPeriodTab
                     allPeriods = jsonPeriods.map(function(period) {
                         return [
                             period.dt_type || 'between_date',
@@ -1729,225 +1518,209 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     Utils.log(allPeriods, 'Périodes converties du JSON');
                     
                 } catch (jsonError) {
-                    // Si le parsing JSON échoue, essayer l'ancien format
                     Utils.log('JSON parsing failed, trying old format', 'updatePeriods', 1);
                     Utils.log(jsonError, 'JSON error');
                     
                     var periodStrings = text.split('£');
                     allPeriods = periodStrings.map(function(periodStr) {
                         return periodStr.split('#');
-});
-                
-                Utils.log(allPeriods, 'Périodes du format ancien');
-            }
-            
-            // Créer les onglets de périodes
-            for (var i = 0; i < allPeriods.length; i++) {
-                var periodValue = allPeriods[i];
-                var periodNumber = (i + 1).toString();
-                
-                Utils.log(periodValue, 'Création période ' + periodNumber);
-                
-                UIManager.appendPeriodTab(
-                    'tabs',
-                    'Periode ' + periodNumber,
-                    periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0],
-                    periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1],
-                    periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || periodValue[3],
-                    periodValue[CONFIG.PERIOD_FIELDS.END_DAY] || periodValue[2],
-                    periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
-                );
-                
-                var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
-                if (periodType == 'between_date') {
-                    var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
-                    DatePickerManager.apply(beginDay);
+                    });
+                    
+                    Utils.log(allPeriods, 'Périodes du format ancien');
                 }
-            }
-            
-            $('[id^=selectable]').selectable();
-            
-            try {
-                $('#commentaire').val(commentary);
-            } catch (error) {
-                Utils.log(error, 'unable to write in #commentaire', 1);
-            }
-            
-            Utils.log('updatePeriods - END', 'updatePeriods');
-        },
+                
+                for (var i = 0; i < allPeriods.length; i++) {
+                    var periodValue = allPeriods[i];
+                    var periodNumber = (i + 1).toString();
+                    
+                    Utils.log(periodValue, 'Création période ' + periodNumber);
+                    
+                    UIManager.appendPeriodTab(
+                        'tabs',
+                        'Periode ' + periodNumber,
+                        periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0],
+                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1],
+                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || periodValue[3],
+                        periodValue[CONFIG.PERIOD_FIELDS.END_DAY] || periodValue[2],
+                        periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
+                    );
+                    
+                    var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
+                    if (periodType == 'between_date') {
+                        var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
+                        DatePickerManager.apply(beginDay);
+                    }
+                }
+                
+                $('[id^=selectable]').selectable();
+                
+                try {
+                    $('#commentaire').val(commentary);
+                } catch (error) {
+                    Utils.log(error, 'unable to write in #commentaire', 1);
+                }
+                
+                Utils.log('updatePeriods - END', 'updatePeriods');
+            },
 
-        getSelectedInDashboard() {
-            Utils.log('', 'getSelectedInDashboard - START');
-            
-            var selected = {};
-            var errors = 0;
-            var errorOutput = 'Impossible de valider le downtime :<br />';
-            var dashboardType = $('#dashboardType').html();
-            
-            Utils.log(dashboardType, 'Dashboard type');
-            
-            // Configuration email
-            var sendingEmail = TokenManager.get("sendingEmail");
-            var email = TokenManager.get("email");
-            var sendEmail = '';
-            
-            if (Utils.isNotNull(sendingEmail) && Utils.checkEmail(email)) {
-                var action = dashboardType == 'add' ? 'Ajout' : (dashboardType == 'update' ? 'Modification' : 'Suppression');
-                sendEmail = `| table ID,result | transpose column_name="Champs"
-                    | sendemail to="${email}" subject="${action} de downtime" sendresults=true inline=true format=table
-                    message="Le downtime ${selected['ID']} vient d'être ${action == 'Ajout' ? 'soumis' : 'mis à jour'}, voici le récapitulatif"`;
-            }
+            getSelectedInDashboard() {
+                Utils.log('', 'getSelectedInDashboard - START');
+                
+                var selected = {};
+                var errors = 0;
+                var errorOutput = 'Impossible de valider le downtime :<br />';
+                var dashboardType = $('#dashboardType').html();
+                
+                Utils.log(dashboardType, 'Dashboard type');
+                
+                var sendingEmail = TokenManager.get("sendingEmail");
+                var email = TokenManager.get("email");
+                var sendEmail = '';
+                
+                if (Utils.isNotNull(sendingEmail) && Utils.checkEmail(email)) {
+                    var action = dashboardType == 'add' ? 'Ajout' : (dashboardType == 'update' ? 'Modification' : 'Suppression');
+                    sendEmail = `| table ID,result | transpose column_name="Champs"
+                        | sendemail to="${email}" subject="${action} de downtime" sendresults=true inline=true format=table
+                        message="Le downtime ${selected['ID']} vient d'être ${action == 'Ajout' ? 'soumis' : 'mis à jour'}, voici le récapitulatif"`;
+                }
 
-            if (dashboardType == "delete") {
-                Utils.log('Mode DELETE détecté', 'getSelectedInDashboard');
-                return DataManager.getDeleteData(selected, sendEmail);
-            }
-            
-            if (dashboardType == "update_custom") {
-                Utils.log('Mode UPDATE_CUSTOM détecté', 'getSelectedInDashboard');
-                return DataManager.getUpdateCustomData(selected, sendEmail);
-            }
+                if (dashboardType == "delete") {
+                    Utils.log('Mode DELETE détecté', 'getSelectedInDashboard');
+                    return DataManager.getDeleteData(selected, sendEmail);
+                }
+                
+                if (dashboardType == "update_custom") {
+                    Utils.log('Mode UPDATE_CUSTOM détecté', 'getSelectedInDashboard');
+                    return DataManager.getUpdateCustomData(selected, sendEmail);
+                }
 
-            // Données communes
-            selected['sendEmail'] = sendEmail;
-            selected['key'] = TokenManager.get('key') || '';
-            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
-            selected['username'] = Splunk.util.getConfigValue('USERNAME');
-            selected['lookup_name'] = 'omni_kv';
-            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
-            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
-            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
-            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
-            selected['step_opt'] = DataManager.getStepOpt();
-            selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
-            selected['downtimeFields'] = [];
-            
-            Utils.log(selected, 'Données de base collectées');
-            
-            // Version
-            if (dashboardType == "add") {
-                selected['version'] = TokenManager.get('selected_version') || 1;
-            } else if (dashboardType == "update") {
+                selected['sendEmail'] = sendEmail;
+                selected['key'] = TokenManager.get('key') || '';
+                selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+                selected['username'] = Splunk.util.getConfigValue('USERNAME');
+                selected['lookup_name'] = 'omni_kv';
+                selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+                selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+                selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+                selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+                selected['step_opt'] = DataManager.getStepOpt();
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['downtimeFields'] = [];
+                
+                Utils.log(selected, 'Données de base collectées');
+                
+                if (dashboardType == "add") {
+                    selected['version'] = TokenManager.get('selected_version') || 1;
+                } else if (dashboardType == "update") {
+                    selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
+                }
+
+                Utils.log('Collecte des périodes', 'getSelectedInDashboard');
+                var periodData = DataManager.collectPeriods();
+                selected['downtimeFields'] = periodData.downtimeFields;
+                errors += periodData.errors;
+                errorOutput += periodData.errorOutput;
+                
+                Utils.log(periodData, 'Données des périodes');
+
+                if (Utils.isNull(selected['service'])) {
+                    errors++;
+                    errorOutput += '- Veuillez sélectionner un ou plusieurs services<br />';
+                }
+                if (Utils.isNull(selected['kpi'])) {
+                    errors++;
+                    errorOutput += '- Veuillez sélectionner une ou plusieurs kpi<br />';
+                }
+                if (Utils.isNull(selected['entity'])) {
+                    errors++;
+                    errorOutput += '- Veuillez sélectionner une ou plusieurs entités<br />';
+                }
+                if (Utils.isNull(selected['commentary'])) {
+                    errors++;
+                    errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
+                }
+
+                Utils.log({errors: errors, errorOutput: errorOutput}, 'Résultat validation finale');
+                
+                return [selected, errors, errorOutput];
+            },
+
+            getDeleteData(selected, sendEmail) {
+                selected['key'] = TokenManager.get('key') || '';
+                selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+                selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+                selected['sendEmail'] = sendEmail;
+                selected['username'] = Splunk.util.getConfigValue('USERNAME');
+                selected['lookup_name'] = 'omni_kv';
+                selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+                selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+                selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+                selected['step_opt'] = DataManager.getStepOpt();
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+                selected['version'] = TokenManager.get('selected_version') || 99999;
+                
+                var errors = 0;
+                var errorOutput = '';
+                
+                if (Utils.isNull(selected['commentary'])) {
+                    errors++;
+                    errorOutput = 'Impossible de valider le downtime :<br /><br />- Veuillez entrer un commentaire détaillé<br />';
+                }
+                
+                Utils.log(selected, 'Delete data collectée');
+                
+                return [selected, errors, errorOutput];
+            },
+
+            getUpdateCustomData(selected, sendEmail) {
+                Utils.log('getUpdateCustomData - START', 'getUpdateCustomData');
+                
+                selected['key'] = TokenManager.get('key') || '';
+                selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+                selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+                selected['sendEmail'] = sendEmail;
+                selected['username'] = Splunk.util.getConfigValue('USERNAME');
+                selected['lookup_name'] = 'omni_kv';
+                selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+                selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+                selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+                selected['step_opt'] = DataManager.getStepOpt();
+                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
-            }
+                
+                // ✅ FIX : Récupérer le dt_filter depuis les tokens
+                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+                
+                Utils.log(selected, 'Update custom data collectée');
+                
+                // Validation
+                var errors = 0;
+                var errorOutput = '';
+                
+                if (Utils.isNull(selected['commentary'])) {
+                    errors++;
+                    errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
+                }
+                
+                // ✅ FIX : Validation simple du dt_filter
+                if (Utils.isNull(selected['dt_filter'])) {
+                    errors++;
+                    errorOutput += '- Le filtre personnalisé est requis<br />';
+                }
+                
+                if (errors > 0) {
+                    errorOutput = 'Impossible de valider le downtime :<br /><br />' + errorOutput;
+                }
+                
+                Utils.log({errors: errors, errorOutput: errorOutput}, 'Validation result');
+                
+                return [selected, errors, errorOutput];
+            },
 
-            // Récupération des périodes
-            Utils.log('Collecte des périodes', 'getSelectedInDashboard');
-            var periodData = DataManager.collectPeriods();
-            selected['downtimeFields'] = periodData.downtimeFields;
-            errors += periodData.errors;
-            errorOutput += periodData.errorOutput;
-            
-            Utils.log(periodData, 'Données des périodes');
-
-            // Validations finales
-            if (Utils.isNull(selected['service'])) {
-                errors++;
-                errorOutput += '- Veuillez sélectionner un ou plusieurs services<br />';
-            }
-            if (Utils.isNull(selected['kpi'])) {
-                errors++;
-                errorOutput += '- Veuillez sélectionner une ou plusieurs kpi<br />';
-            }
-            if (Utils.isNull(selected['entity'])) {
-                errors++;
-                errorOutput += '- Veuillez sélectionner une ou plusieurs entités<br />';
-            }
-            if (Utils.isNull(selected['commentary'])) {
-                errors++;
-                errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
-            }
-
-            Utils.log({errors: errors, errorOutput: errorOutput}, 'Résultat validation finale');
-            
-            return [selected, errors, errorOutput];
-        },
-
-        getDeleteData(selected, sendEmail) {
-            selected['key'] = TokenManager.get('key') || '';
-            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
-            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
-            selected['sendEmail'] = sendEmail;
-            selected['username'] = Splunk.util.getConfigValue('USERNAME');
-            selected['lookup_name'] = 'omni_kv';
-            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
-            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
-            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
-            selected['step_opt'] = DataManager.getStepOpt();
-            selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
-            selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
-            selected['version'] = TokenManager.get('selected_version') || 99999;
-            
-            // Validation du commentaire
-            var errors = 0;
-            var errorOutput = '';
-            
-            if (Utils.isNull(selected['commentary'])) {
-                errors++;
-                errorOutput = 'Impossible de valider le downtime :<br /><br />- Veuillez entrer un commentaire détaillé<br />';
-            }
-            
-            Utils.log(selected, 'Delete data collectée');
-            
-            return [selected, errors, errorOutput];
-        },
-
-        getUpdateCustomData(selected, sendEmail) {
-            Utils.log('getUpdateCustomData - START', 'getUpdateCustomData');
-            
-            selected['key'] = TokenManager.get('key') || '';
-            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
-            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
-            selected['sendEmail'] = sendEmail;
-            selected['username'] = Splunk.util.getConfigValue('USERNAME');
-            selected['lookup_name'] = 'omni_kv';
-            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
-            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
-            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
-            selected['step_opt'] = DataManager.getStepOpt();
-            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
-            selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
-            selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
-            
-            // Récupérer le filtre personnalisé depuis le formulaire
-            // var parsedFilter = UIManager.collectCustomFilterFromForm();
-            // var dtFilterString = CustomFilterParser.reconstruct(parsedFilter);
-            
-            // Utils.log(parsedFilter, 'Parsed filter from form');
-            // Utils.log(dtFilterString, 'Reconstructed dt_filter string');
-            
-            selected['dt_filter'] = dtFilterString;
-            
-            // Validation
-            var errors = 0;
-            var errorOutput = '';
-            
-            if (Utils.isNull(selected['commentary'])) {
-                errors++;
-                errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
-            }
-            
-            if (!parsedFilter.expression1 || !parsedFilter.expression1.field) {
-                errors++;
-                errorOutput += '- Veuillez configurer au moins une expression de filtre valide<br />';
-            }
-            
-            if (parsedFilter.expression2 && !parsedFilter.expression2.field) {
-                errors++;
-                errorOutput += '- La seconde expression de filtre est incomplète<br />';
-            }
-            
-            if (errors > 0) {
-                errorOutput = 'Impossible de valider le downtime :<br /><br />' + errorOutput;
-            }
-            
-            Utils.log(selected, 'Update custom data collectée');
-            Utils.log({errors: errors, errorOutput: errorOutput}, 'Validation result');
-            
-            return [selected, errors, errorOutput];
-        },
 
         collectPeriods() {
             Utils.log('Début collectPeriods', 'collectPeriods');
