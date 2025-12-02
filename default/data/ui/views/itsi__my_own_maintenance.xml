@@ -1,28 +1,29 @@
-<form script="omni/omni_journal.js,common\assets\js\sidebar\sidebar.js, common\assets\js\custom_button\custom_button.js" hideEdit="false" version="1.1">
+<form script="omni/omni_journal.js,common\assets\js\sidebar\sidebar.js, common\assets\js\custom_button\custom_button.js" hideEdit="true" version="1.1">
   <label>ITSI : My Own Maintenance</label>
-  <search>
-    <query>
-|rest /services/authentication/users splunk_server=local
-| search [
-  | rest /services/authentication/current-context splunk_server=local 
-  | rename username as title 
-  | fields title]
-| table title realname
-    </query>
-    <done>
-      <set token="login">$result.title$</set>
-      <set token="realname">$result.realname$</set>
+  <init>
+      <set token="login"> $env:user$</set>
+      <set token="realname">$env:user_realname$</set>
       <set token="input_daycount">0</set>
       <set token="input_earliest">@d</set>
       <set token="input_latest">+1d@d</set>
-    </done>
-  </search>
+  </init>
   <search id="mydt">
     <query>
      <![CDATA[
 | inputlookup  omni_kv_trace_log_def
-| eval _raw=downtime.";".commentary.";".creator.";".action.";".dt_update.";".ID.";".mvjoin(service,",").";".mvjoin(kpi,",").";".mvjoin(entity,",").";".version,
-downtime=mvjoin(downtime,"£")
+| eval downtime_raw=downtime
+| eval downtime_parsed=""
+| foreach downtime_raw mode=multivalue 
+    [| eval dt_json='<<FIELD>>',
+           dt_type=spath(dt_json, "dt_type"),
+           begin_date=spath(dt_json, "begin_date"),
+           end_date=spath(dt_json, "end_date"),
+           begin_time=spath(dt_json, "begin_time"),
+           end_time=spath(dt_json, "end_time"),
+           period_str=dt_type."#".begin_date."#".end_date."#".begin_time."#".end_time,
+           downtime_parsed=if(len(downtime_parsed)>0, downtime_parsed."£".period_str, period_str)]
+| eval downtime=coalesce(downtime_parsed, ""),
+_raw=downtime.";".commentary.";".creator.";".action.";".dt_update.";".ID.";".mvjoin(service,",").";".mvjoin(kpi,",").";".mvjoin(entity,",").";".version
 | eval state=case(action=="add", "ACTIVE", action=="update", "ACTIVE", action=="delete", "DELETE")
 | sort - dt_update
 | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
@@ -88,9 +89,6 @@ downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
       <set token="defined_input_ID">$input_ID$</set>
     </done>
   </search>
-  <!--<row>
-    <panel id="footer_mrspocv2" ref="footer_mrspocv2" app="otchee_app_omni"></panel>
-  </row> -->
   <fieldset submitButton="false"></fieldset>
       <row>
     <panel>
@@ -177,18 +175,6 @@ downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
   <row depends="$hide$">
     <panel>
       <html>
-        
-      <!--  <style>
-        th[data-sort-key="Type de ciblage"] { width: 120px !important;  }
-        th[data-sort-key="Élément ciblé"] { width: 120px !important; }
-        th[data-sort-key="ELEMENT"] { width: 30% !important; }
-        #highlight th[data-sort-key=RECAPITULATIF] { display: none; }
-        #highlight th[data-sort-key=COMMENTAIRE] { display: none; }
-        #highlight th[data-sort-key=AUTEUR] { display: none; }
-        #highlight th[data-sort-key=TRACE] { display: none; }
-        </style>
-      -->  
-        
       <style>
         div[data-test-panel-id='presets'],div[data-test-panel-id='date'],div[data-test-panel-id='relative'],div[data-test-panel-id='realTime'],div[data-test-panel-id='advanced'] {display: none;}
 

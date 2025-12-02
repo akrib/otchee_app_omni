@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.5.3'; // Version avec amélioration debugging et gestion d'erreurs
+var scriptVersion = '0.6.0'; // Version avec amélioration delete page et unification description
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -523,6 +523,34 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var userName = Splunk.util.getConfigValue('USERNAME');
                 var dashboardType = $('#dashboardType').html();
                 var downtimeType = $('#downtimeType').html();
+                
+                // Interface simplifiée pour le mode delete
+                if (dashboardType === 'delete') {
+                    var html = `
+                        <div class="ui Omni_base">
+                            <table id="Omni_table">
+                                <tr><td width="100%">
+                                    <div class="ui small form segment Omni_segment">
+                                        <h3>Commentaire de suppression</h3>
+                                        <p style="color: #666; margin-bottom: 10px;">Veuillez indiquer la raison de la suppression de cette maintenance</p>
+                                    </div>
+                                    <textarea class="Omni_commentaire" id="commentaire" cols="300" rows="3" placeholder="Raison de la suppression (obligatoire)"></textarea>
+                                </td></tr>
+                            </table>
+                            <input id="CANCEL_button" type="button" value="Annuler" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">
+                            <input id="VALID_button" type="button" value="Confirmer la suppression" style="padding: 5px 10px; border-radius: 4px; background-color: #d9534f" class="btn-primary Omni_button">
+                            ${debugMode == '1' ? '<input id="TEST_button" type="button" value="Test" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">' : ''}
+                            <br/>
+                            <center><div id="loadSpinner" loading_msg=" " circle_color="#A64764" /></center>
+                        </div>
+                    `;
+                    
+                    $('#downtime').html(html);
+                    $('#username').html(userName);
+                    return;
+                }
+                
+                // Interface normale pour add/update
                 var html = `
                     <div class="ui Omni_base">
                         <table id="Omni_table">
@@ -745,18 +773,235 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return '';
             },
 
+            // FONCTION UNIFIÉE pour générer les périodes depuis JSON ou DOM
+            buildPeriodsDescriptionFromSource() {
+                var periodsHtml = '';
+                var dashboardType = $('#dashboardType').html();
+                
+                Utils.log('Début buildPeriodsDescriptionFromSource', 'buildPeriodsDescriptionFromSource');
+                Utils.log(dashboardType, 'Dashboard type');
+                
+                if (dashboardType === 'delete') {
+                    // Mode DELETE : lire depuis le JSON stocké
+                    var downtimeSelected = TokenManager.get('downtime_selected');
+                    
+                    if (Utils.isNull(downtimeSelected)) {
+                        Utils.log('Aucun downtime sélectionné', 'buildPeriodsDescriptionFromSource', 1);
+                        return '';
+                    }
+                    
+                    try {
+                        // Le downtime est stocké comme une chaîne JSON dans le token
+                        var downtimeJson = JSON.parse(downtimeSelected);
+                        
+                        if (!Array.isArray(downtimeJson)) {
+                            downtimeJson = [downtimeJson];
+                        }
+                        
+                        Utils.log(downtimeJson, 'Downtime JSON parsé');
+                        
+                        downtimeJson.forEach((period, index) => {
+                            var periodNumber = index + 1;
+                            var periodType = '';
+                            var periodDesc = '';
+                            
+                            // Déterminer le type de période et construire la description
+                            if (period.dt_type === 'between_date') {
+                                periodType = 'Date à date';
+                                periodDesc = `Du <strong>${period.begin_date} ${period.begin_time.substr(0, 5)}</strong> au <strong>${period.end_date} ${period.end_time.substr(0, 5)}</strong>`;
+                            } 
+                            else if (period.dt_type === 'weekly') {
+                                periodType = 'Hebdomadaire';
+                                var days = period.begin_date.split(';').join(', ');
+                                periodDesc = `Les <strong>${days}</strong> de <strong>${period.begin_time.substr(0, 5)}</strong> à <strong>${period.end_time.substr(0, 5)}</strong>`;
+                            }
+                            else if (period.dt_type === 'monthly') {
+                                periodType = 'Mensuel';
+                                var days = period.begin_date.split(';').join(', ');
+                                periodDesc = `Les jours <strong>${days}</strong> de <strong>${period.begin_time.substr(0, 5)}</strong> à <strong>${period.end_time.substr(0, 5)}</strong>`;
+                            }
+                            else if (period.dt_type.startsWith('special_date_')) {
+                                periodType = 'Spécifique';
+                                var specialType = period.dt_type.replace('special_date_', '').replace('_in_month', '');
+                                var typeLabels = {
+                                    'first': 'Premier du mois',
+                                    'second': 'Deuxième du mois',
+                                    'third': 'Troisième du mois',
+                                    'fourth': 'Quatrième du mois',
+                                    'last': 'Dernier du mois'
+                                };
+                                var typeLabel = typeLabels[specialType] || specialType;
+                                periodDesc = `<strong>${typeLabel}</strong> <strong>${period.begin_date}</strong> de <strong>${period.begin_time.substr(0, 5)}</strong> à <strong>${period.end_time.substr(0, 5)}</strong>`;
+                            }
+                            
+                            // Ajouter des informations supplémentaires si présentes
+                            var additionalInfo = '';
+                            if (period.dt_filter && period.dt_filter !== '') {
+                                additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Filter: <em>${period.dt_filter}</em></span>`;
+                            }
+                            if (period.dt_pattern && period.dt_pattern !== '') {
+                                additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Pattern: <em>${period.dt_pattern}</em></span>`;
+                            }
+                            if (period.id && period.id !== '') {
+                                additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #999;">ID: <code>${period.id}</code></span>`;
+                            }
+                            
+                            periodsHtml += `
+                                <tr>
+                                    <td style="padding-left: 20px; vertical-align: top;"><em>Période ${periodNumber}</em></td>
+                                    <td></td>
+                                    <td>
+                                        <span class="description_item">${periodType}</span> ${periodDesc}
+                                        ${additionalInfo}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                    } catch (error) {
+                        Utils.log(error, 'Erreur lors du parsing du JSON downtime', 2);
+                        console.error('Erreur complète:', error);
+                        
+                        // Fallback : essayer l'ancien format (chaîne avec séparateurs)
+                        try {
+                            var allPeriods = downtimeSelected.split('£');
+                            Utils.log(allPeriods, 'Tentative avec l\'ancien format');
+                            
+                            allPeriods.forEach((period, index) => {
+                                var periodValue = period.split('#');
+                                var periodNumber = index + 1;
+                                
+                                if (periodValue.length >= 5) {
+                                    var periodType = periodValue[0];
+                                    var beginDay = periodValue[1];
+                                    var endDay = periodValue[2];
+                                    var beginHour = periodValue[3].substr(0, 5);
+                                    var endHour = periodValue[4].substr(0, 5);
+                                    
+                                    var typeLabel = '';
+                                    var desc = '';
+                                    
+                                    if (periodType === 'between_date') {
+                                        typeLabel = 'Date à date';
+                                        desc = `Du <strong>${beginDay} ${beginHour}</strong> au <strong>${endDay} ${endHour}</strong>`;
+                                    } else if (periodType === 'weekly') {
+                                        typeLabel = 'Hebdomadaire';
+                                        desc = `Les <strong>${beginDay}</strong> de <strong>${beginHour}</strong> à <strong>${endHour}</strong>`;
+                                    } else if (periodType === 'monthly') {
+                                        typeLabel = 'Mensuel';
+                                        desc = `Les jours <strong>${beginDay}</strong> de <strong>${beginHour}</strong> à <strong>${endHour}</strong>`;
+                                    } else if (periodType.startsWith('special_date_')) {
+                                        typeLabel = 'Spécifique';
+                                        desc = `<strong>${periodType.replace('special_date_', '').replace('_in_month', '')}</strong> <strong>${beginDay}</strong> de <strong>${beginHour}</strong> à <strong>${endHour}</strong>`;
+                                    }
+                                    
+                                    periodsHtml += `
+                                        <tr>
+                                            <td style="padding-left: 20px;"><em>Période ${periodNumber}</em></td>
+                                            <td></td>
+                                            <td><span class="description_item">${typeLabel}</span> ${desc}</td>
+                                        </tr>
+                                    `;
+                                }
+                            });
+                        } catch (fallbackError) {
+                            Utils.log(fallbackError, 'Erreur également dans le fallback', 2);
+                        }
+                    }
+                    
+                } else {
+                    // Mode ADD/UPDATE : lire depuis le DOM
+                    var periodNumber = 1;
+                    
+                    $('[id^=content-tab-Period]').each(function() {
+                        var periodDesc = '';
+                        var periodType = '';
+                        
+                        // Détection du type de période
+                        if ($(this).find('[periodID=radioD]').is(':checked')) {
+                            var dateBegin = $(this).find('[id^=datepicker_begin]').val();
+                            var dateEnd = $(this).find('[id^=datepicker_end]').val();
+                            var timeBegin = $(this).find('.inputPeriodBegin').val();
+                            var timeEnd = $(this).find('.inputPeriodEnd').val();
+                            
+                            if (dateBegin && dateEnd) {
+                                periodType = 'Date à date';
+                                periodDesc = `Du <strong>${dateBegin} ${timeBegin}</strong> au <strong>${dateEnd} ${timeEnd}</strong>`;
+                            }
+                        } 
+                        else if ($(this).find('[periodID=radioW]').is(':checked')) {
+                            var days = [];
+                            $(this).find('.ui-selected').each(function() {
+                                days.push($(this).html());
+                            });
+                            var timeBegin = $(this).find('.inputPeriodBegin').val();
+                            var timeEnd = $(this).find('.inputPeriodEnd').val();
+                            
+                            if (days.length > 0) {
+                                periodType = 'Hebdomadaire';
+                                periodDesc = `Les <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                            }
+                        }
+                        else if ($(this).find('[periodID=radioM]').is(':checked')) {
+                            var days = [];
+                            $(this).find('.ui-selected').each(function() {
+                                days.push($(this).html());
+                            });
+                            var timeBegin = $(this).find('.inputPeriodBegin').val();
+                            var timeEnd = $(this).find('.inputPeriodEnd').val();
+                            
+                            if (days.length > 0) {
+                                periodType = 'Mensuel';
+                                periodDesc = `Les jours <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                            }
+                        }
+                        else if ($(this).find('[periodID=radioS]').is(':checked')) {
+                            var day = $(this).find('#select_day').val();
+                            var type = $(this).find('#select_type option:selected').text();
+                            var timeBegin = $(this).find('.inputPeriodBegin').val();
+                            var timeEnd = $(this).find('.inputPeriodEnd').val();
+                            
+                            if (day && type) {
+                                periodType = 'Spécifique';
+                                periodDesc = `<strong>${type}</strong> <strong>${day}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
+                            }
+                        }
+                        
+                        // Ajout de la période si elle est valide
+                        if (periodDesc !== '') {
+                            periodsHtml += `
+                                <tr>
+                                    <td style="padding-left: 20px;"><em>Période ${periodNumber}</em></td>
+                                    <td></td>
+                                    <td><span class="description_item">${periodType}</span> ${periodDesc}</td>
+                                </tr>
+                            `;
+                            periodNumber++;
+                        }
+                    });
+                }
+                
+                Utils.log(periodsHtml, 'Périodes HTML générées');
+                return periodsHtml;
+            },
+
             updateDescriptionDiv() {
                 var service_selected = TokenManager.get('service_selected');
                 var kpi_selected = TokenManager.get('kpi_selected');
                 var entity_selected = TokenManager.get('entity_selected');
                 var dt_filterToken = TokenManager.get('dt_filter_selected') || '';
                 var dt_patternToken = TokenManager.get('dt_pattern_selected') || '';
+                var dt_id = TokenManager.get('DT_ID') || '';
                 var dashboardType = $('#dashboardType').html();
+                
+                Utils.log('updateDescriptionDiv appelé', 'updateDescriptionDiv');
+                Utils.log({dashboardType: dashboardType, dt_id: dt_id}, 'Contexte');
                 
                 // Construction du HTML de base avec les sélections
                 var selectionDescHtml = `
                     <table id="selection_desc_table" width="100%">
-                        <tr><td width="150"><strong>Service(s)</strong></td><td width="20"></td><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
+                        <tr><td width="150"><strong>ID Downtime</strong></td><td width="20"></td><td><span class="description_item">${dt_id}</span></td></tr>
+                        <tr><td><strong>Service(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(service_selected)}</td></tr>
                         <tr><td><strong>KPI(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(kpi_selected)}</td></tr>
                         <tr><td><strong>Entity(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(entity_selected)}</td></tr>
                 `;
@@ -771,94 +1016,21 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>`;
                 }
                 
-                // Ajout des périodes seulement si ce n'est pas un delete
-                if (dashboardType !== 'delete') {
-                    var periodsHtml = UIManager.buildPeriodsDescription();
-                    if (periodsHtml !== '') {
-                        selectionDescHtml += `<tr><td colspan="3"><br/><strong>Périodes de maintenance :</strong></td></tr>`;
-                        selectionDescHtml += periodsHtml;
-                    }
+                // Ajout des périodes via la fonction unifiée
+                var periodsHtml = UIManager.buildPeriodsDescriptionFromSource();
+                if (periodsHtml !== '') {
+                    var periodTitle = dashboardType === 'delete' 
+                        ? 'Périodes de maintenance à supprimer :' 
+                        : 'Périodes de maintenance :';
+                    selectionDescHtml += `<tr><td colspan="3"><br/><strong>${periodTitle}</strong></td></tr>`;
+                    selectionDescHtml += periodsHtml;
                 }
                 
-                selectionDescHtml += `</table>`;
+                selectionDescHtml += `<tr></tr></table>`;
 
                 if (Utils.isNotNull(selectionDescHtml)) {
                     $('#selection_desc').html(selectionDescHtml);
                 }
-            },
-
-            buildPeriodsDescription() {
-                var periodsHtml = '';
-                var periodNumber = 1;
-                
-                $('[id^=content-tab-Period]').each(function() {
-                    var periodDesc = '';
-                    var periodType = '';
-                    
-                    // Détection du type de période
-                    if ($(this).find('[periodID=radioD]').is(':checked')) {
-                        var dateBegin = $(this).find('[id^=datepicker_begin]').val();
-                        var dateEnd = $(this).find('[id^=datepicker_end]').val();
-                        var timeBegin = $(this).find('.inputPeriodBegin').val();
-                        var timeEnd = $(this).find('.inputPeriodEnd').val();
-                        
-                        if (dateBegin && dateEnd) {
-                            periodType = 'Date à date';
-                            periodDesc = `Du <strong>${dateBegin} ${timeBegin}</strong> au <strong>${dateEnd} ${timeEnd}</strong>`;
-                        }
-                    } 
-                    else if ($(this).find('[periodID=radioW]').is(':checked')) {
-                        var days = [];
-                        $(this).find('.ui-selected').each(function() {
-                            days.push($(this).html());
-                        });
-                        var timeBegin = $(this).find('.inputPeriodBegin').val();
-                        var timeEnd = $(this).find('.inputPeriodEnd').val();
-                        
-                        if (days.length > 0) {
-                            periodType = 'Hebdomadaire';
-                            periodDesc = `Les <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
-                        }
-                    }
-                    else if ($(this).find('[periodID=radioM]').is(':checked')) {
-                        var days = [];
-                        $(this).find('.ui-selected').each(function() {
-                            days.push($(this).html());
-                        });
-                        var timeBegin = $(this).find('.inputPeriodBegin').val();
-                        var timeEnd = $(this).find('.inputPeriodEnd').val();
-                        
-                        if (days.length > 0) {
-                            periodType = 'Mensuel';
-                            periodDesc = `Les jours <strong>${days.join(', ')}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
-                        }
-                    }
-                    else if ($(this).find('[periodID=radioS]').is(':checked')) {
-                        var day = $(this).find('#select_day').val();
-                        var type = $(this).find('#select_type option:selected').text();
-                        var timeBegin = $(this).find('.inputPeriodBegin').val();
-                        var timeEnd = $(this).find('.inputPeriodEnd').val();
-                        
-                        if (day && type) {
-                            periodType = 'Spécifique';
-                            periodDesc = `<strong>${type}</strong> <strong>${day}</strong> de <strong>${timeBegin}</strong> à <strong>${timeEnd}</strong>`;
-                        }
-                    }
-                    
-                    // Ajout de la période si elle est valide
-                    if (periodDesc !== '') {
-                        periodsHtml += `
-                            <tr>
-                                <td style="padding-left: 20px;"><em>Période ${periodNumber}</em></td>
-                                <td></td>
-                                <td><span class="description_item">${periodType}</span> ${periodDesc}</td>
-                            </tr>
-                        `;
-                        periodNumber++;
-                    }
-                });
-                
-                return periodsHtml;
             }
         };
 
@@ -1028,6 +1200,25 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             },
 
             updatePeriods(text, commentary) {
+                var dashboardType = $('#dashboardType').html();
+                
+                if (dashboardType === 'delete') {
+                    // En mode delete, on stocke juste les données sans créer l'interface
+                    Utils.log('Mode delete - stockage des données seulement', 'updatePeriods');
+                    TokenManager.set('downtime_selected', text);
+                    
+                    try {
+                        $('#commentaire').val(commentary);
+                    } catch (error) {
+                        Utils.log(error, 'unable to write in #commentaire', 1);
+                    }
+                    
+                    // Mettre à jour la description directement
+                    UIManager.updateDescriptionDiv();
+                    return;
+                }
+                
+                // Pour add/update, comportement normal
                 UIManager.create();
                 
                 var allPeriods = text.split('£');
@@ -1160,9 +1351,18 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 selected['version'] = TokenManager.get('selected_version') || 99999;
                 
+                // Validation du commentaire
+                var errors = 0;
+                var errorOutput = '';
+                
+                if (Utils.isNull(selected['commentary'])) {
+                    errors++;
+                    errorOutput = 'Impossible de valider le downtime :<br /><br />- Veuillez entrer un commentaire détaillé<br />';
+                }
+                
                 Utils.log(selected, 'Delete data collectée');
                 
-                return [selected, 0, ''];
+                return [selected, errors, errorOutput];
             },
 
             collectPeriods() {
@@ -1293,14 +1493,24 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var tokenValue = TokenManager.get("step_opt_for_delete");
                 if (Utils.isNotNull(tokenValue)) return tokenValue;
                 
-                var serviceToken = TokenManager.get('service_type');
-                var kpiToken = TokenManager.get('kpi_type');
-                var entityToken = TokenManager.get('entity_type');
-                var dt_filterToken = TokenManager.get('dt_filter_type');
-                if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken) && Utils.isNotNull(dt_filterToken)) {
-                    return serviceToken.toString() + kpiToken.toString() + entityToken.toString();
+                // CORRECTION: utiliser les bons noms de tokens des dashboards
+                var serviceToken = TokenManager.get('service_select_input_type');
+                var kpiToken = TokenManager.get('kpi_select_input_type');
+                var entityToken = TokenManager.get('entity_select_input_type');
+                
+                Utils.log({
+                    serviceToken: serviceToken,
+                    kpiToken: kpiToken,
+                    entityToken: entityToken
+                }, 'getStepOpt - tokens récupérés');
+                
+                if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken)) {
+                    var stepOpt = serviceToken.toString() + kpiToken.toString() + entityToken.toString();
+                    Utils.log(stepOpt, 'step_opt calculé');
+                    return stepOpt;
                 }
                 
+                Utils.log('step_opt par défaut: 000', 'getStepOpt', 1);
                 return "000";
             }
         };
@@ -1359,23 +1569,26 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     LoadSpinner.changeMsg('Verification des données en entrée');
                     LoadSpinner.state('ON');
                     
-                    // Validation des datepickers
-                    Utils.log('Validation des datepickers', 'sendData');
-                    var dateValidationErrors = Validator.allDatepickers();
-                    Utils.log(dateValidationErrors, 'Erreurs de validation dates');
+                    var dashboardType = $('#dashboardType').html();
                     
-                    if (dateValidationErrors.length > 0) {
-                        Utils.log('Erreurs de validation détectées', 'sendData', 1);
-                        LoadSpinner.state('OFF');
-                        TokenManager.set('modal_header', 'ERREUR');
-                        TokenManager.set('modal_content', dateValidationErrors);
-                        $('#modal_link')[0].click();
-                        return;
+                    // En mode delete, pas de validation des datepickers
+                    if (dashboardType !== 'delete') {
+                        Utils.log('Validation des datepickers', 'sendData');
+                        var dateValidationErrors = Validator.allDatepickers();
+                        Utils.log(dateValidationErrors, 'Erreurs de validation dates');
+                        
+                        if (dateValidationErrors.length > 0) {
+                            Utils.log('Erreurs de validation détectées', 'sendData', 1);
+                            LoadSpinner.state('OFF');
+                            TokenManager.set('modal_header', 'ERREUR');
+                            TokenManager.set('modal_content', dateValidationErrors);
+                            $('#modal_link')[0].click();
+                            return;
+                        }
                     }
                     
                     Utils.log('Collecte des données du dashboard', 'sendData');
                     var [selected, errors, errorOutput] = DataManager.getSelectedInDashboard();
-                    var dashboardType = $('#dashboardType').html();
                     
                     Utils.log(selected, 'Selected data');
                     Utils.log(errors, 'Nombre d\'erreurs');
@@ -1440,7 +1653,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                                 ? '<a href="/app/' + app_path + '/' + viewName + '">Fermer la fenêtre</a>'
                                 : '<a href="/app/' + app_path + '/accueil">Fermer la fenêtre</a>';
                             
-                            Dashboard.showSuccessMessage('Information', 'Mise à jour de la base des downtimes OK', closingLink);
+                            var successMessage = dashboardType == 'delete'
+                                ? 'Suppression de la maintenance effectuée avec succès'
+                                : 'Mise à jour de la base des downtimes OK';
+                            
+                            Dashboard.showSuccessMessage('Information', successMessage, closingLink);
                         });
                         
                         omni_kv.on('search:failed', function(properties) {

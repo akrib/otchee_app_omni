@@ -42,30 +42,44 @@
           AND ID=$input_ID$
           AND entity="$input_entity$" 
           AND NOT action="obsolete"
-                | table ID,dt_update,action
+        | table ID,dt_update,action
         | lookup omni_kv_trace_log_def ID,dt_update,action
         | eval
-        service=if(service="*","TOUS",service),
-        service=mvjoin(service,";"),
-        kpi=if(kpi="*","TOUS",kpi),
-        kpi=mvjoin(kpi,";"),
-        entity=if(entity="*","TOUS",entity),
-        entity=mvjoin(entity,";")
+            service=if(service="*","TOUS",service),
+            service=mvjoin(service,";"),
+            kpi=if(kpi="*","TOUS",kpi),
+            kpi=mvjoin(kpi,";"),
+            entity=if(entity="*","TOUS",entity),
+            entity=mvjoin(entity,";")
+        ``` Parser le JSON downtime pour extraire les périodes ```
+        | eval downtime_json=if(isnotnull(downtime) AND downtime!="", downtime, "[]")
+        | spath input=downtime_json
+        | eval period_count=mvcount('id{}')
+        | eval periods_summary=""
+        | foreach id{} dt_type{} begin_date{} end_date{} begin_time{} end_time{} 
+            [ eval periods_summary=if(isnotnull('dt_type{}'), 
+                periods_summary + "Type: " + 'dt_type{}' + " | " + 
+                "Du " + 'begin_date{}' + " " + 'begin_time{}' + " " + 
+                "Au " + 'end_date{}' + " " + 'end_time{}' + 
+                if('dt_filter{}'!="", " | Filter: " + 'dt_filter{}', "") + 
+                if('dt_pattern{}'!="", " | Pattern: " + 'dt_pattern{}', "") + 
+                "###", periods_summary)]
+        | eval periods_summary=if(periods_summary="", "Aucune période définie", periods_summary)
       ]]>
     </query>
     <earliest></earliest>
     <latest>now</latest>
   </search>
   <fieldset submitButton="false"></fieldset>
-      <row>
+  <row>
     <panel>
       <html>
         <h2 style="font-size:16px !important;">
-                    <a href="./accueil">
-                        <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
-                        <strong>Revenir à l'écran "Menu des Maintenances"</strong>
-                    </a>
-                </h2>
+          <a href="./accueil">
+            <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
+            <strong>Revenir à l'écran "Menu des Maintenances"</strong>
+          </a>
+        </h2>
       </html>
     </panel>
   </row>
@@ -74,17 +88,17 @@
       <html>
         <section class="navbar custom-navbar" role="navigation">
           <div class="container">
-               <div class="navbar-header">
-                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+            <div class="navbar-header">
+              <h1 class="navbar-brand" style="font-size: 30px !important;">
                 <span class="omni-title-first-part">
                   <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
                 </span>
                 <span class="omni-title-second-part"> Maintenance Logs</span>
               </h1>
-                    <p style="display: inline-block;" class="gradient-spoc">Suivez les modifications de vos maintenances en quelques clics.</p>
-               </div>
+              <p style="display: inline-block;" class="gradient-spoc">Suivez les modifications de vos maintenances en quelques clics.</p>
+            </div>
           </div>
-     </section>
+        </section>
       </html>
     </panel>
   </row>
@@ -95,7 +109,7 @@
           .results-table th.col-info .icon-info {
             width:40px !important;
             text-align:center !important;
-            }
+          }
         </style>
       </html>
     </panel>
@@ -200,18 +214,20 @@
           <query>
             | sort -dt_update
             | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
-            | table  ID,last_update, action,creator,service,kpi,entity,commentary
-            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE action as ACTION, last_update as "DATE",creator as AUTEUR
+            | table ID,last_update,action,creator,service,kpi,entity,commentary,downtime,periods_summary,period_count,dt_filter,dt_pattern
+            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE,action as ACTION,last_update as "DATE",creator as AUTEUR,downtime as DOWNTIME,periods_summary as PERIODS,period_count as NB_PERIODS,dt_filter as DT_FILTER,dt_pattern as DT_PATTERN
           </query>
         </search>
         <option name="count">100</option>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
+        <!--<option name="fields">["ID","DATE","ACTION", "AUTEUR", "DOWNTIME"]</option>-->
         <drilldown>
-          <set token="selected_client">$row.service$</set>
-          <set token="selected_site">$row.kpi$</set>
-          <set token="selected_cible">$row.entity$</set>
-          <set token="selected_commentaire">$row.commentaire$</set>
+          <set token="selected_client">$row.SERVICE$</set>
+          <set token="selected_site">$row.KPI$</set>
+          <set token="selected_cible">$row.ENTITY$</set>
+          <set token="selected_commentaire">$row.COMMENTAIRE$</set>
+          <set token="selected_downtime">$row.DOWNTIME$</set>
         </drilldown>
       </table>
     </panel>

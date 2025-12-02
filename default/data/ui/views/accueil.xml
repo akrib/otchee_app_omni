@@ -1311,9 +1311,10 @@
 		}
 	},
 	"layout": {
-		"options": {
-			"showTitleAndDescription": false
-		},
+    "options": {
+        "showTitleAndDescription": false,
+        "initialTabId": "layout_1"
+    },
 		"globalInputs": [],
 		"tabs": {
 			"items": [

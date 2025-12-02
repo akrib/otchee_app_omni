@@ -1,225 +1,225 @@
-.table-chrome>thead>tr>th {
+/* FUSION CSS - priorité au premier fichier */
+
+/* === OMNI JOURNAL CSS (prioritaire) === */
+
+/* Conteneur des périodes */
+.periods-container {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+.period-wrapper {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #ffffff;
+    border-left: 4px solid #007bff;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.period-wrapper:last-child {
+    margin-bottom: 0;
+}
+
+.period-number {
+    font-weight: bold;
+    color: #495057;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.period-item {
+    padding: 8px 0;
+    line-height: 1.6;
+}
+
+.period-type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-right: 8px;
+    text-transform: uppercase;
+}
+
+.badge-date { background-color: #007bff; color: white; }
+.badge-weekly { background-color: #28a745; color: white; }
+.badge-monthly { background-color: #ffc107; color: #212529; }
+.badge-special { background-color: #17a2b8; color: white; }
+.badge-other { background-color: #6c757d; color: white; }
+
+.period-filter,
+.period-pattern {
+    display: block;
+    margin-top: 5px;
+    padding: 5px 10px;
+    background-color: #e9ecef;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #495057;
+}
+
+.period-filter strong,
+.period-pattern strong {
+    color: #212529;
+}
+
+.no-periods,
+.periods-error,
+.period-error {
+    padding: 10px;
     text-align: center;
+    color: #6c757d;
+    font-style: italic;
 }
 
-td.icon {
-    text-align: center;
+.periods-error,
+.period-error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 3px;
 }
 
-td.icon i {
-    font-size: 25px;
-    text-shadow: 1px 1px #aaa;
+.description_item {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 2px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 3px;
+    font-size: 0.9em;
 }
 
-td.icon .severe {
-    color: red;
+.range-cell { padding: 8px !important; }
+
+.hide { display: none !important; }
+
+.range-add { background-color: #d4edda !important; color: #155724 !important; }
+.range-modify { background-color: #fff3cd !important; color: #856404 !important; }
+.range-delete { background-color: #f8d7da !important; color: #721c24 !important; }
+.range-obsolete { background-color: #d6d8db !important; color: #383d41 !important; }
+
+.range-owner { font-weight: bold; }
+.range-other { opacity: 0.7; }
+
+.range-update { background-color: #cfe2ff !important; }
+.range-nochange { background-color: #f8f9fa !important; }
+
+.maintenance_version,
+.maintenance_id,
+.maintenance_date,
+.maintenance_periods_count {
+    font-weight: 500;
 }
 
-td.icon .elevated {
-    color: orangered;
+.maintenance_periods_count {
+    text-align: center !important;
+    font-size: 0.9em;
 }
 
-td.icon .low {
-    color: #006400;
+.title-search {
+    color: #007bff;
+    font-size: 1.1em;
+    margin: 10px 0;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
 }
 
-/* Row Coloring */
-#tablenoheader thead {
-    display: none;
+.search-bold {
+    color: #495057;
+    font-weight: 600;
 }
 
-#highlight .results-table tr.expanded-content-row td, .results-table tr.expanded-row td {
-    background-color: transparent !important;
+.dataexpansion { padding-top: 15px !important; }
+
+@media (max-width: 768px) {
+    .period-wrapper { padding: 8px; }
+    .period-type-badge { font-size: 0.75em; padding: 2px 8px; }
+    .description_item { font-size: 0.8em; padding: 3px 8px; }
 }
 
-#highlight td {
-    color: #2c3e50;
-}
+/* === SECOND CSS (fusion, priorité moindre) === */
 
-#highlight th.hide {
-    display: none;
-}
+.table-chrome>thead>tr>th { text-align: center; }
 
-#highlight td.hide {
-    display: none;
-}
+td.icon { text-align: center; }
 
-.range-owner {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/owner.png") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 48px 48px;
-    background-position: center;
-}
+td.icon i { font-size: 25px; text-shadow: 1px 1px #aaa; }
 
-.range-other {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/modifier.png") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 48px 48px;
-    background-position: center;
-}
+td.icon .severe { color: red; }
 
-.range-update {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/updated.png") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 48px 48px;
-    background-position: center;
-}
+td.icon .elevated { color: orangered; }
 
-.range-nochange {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/updated.png") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 48px 48px;
-    background-position: center;
-    opacity: 0;
-}
+td.icon .low { color: #006400; }
 
-.range-add {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/add_v2.svg") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 24px 24px;
-    background-position: center;
-}
-.range-obsolete {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/recycle_v2.svg") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 24px 24px;
-    background-position: center;
-}
-.range-modify {
-    text-align: center;
-    background: url("/static/app/otchee_app_omni/media/pen_v2.svg") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 24px 24px;
-    background-position: center;
-}
+#tablenoheader thead { display: none; }
+
+#highlight .results-table tr.expanded-content-row td,
+.results-table tr.expanded-row td { background-color: transparent !important; }
+
+#highlight td { color: #2c3e50; }
+
+#highlight th.hide,
+#highlight td.hide { display: none; }
+
+/* Overriding range-* background with images */
+.range-owner,
+.range-other,
+.range-update,
+.range-nochange,
+.range-add,
+.range-obsolete,
+.range-modify,
 .range-delete {
     text-align: center;
-    background: url("/static/app/otchee_app_omni/media/trash_v2.svg") 5px no-repeat;
-    text-indent:-99999em;
-    overflow:hidden;
-    background-size: 24px 24px;
     background-position: center;
-}
-
-#highlight .table td {
-    border-top: 1px solid #bdc3c7;
-    text-align: center;
-}
-
-#highlight td.range-severe, td.range-elevated {
-    font-weight: bold;
-}
-
-.icon-inline i {
-    font-size: 18px;
-    margin-left: 5px;
-}
-.icon-inline i.icon-alert-circle {
-    color: #ef392c;
-}
-.icon-inline i.icon-alert {
-    color: #ff9c1a;
-}
-.icon-inline i.icon-check {
-    color: #5fff5e;
-}
-.icon-inline i.icon-graph {
-    background: transparent url("/static/app/otchee_app_omni/graph.png") no-repeat;
-    display:inline-block;
-    height:16px; /* your image height */
-    text-indent:-99999em;
-    width:16px; /* your image width */
-    overflow:hidden;
     background-size: contain;
+    background-repeat: no-repeat;
+    text-indent: -99999em;
+    overflow: hidden;
 }
 
-.icon-inline i.icon-downtime {
-    background: transparent url("/static/app/otchee_app_omni/downtime.png") no-repeat;
-    display:inline-block;
-    height:16px; /* your image height */
-    text-indent:-99999em;
-    width:16px; /* your image width */
-    overflow:hidden;
-    background-size: contain;
-}
+.range-owner { background-image: url('/static/app/otchee_app_omni/media/owner.png'); }
+.range-other { background-image: url('/static/app/otchee_app_omni/media/modifier.png'); }
+.range-update { background-image: url('/static/app/otchee_app_omni/media/updated.png'); }
+.range-nochange { background-image: url('/static/app/otchee_app_omni/media/updated.png'); opacity: 0; }
+.range-add { background-image: url('/static/app/otchee_app_omni/media/add_v2.svg'); background-size: 24px 24px; }
+.range-obsolete { background-image: url('/static/app/otchee_app_omni/media/recycle_v2.svg'); background-size: 24px 24px; }
+.range-modify { background-image: url('/static/app/otchee_app_omni/media/pen_v2.svg'); background-size: 24px 24px; }
+.range-delete { background-image: url('/static/app/otchee_app_omni/media/trash_v2.svg'); background-size: 24px 24px; }
 
-.icon-inline i.icon-config {
-    background:url("/static/app/otchee_app_omni/settings.png") no-repeat;
-    display:inline-block;
-    height:16px; /* your image height */
-    text-indent:-99999em;
-    width:16px; /* your image width */
-    overflow:hidden;
-    background-size: contain;
-}
+#highlight .table td { border-top: 1px solid #bdc3c7; text-align: center; }
 
+#highlight td.range-severe,
+td.range-elevated { font-weight: bold; }
+
+.icon-inline i { font-size: 18px; margin-left: 5px; }
+.icon-inline i.icon-alert-circle { color: #ef392c; }
+.icon-inline i.icon-alert { color: #ff9c1a; }
+.icon-inline i.icon-check { color: #5fff5e; }
+
+.icon-inline i.icon-graph,
+.icon-inline i.icon-downtime,
+.icon-inline i.icon-config,
 .icon-inline i.icon-metric-service {
-    background:url("/static/app/otchee_app_omni/graph.png") no-repeat;
-    display:inline-block;
-    height:16px; /* your image height */
-    text-indent:-99999em;
-    width:16px; /* your image width */
-    overflow:hidden;
-    background-size: contain;
+    display:inline-block; height:16px; width:16px; text-indent:-99999em; overflow:hidden; background-size:contain; background-repeat:no-repeat;
 }
 
-div[data-test-panel-id='presets'], div[data-test-panel-id='date'], div[data-test-panel-id='relative'], div[data-test-panel-id='realTime'], div[data-test-panel-id='advanced'] {
-    display: none;
-}
+.icon-inline i.icon-downtime { background-image:url('/static/app/otchee_app_omni/downtime.png'); }
+.icon-inline i.icon-config { background-image:url('/static/app/otchee_app_omni/settings.png'); }
+.icon-inline i.icon-metric-service { background-image:url('/static/app/otchee_app_omni/graph.png'); }
 
-#highlight th[data-sort-key="SERVICE"] {
-     display: none; 
-}
+#selector_container { display:inline-flex; }
+#selector_1.dashboard-cell{ width:20% !important; }
+#selector_table.dashboard-cell{ width:79.5% !important; height:100% !important; }
 
-#highlight th[data-sort-key="KPI"] {
-     display: none; 
-}
+.ui-widget-content { outline:none !important; }
 
-#highlight th[data-sort-key="ENTITY"] {
-     display: none;
-}
-
-#highlight th[data-sort-key="COMMENTAIRE"] {
-     display: none; 
-}
-#highlight th[data-sort-key="fullRaw"] {
-     display: none; 
-}
-table#legende {
-border-collapse: inherit;
-border-spacing: 10px;
-}
-
-td.dataexpansion {
-text-align: left !important;
-}
-
-#selector_container {
-    display: inline-flex;
-}
-
-#selector_1.dashboard-cell{
-  width : 20% !important;
-}
-
-#selector_table.dashboard-cell{
-  width : 79.5% !important;
-  height : 100% !important;
-}
-
-.ui-widget-content {
-  outline: none !important;
+#highlight table thead th:nth-child(n+6) {
+    display: none !important;
 }
