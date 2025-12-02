@@ -786,90 +786,90 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 $('#username').html(userName);
             },
 
-            setupCustomFilterListeners() {
-                // Toggle expression 2
-                $('#use_expr2').on('change', function() {
-                    if ($(this).is(':checked')) {
-                        $('#logical_operator_choice').show();
-                        $('#expression2_container').show();
-                    } else {
-                        $('#logical_operator_choice').hide();
-                        $('#expression2_container').hide();
-                    }
-                    UIManager.updateCustomFilterPreview();
-                });
+            // setupCustomFilterListeners() {
+            //     // Toggle expression 2
+            //     $('#use_expr2').on('change', function() {
+            //         if ($(this).is(':checked')) {
+            //             $('#logical_operator_choice').show();
+            //             $('#expression2_container').show();
+            //         } else {
+            //             $('#logical_operator_choice').hide();
+            //             $('#expression2_container').hide();
+            //         }
+            //         UIManager.updateCustomFilterPreview();
+            //     });
                 
-                // Gestion de l'affichage du champ valeur selon l'opérateur
-                $('#expr1_operator').on('change', function() {
-                    var operator = $(this).val();
-                    if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
-                        $('#expr1_value_container').hide();
-                    } else {
-                        $('#expr1_value_container').show();
-                    }
-                    UIManager.updateCustomFilterPreview();
-                });
+            //     // Gestion de l'affichage du champ valeur selon l'opérateur
+            //     $('#expr1_operator').on('change', function() {
+            //         var operator = $(this).val();
+            //         if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
+            //             $('#expr1_value_container').hide();
+            //         } else {
+            //             $('#expr1_value_container').show();
+            //         }
+            //         UIManager.updateCustomFilterPreview();
+            //     });
                 
-                $('#expr2_operator').on('change', function() {
-                    var operator = $(this).val();
-                    if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
-                        $('#expr2_value_container').hide();
-                    } else {
-                        $('#expr2_value_container').show();
-                    }
-                    UIManager.updateCustomFilterPreview();
-                });
+            //     $('#expr2_operator').on('change', function() {
+            //         var operator = $(this).val();
+            //         if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
+            //             $('#expr2_value_container').hide();
+            //         } else {
+            //             $('#expr2_value_container').show();
+            //         }
+            //         UIManager.updateCustomFilterPreview();
+            //     });
                 
-                // Mise à jour de l'aperçu en temps réel
-                $('#expr1_not, #expr1_field, #expr1_value, #logical_operator, #expr2_not, #expr2_field, #expr2_value').on('input change', function() {
-                    UIManager.updateCustomFilterPreview();
-                });
-            },
+            //     // Mise à jour de l'aperçu en temps réel
+            //     $('#expr1_not, #expr1_field, #expr1_value, #logical_operator, #expr2_not, #expr2_field, #expr2_value').on('input change', function() {
+            //         UIManager.updateCustomFilterPreview();
+            //     });
+            // },
 
-            updateCustomFilterPreview() {
-                var preview = '';
+            // updateCustomFilterPreview() {
+            //     var preview = '';
                 
-                // Expression 1
-                var expr1Not = $('#expr1_not').is(':checked');
-                var expr1Field = $('#expr1_field').val().trim();
-                var expr1Operator = $('#expr1_operator').val();
-                var expr1Value = $('#expr1_value').val().trim();
+            //     // Expression 1
+            //     var expr1Not = $('#expr1_not').is(':checked');
+            //     var expr1Field = $('#expr1_field').val().trim();
+            //     var expr1Operator = $('#expr1_operator').val();
+            //     var expr1Value = $('#expr1_value').val().trim();
                 
-                if (expr1Field && expr1Operator) {
-                    if (expr1Not) preview += 'NOT ';
+            //     if (expr1Field && expr1Operator) {
+            //         if (expr1Not) preview += 'NOT ';
                     
-                    var expr1 = {
-                        operatorKey: expr1Operator,
-                        field: expr1Field,
-                        value: expr1Value
-                    };
-                    preview += CustomFilterParser.reconstructExpression(expr1);
-                }
+            //         var expr1 = {
+            //             operatorKey: expr1Operator,
+            //             field: expr1Field,
+            //             value: expr1Value
+            //         };
+            //         preview += CustomFilterParser.reconstructExpression(expr1);
+            //     }
                 
-                // Expression 2 si activée
-                if ($('#use_expr2').is(':checked')) {
-                    var logicalOp = $('#logical_operator').val();
-                    var expr2Not = $('#expr2_not').is(':checked');
-                    var expr2Field = $('#expr2_field').val().trim();
-                    var expr2Operator = $('#expr2_operator').val();
-                    var expr2Value = $('#expr2_value').val().trim();
+            //     // Expression 2 si activée
+            //     if ($('#use_expr2').is(':checked')) {
+            //         var logicalOp = $('#logical_operator').val();
+            //         var expr2Not = $('#expr2_not').is(':checked');
+            //         var expr2Field = $('#expr2_field').val().trim();
+            //         var expr2Operator = $('#expr2_operator').val();
+            //         var expr2Value = $('#expr2_value').val().trim();
                     
-                    if (expr2Field && expr2Operator && preview) {
-                        preview += ' ' + logicalOp + ' ';
+            //         if (expr2Field && expr2Operator && preview) {
+            //             preview += ' ' + logicalOp + ' ';
                         
-                        if (expr2Not) preview += 'NOT ';
+            //             if (expr2Not) preview += 'NOT ';
                         
-                        var expr2 = {
-                            operatorKey: expr2Operator,
-                            field: expr2Field,
-                            value: expr2Value
-                        };
-                        preview += CustomFilterParser.reconstructExpression(expr2);
-                    }
-                }
+            //             var expr2 = {
+            //                 operatorKey: expr2Operator,
+            //                 field: expr2Field,
+            //                 value: expr2Value
+            //             };
+            //             preview += CustomFilterParser.reconstructExpression(expr2);
+            //         }
+            //     }
                 
-                $('#filter_preview').html(preview || 'Aucun filtre configuré');
-            },
+            //     $('#filter_preview').html(preview || 'Aucun filtre configuré');
+            // },
 
             populateCustomFilterForm(parsedFilter) {
                 Utils.log(parsedFilter, 'populateCustomFilterForm');
@@ -1216,8 +1216,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log('Début buildPeriodsDescriptionFromSource', 'buildPeriodsDescriptionFromSource');
                 Utils.log(dashboardType, 'Dashboard type');
                 
-                if (dashboardType === 'delete' || dashboardType === 'update_custom') {
-                    // Mode DELETE ou UPDATE_CUSTOM : lire depuis le JSON stocké
+                if (dashboardType === 'delete' ) {
+                    // Mode DELETE : lire depuis le JSON stocké
                     var downtimeSelected = TokenManager.get('downtime_selected');
                     
                     if (Utils.isNull(downtimeSelected)) {
@@ -1456,9 +1456,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 if (periodsHtml !== '') {
                     var periodTitle = dashboardType === 'delete' 
                         ? 'Périodes de maintenance à supprimer :' 
-                        : (dashboardType === 'update_custom' 
-                            ? 'Périodes de maintenance :' 
-                            : 'Périodes de maintenance :');
+                        : 'Périodes de maintenance :';
                     selectionDescHtml += `<tr><td colspan="3"><br/><strong>${periodTitle}</strong></td></tr>`;
                     selectionDescHtml += periodsHtml;
                 }
@@ -1631,7 +1629,12 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         TokenManager.set('update_full_loading', 1);
                     } else if (dashboardType == "delete") {
                         TokenManager.set("downtime_selected", downtime);
-                        DataManager.updatePeriods(downtime, commentary);
+                        // DataManager.updatePeriods(downtime, commentary);
+                        try {
+                            $('#commentaire').val(commentary);
+                        } catch (error) {
+                            Utils.log(error, 'unable to write in #commentaire', 1);
+                        }
                         UIManager.updateDescriptionDiv();
                         TokenManager.set('update_full_loading', 1);
                         TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
@@ -1648,13 +1651,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         
                         // Remplir le formulaire
                         UIManager.populateCustomFilterForm(parsedFilter);
-                        
+                        DataManager.updatePeriods(downtime, commentary);
                         // Remplir le commentaire
-                        try {
-                            $('#commentaire').val(commentary);
-                        } catch (error) {
-                            Utils.log(error, 'unable to write in #commentaire', 1);
-                        }
+
                         
                         // Mettre à jour la description
                         UIManager.updateDescriptionDiv();
