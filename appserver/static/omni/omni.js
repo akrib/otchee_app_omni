@@ -1202,6 +1202,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             updatePeriods(text, commentary) {
                 var dashboardType = $('#dashboardType').html();
                 
+                Utils.log({text: text, commentary: commentary, dashboardType: dashboardType}, 'updatePeriods - START');
+                
                 if (dashboardType === 'delete') {
                     // En mode delete, on stocke juste les données sans créer l'interface
                     Utils.log('Mode delete - stockage des données seulement', 'updatePeriods');
@@ -1221,25 +1223,66 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 // Pour add/update, comportement normal
                 UIManager.create();
                 
-                var allPeriods = text.split('£');
-                Utils.log(allPeriods, 'downtime array');
+                var allPeriods = [];
                 
+                // Essayer de parser comme JSON d'abord
+                try {
+                    Utils.log('Tentative de parsing JSON', 'updatePeriods');
+                    var jsonPeriods = JSON.parse(text);
+                    
+                    if (!Array.isArray(jsonPeriods)) {
+                        jsonPeriods = [jsonPeriods];
+                    }
+                    
+                    Utils.log(jsonPeriods, 'JSON parsé avec succès');
+                    
+                    // Convertir le format JSON en format ancien pour appendPeriodTab
+                    allPeriods = jsonPeriods.map(function(period) {
+                        return [
+                            period.dt_type || 'between_date',
+                            period.begin_date || '',
+                            period.end_date || '',
+                            period.begin_time || '00:00:00',
+                            period.end_time || '24:00:00'
+                        ];
+                    });
+                    
+                    Utils.log(allPeriods, 'Périodes converties du JSON');
+                    
+                } catch (jsonError) {
+                    // Si le parsing JSON échoue, essayer l'ancien format
+                    Utils.log('JSON parsing failed, trying old format', 'updatePeriods', 1);
+                    Utils.log(jsonError, 'JSON error');
+                    
+                    var periodStrings = text.split('£');
+                    allPeriods = periodStrings.map(function(periodStr) {
+                        return periodStr.split('#');
+                    });
+                    
+                    Utils.log(allPeriods, 'Périodes du format ancien');
+                }
+                
+                // Créer les onglets de périodes
                 for (var i = 0; i < allPeriods.length; i++) {
-                    var periodValue = allPeriods[i].split('#');
+                    var periodValue = allPeriods[i];
                     var periodNumber = (i + 1).toString();
+                    
+                    Utils.log(periodValue, 'Création période ' + periodNumber);
                     
                     UIManager.appendPeriodTab(
                         'tabs',
                         'Periode ' + periodNumber,
-                        periodValue[CONFIG.PERIOD_FIELDS.TYPE],
-                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY],
-                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR],
-                        periodValue[CONFIG.PERIOD_FIELDS.END_DAY],
-                        periodValue[CONFIG.PERIOD_FIELDS.END_HOUR]
+                        periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0],
+                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1],
+                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || periodValue[3],
+                        periodValue[CONFIG.PERIOD_FIELDS.END_DAY] || periodValue[2],
+                        periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
                     );
                     
-                    if (periodValue[CONFIG.PERIOD_FIELDS.TYPE] == 'between_date') {
-                        DatePickerManager.apply(periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY]);
+                    var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
+                    if (periodType == 'between_date') {
+                        var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
+                        DatePickerManager.apply(beginDay);
                     }
                 }
                 
@@ -1250,6 +1293,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 } catch (error) {
                     Utils.log(error, 'unable to write in #commentaire', 1);
                 }
+                
+                Utils.log('updatePeriods - END', 'updatePeriods');
             },
 
             getSelectedInDashboard() {
