@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.5.2'; // Version avec amélioration debugging et gestion d'erreurs
+var scriptVersion = '0.5.3'; // Version avec amélioration debugging et gestion d'erreurs
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -38,8 +38,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             PERIOD_FIELDS: {
                 TYPE: 0,
                 BEGIN_DAY: 1,
-                BEGIN_HOUR: 2,
-                END_DAY: 3,
+                END_DAY: 2,      
+                BEGIN_HOUR: 3,   
                 END_HOUR: 4
             },
             DOWNTIME_FIELDS: {
