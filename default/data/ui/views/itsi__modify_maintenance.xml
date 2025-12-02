@@ -1,12 +1,12 @@
-<form script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,common\assets\js\dual\dual.js,omni/omni.js" hideEdit="true" version="1.1">
-  <label>ITSI : Modify Maintenance</label>
+<form script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js" hideEdit="true" version="1.1">
+  <label>ITSI : Modify Maintenance v2</label>
   <init>
     <eval token="update">now()</eval>
     <set token="stepLabel">firstStep</set>
     <set token="modal_header"></set>
     <set token="modal_content"></set>
     <set token="modal_footer"></set>
-    <!--<set token="hide">true</set>-->
+    <set token="hide">true</set>
   </init>
   <search>
     <query>
@@ -65,10 +65,10 @@
 | spath input=svcs path=title output=service_title 
 | spath input=svcs path=kpis{} output=kpi 
 | stats values(service_title) as service_title by kpi
-```| spath input=kpi path=_key output=search_id   ```
-```| spath input=kpi path=service_id output=service_id ```
-| eval service_title=lower(service_title)
-| fields service_title
+| spath input=kpi path=_key output=search_id 
+| spath input=kpi path=service_id output=service_id 
+| fields service_title service_id
+| table *
     </query>
   </search>
   <search id="base_kpi">
@@ -93,24 +93,9 @@
 | spath input=services path=title output=service_title 
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
-| rename title as entity_title
     </query>
-  </search>
-  <!-- <row>
-    <panel ref="footer_mrspocv2"></panel>
-  </row> -->
+  </search>  
   <fieldset submitButton="false"></fieldset>
-<!--  <row>-->
-<!--    <panel>-->
-<!--      <html>-->
-<!--        <center>-->
-<!--<div id="header" class="bg-mrspoc">-->
-<!--    <h1>MODIFIER UNE MAINTENANCE</h1>-->
-<!--</div>-->
-<!--</center>-->
-<!--</html>-->
-<!--    </panel>-->
-<!--  </row>-->
   <row depends="$DT_ID$" rejects="$update_full_loading$">
     <panel>
       <html>
@@ -149,14 +134,18 @@
       </html>
     </panel>
   </row>
-  <row >
-
+  <row>
     <panel>
       <html>
         <section class="navbar custom-navbar" role="navigation">
           <div class="container">
                <div class="navbar-header">
-                    <h1 class="navbar-brand" style="font-size: 30px !important;"><span class="omni-title-first-part"><img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"></img></span><span class="omni-title-second-part"> Modify Maintenance</span></h1>
+                    <h1 class="navbar-brand" style="font-size: 30px !important;">
+                <span class="omni-title-first-part">
+                  <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
+                </span>
+                <span class="omni-title-second-part"> Modify Maintenance</span>
+              </h1>
                </div>
           </div>
      </section>
@@ -168,8 +157,8 @@
            <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
            <p id="swc_step_1" data-label="KPI" data-validateToken="kpi_selected"/>    
            <p id="swc_step_2" data-label="Entity" data-validateToken="entity_selected"/>
-           <p id="swc_step_3" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
-           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
+           <p id="swc_step_3" data-label="Pattern" data-validateToken="dt_pattern_selected"/>
+           <p id="swc_step_4" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
         <div id="step-control-wizard"/>
         </html>
     </panel>
@@ -180,6 +169,8 @@
         <h1>SERVICE</h1>
       </html>
     </panel>
+  </row>
+  <row depends="$step_0$,$DT_ID$,$update_full_loading$">
     <panel>
       <input type="dropdown" token="service_select_input_type">
         <label>type de séléction</label>
@@ -188,95 +179,155 @@
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
-            <set token="service_selected">*</set>
+            <unset token="service_selected"></unset>
             <eval token="service_select_all">1</eval>
-            <eval token="service_select_dual">null()</eval>
-            <eval token="service_select_rex">null()</eval>
+            <unset token="service_select_dual"></unset>
+            <unset token="service_select_rex"></unset>
             <eval token="service_type">1</eval>
           </condition>
           <condition value="2">
-            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
-            <eval token="service_select_all">null()</eval>
+            <unset token="service_selected"></unset>
+            <unset token="service_select_all"></unset>
             <eval token="service_select_dual">1</eval>
-            <eval token="service_select_rex">null()</eval>
+            <unset token="service_select_rex"></unset>
             <eval token="service_type">2</eval>
           </condition>
           <condition value="3">
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
-            <eval token="service_select_all">null()</eval>
-            <eval token="service_select_dual">null()</eval>
+            <unset token="service_selected"></unset>
+            <unset token="service_select_all"></unset>
+            <unset token="service_select_dual"></unset>
             <eval token="service_select_rex">1</eval>
             <eval token="service_type">3</eval>
           </condition>
           <condition>
-            <!--<unset token="service_selected"></unset>-->
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
-            <eval token="service_select_all">null()</eval>
-            <eval token="service_select_dual">null()</eval>
-            <eval token="service_select_rex">null()</eval>
+            <unset token="service_selected"></unset>
+            <unset token="service_select_all"></unset>
+            <unset token="service_select_dual"></unset>
+            <unset token="service_select_rex"></unset>
             <eval token="service_type">-1</eval>
           </condition>
         </change>
       </input>
     </panel>
   </row>
-  <row depends="$hide$">
+  <row depends="$step_0$,$service_select_dual$,$DT_ID$,$update_full_loading$" rejects="$service_loaded$">
     <panel>
-      <table>
-        <search base="base_service">
-          <query>
-| appendpipe [stats count| eval service_title="*"  | where count==0 |table service_title]
-| table service_title
-| eval service_title=lower(service_title)
-| eval service_data=replace(lower("$service_for_concat$"),"\*","%"), service_data=split(service_data,","),valid=0, valid=mvmap(service_data,valid+if(service_title LIKE(service_data),1,0)), valid=sum(valid) 
-| eval service_title=if(valid&gt;0,"selected="+service_title,"default="+service_title)
-| stats values(service_title) as export
-| eval export=mvjoin(export,";")
-</query>
-          <progress>
-            <unset token="service_maj"></unset>
-            <unset token="service_concat"></unset>
-            <unset token="form.service_concat"></unset>
-          </progress>
-          <done>
-            <set token="service_concat">$result.export$</set>
-            <set token="form.service_concat">$result.export$</set>
-            <set token="service_maj">1</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
+      <html>
+<div class="loader container">
+<div class="loader book">
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+</div>
+</div>
+<h1 class="loader title">Chargement</h1>
+
+    </html>
     </panel>
   </row>
-  <row depends="$step_0$,$service_select_all$,$DT_ID$,$update_full_loading$,$hide$">
-    <panel>
-      <table>
-        <search base="base_service">
-          <query>
-| rename service_title as List
-| table List
-</query>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-  </row>
-  <row depends="$step_0$,$service_select_dual$,$DT_ID$,$update_full_loading$">
+  <row depends="$step_0$,$service_select_dual$,$service_loaded$,$DT_ID$,$update_full_loading$">
     <panel>
       <title></title>
-      <html>
-        <div class="dual col-sm-12" input_token="service_concat" outputCondition="service_select_input_type,2" output_token="service_selected" refresh_token="service_select_dual"/>
-      </html>
+      <input type="multiselect" token="service_concat">
+        <label>Service</label>
+        <fieldForLabel>service_title</fieldForLabel>
+        <fieldForValue>service_title</fieldForValue>
+        <search base="base_service">
+          <query>
+| table service_title 
+| stats count as _count by service_title 
+          </query>
+          <done>
+            <set token="service_loaded"></set>
+          </done>
+        </search>
+        <delimiter>;</delimiter>
+        <choice value="%">All</choice>
+      </input>
     </panel>
   </row>
   <row depends="$step_0$,$service_select_rex$,$DT_ID$,$update_full_loading$">
     <panel>
       <input type="text" token="service_text_selected">
         <label>Wildcard</label>
-        <change>
-          <eval token="service_selected">if(isnotnull($service_text_selected$) AND $service_select_rex$=1,lower($service_text_selected$),null())</eval>
-        </change>
       </input>
+    </panel>
+  </row>
+  <row depends="$step_0$,$hide$">
+    <html>
+      <table>
+        <tr><th>update_full_loading</th><th>$update_full_loading$</th></tr>
+        <tr><td>DT_ID</td><td>$DT_ID$</td></tr>
+        <tr><td>form.service_select_input_type</td><td>$form.service_select_input_type$</td></tr>
+        <tr><td>form.service_concat</td><td>$form.service_concat$</td></tr>
+        <tr><td>form.kpi_select_input_type</td><td>$form.kpi_select_input_type$</td></tr>
+        <tr><td>form.kpi_concat</td><td>$form.kpi_concat$</td></tr>
+        <tr><td>form.entity_select_input_type</td><td>$form.entity_select_input_type$</td></tr>
+        <tr><td>form.entity_concat</td><td>$form.entity_concat$</td></tr>
+      </table>
+    </html>
+    </row>  
+  <row depends="$step_0$,$service_select_input_type$,$hide$">
+    <panel>
+      <title>DEBUG =&gt; service_selected : $service_selected$     </title>
+      <table>
+        <title>service query</title>
+        <search base="base_service">
+          <query>
+| rename service_title as List
+| table List
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>all service query $service_select_all$</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$service_select_all$" 
+|eval service_selected="%"
+          </query>
+          <done>
+            <set token="service_selected">$result.service_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>list service query $service_select_dual$</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$service_select_dual$" 
+|eval service_selected="$service_concat$"
+          </query>
+          <done>
+            <set token="service_selected">$result.service_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>wildcard service query $service_select_rex$</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$service_select_rex$" 
+|eval service_selected="$service_text_selected$"
+          </query>
+          <done>
+            <set token="service_selected">$result.service_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
     </panel>
   </row>
   <row depends="$step_1$">
@@ -285,6 +336,8 @@
         <h1>KPI</h1>
       </html>
     </panel>
+  </row>
+  <row depends="$step_1$">
     <panel>
       <input type="dropdown" token="kpi_select_input_type">
         <label>type de séléction</label>
@@ -293,93 +346,140 @@
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
-            <eval token="kpi_selected">"%"</eval>
+            <unset token="kpi_selected"></unset>
             <eval token="kpi_select_all">1</eval>
-            <eval token="kpi_select_dual">null()</eval>
-            <eval token="kpi_select_rex">null()</eval>
+            <unset token="kpi_select_dual"></unset>
+            <unset token="kpi_select_rex"></unset>
             <eval token="kpi_type">1</eval>
           </condition>
           <condition value="2">
-            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
-            <eval token="kpi_select_all">null()</eval>
+            <unset token="kpi_selected"></unset>
+            <unset token="kpi_select_all"></unset>
             <eval token="kpi_select_dual">1</eval>
-            <eval token="kpi_select_rex">null()</eval>
+            <unset token="kpi_select_rex"></unset>
             <eval token="kpi_type">2</eval>
           </condition>
           <condition value="3">
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
-            <eval token="kpi_select_all">null()</eval>
-            <eval token="kpi_select_dual">null()</eval>
+            <unset token="kpi_selected"></unset>
+            <unset token="kpi_select_all"></unset>
+            <unset token="kpi_select_dual"></unset>
             <eval token="kpi_select_rex">1</eval>
             <eval token="kpi_type">3</eval>
           </condition>
           <condition>
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
             <unset token="kpi_selected"></unset>
-            <eval token="kpi_select_all">null()</eval>
-            <eval token="kpi_select_dual">null()</eval>
-            <eval token="kpi_select_rex">null()</eval>
+            <unset token="kpi_select_all"></unset>
+            <unset token="kpi_select_dual"></unset>
+            <unset token="kpi_select_rex"></unset>
             <eval token="kpi_type">-1</eval>
           </condition>
         </change>
       </input>
     </panel>
   </row>
-  <row depends="$hide$">
+  <row depends="$step_1$,$kpi_select_dual$" rejects="$kpi_loaded$">
     <panel>
-      <table>
-        <search base="base_kpi">
-          <query>
-| appendpipe [stats count| eval kpi_title="*"  | where count==0 |table kpi_title]
-| table kpi_title
-| eval kpi_title=lower(kpi_title)
-| eval kpi_data=replace(lower("$kpi_for_concat$"),"\*","%"), kpi_data=split(kpi_data,","),valid=0, valid=mvmap(kpi_data,valid+if(kpi_title LIKE(kpi_data),1,0)), valid=sum(valid)
-| eval kpi_title=if(valid&gt;0,"selected="+kpi_title,"default="+kpi_title)
-| stats values(kpi_title) as export
-| eval export=mvjoin(export,";")
-</query>
-          <progress>
-            <unset token="kpi_maj"></unset>
-            <unset token="kpi_concat"></unset>
-          </progress>
-          <done>
-            <set token="kpi_concat">$result.export$</set>
-            <set token="kpi_maj">1</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
+      <html>
+<div class="loader container">
+<div class="loader book">
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+</div>
+</div>
+<h1 class="loader title">Chargement</h1>
+    </html>
     </panel>
   </row>
-  <row depends="$step_1$,$kpi_select_all$,$hide$">
-    <panel>
-      <table>
-        <search base="base_kpi">
-          <query>
-| rename kpi_title as List
-| table List
-</query>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-  </row>
-  <row depends="$step_1$,$kpi_select_dual$">
+  <row depends="$step_1$,$kpi_select_dual$,$kpi_loaded$">
     <panel>
       <title></title>
-      <html>
-        <div class="dual col-sm-12" input_token="kpi_concat" outputCondition="kpi_select_input_type,2" output_token="kpi_selected" refresh_token="kpi_select_dual"/>
-      </html>
+      <input type="multiselect" token="kpi_concat">
+        <label>KPI</label>
+        <fieldForLabel>kpi_title</fieldForLabel>
+        <fieldForValue>kpi_title</fieldForValue>
+        <search base="base_kpi">
+          <query>
+| table kpi_title 
+| stats count as _count by kpi_title
+          </query>
+          <done>
+            <set token="kpi_loaded"></set>
+          </done>
+        </search>
+        <delimiter>;</delimiter>
+        <choice value="%">All</choice>
+      </input>
     </panel>
   </row>
   <row depends="$step_1$,$kpi_select_rex$">
     <panel>
       <input type="text" token="kpi_text_selected">
         <label>Wildcard</label>
-        <change>
-          <eval token="kpi_selected">if(isnotnull($kpi_text_selected$) AND $kpi_select_rex$=1,lower($kpi_text_selected$),null())</eval>
-        </change>
       </input>
+    </panel>
+  </row>
+  <row depends="$step_1$,$kpi_select_input_type$,$hide$">
+    <panel>
+      <title>DEBUG =&gt; kpi_selected : $kpi_selected$</title>
+      <table>
+        <title>kpi query</title>
+        <search base="base_kpi">
+          <query>
+| rename kpi_title as List
+| table List
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>all kpi query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$kpi_select_all$" 
+|eval kpi_selected="%"
+          </query>
+          <done>
+            <set token="kpi_selected">$result.kpi_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>list kpi query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$kpi_select_dual$" 
+|eval kpi_selected="$kpi_concat$"
+          </query>
+          <done>
+            <set token="kpi_selected">$result.kpi_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>wildcard kpi query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$kpi_select_rex$" 
+|eval kpi_selected="$kpi_text_selected$"
+          </query>
+          <done>
+            <set token="kpi_selected">$result.kpi_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
     </panel>
   </row>
   <row depends="$step_2$">
@@ -388,6 +488,8 @@
         <h1>ENTITY</h1>
       </html>
     </panel>
+  </row>
+  <row depends="$step_2$">
     <panel>
       <input type="dropdown" token="entity_select_input_type">
         <label>type de séléction</label>
@@ -396,96 +498,198 @@
         <choice value="3">Wildcard</choice>
         <change>
           <condition value="1">
-            <eval token="entity_selected">"%"</eval>
+            <unset token="entity_selected"></unset>
             <eval token="entity_select_all">1</eval>
-            <eval token="entity_select_dual">null()</eval>
-            <eval token="entity_select_rex">null()</eval>
+            <unset token="entity_select_dual"></unset>
+            <unset token="entity_select_rex"></unset>
             <eval token="entity_type">1</eval>
           </condition>
           <condition value="2">
-            <!-- <eval token="site_selected">$site_concat_in_list$</eval>  -->
-            <eval token="entity_select_all">null()</eval>
+            <unset token="entity_selected"></unset>
+            <unset token="entity_select_all"></unset>
             <eval token="entity_select_dual">1</eval>
-            <eval token="entity_select_rex">null()</eval>
+            <unset token="entity_select_rex"></unset>
             <eval token="entity_type">2</eval>
           </condition>
           <condition value="3">
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
-            <eval token="entity_select_all">null()</eval>
-            <eval token="entity_select_dual">null()</eval>
+            <unset token="entity_selected"></unset>
+            <unset token="entity_select_all"></unset>
+            <unset token="entity_select_dual"></unset>
             <eval token="entity_select_rex">1</eval>
             <eval token="entity_type">3</eval>
           </condition>
           <condition>
             <unset token="entity_selected"></unset>
-            <!-- <eval token="site_selected">$site_concat_in_text$</eval> -->
-            <eval token="entity_select_all">null()</eval>
-            <eval token="entity_select_dual">null()</eval>
-            <eval token="entity_select_rex">null()</eval>
+            <unset token="entity_select_all"></unset>
+            <unset token="entity_select_dual"></unset>
+            <unset token="entity_select_rex"></unset>
             <eval token="entity_type">-1</eval>
           </condition>
         </change>
       </input>
     </panel>
   </row>
-  <row depends="$hide$">
+  <row depends="$step_2$,$entity_select_dual$" rejects="$entity_loaded$">
     <panel>
-      <table>
-        <search base="base_entity">
-          <query>
-| appendpipe [stats count| eval entity_title="*"  | where count==0 |table entity_title]
-| table entity_title
-| eval entity_title=lower(entity_title)
-| eval entity_data=replace(lower("$entity_for_concat$"),"\*","%"), entity_data=split(entity_data,","),valid=0, valid=mvmap(entity_data,valid+if(entity_title LIKE(entity_data),1,0)), valid=sum(valid)
-| eval entity_title=if(valid&gt;0,"selected="+entity_title,"default="+entity_title)
-| stats values(entity_title) as export
-| eval export=mvjoin(export,";")
-</query>
-          <progress>
-            <unset token="entity_maj"></unset>
-            <unset token="entity_concat"></unset>
-          </progress>
-          <done>
-            <set token="entity_concat">$result.export$</set>
-            <set token="entity_maj">1</set>
-          </done>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
+      <html>
+<div class="loader container">
+<div class="loader book">
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+  <figure class="loader page"/>
+</div>
+</div>
+<h1 class="loader title">Chargement</h1>
+    </html>
     </panel>
   </row>
-  <row depends="$step_2$,$entity_select_all$">
-    <panel>
-      <table>
-        <search base="base_entity,$hide$">
-          <query>
-| rename entity_title as List
-| table List
-</query>
-        </search>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-  </row>
-  <row depends="$step_2$,$entity_select_dual$">
+  <row depends="$step_2$,$entity_select_dual$,$entity_loaded$">
     <panel>
       <title></title>
-      <html>
-        <div class="dual col-sm-12" input_token="entity_concat" outputCondition="entity_select_input_type,2" output_token="entity_selected" refresh_token="entity_select_dual"/>
-      </html>
+      <input type="multiselect" token="entity_concat">
+        <label>Entity</label>
+        <fieldForLabel>entity_name</fieldForLabel>
+        <fieldForValue>entity_name</fieldForValue>
+        <search base="base_entity">
+          <query>| table entity_name
+| stats count as _count by entity_name
+        </query>
+          <done>
+            <set token="entity_loaded"></set>
+          </done>
+        </search>
+        <delimiter>;</delimiter>
+        <choice value="%">All</choice>
+      </input>
     </panel>
   </row>
   <row depends="$step_2$,$entity_select_rex$">
     <panel>
       <input type="text" token="entity_text_selected">
         <label>Wildcard</label>
+      </input>
+    </panel>
+  </row>
+  <row depends="$step_2$,$entity_select_input_type$,$hide$">
+    <panel>
+      <title>DEBUG =&gt; entity_selected : $entity_selected$</title>
+      <table>
+        <title>entity query</title>
+        <search base="base_entity">
+          <query>
+| rename entity_name as List
+| table List
+</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>all entity query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$entity_select_all$" 
+|eval entity_selected="%"
+          </query>
+          <done>
+            <set token="entity_selected">$result.entity_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>list entity query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$entity_select_dual$" 
+|eval entity_selected="$entity_concat$"
+          </query>
+          <done>
+            <set token="entity_selected">$result.entity_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>wildcard entity query</title>
+        <search>
+          <query>
+|makeresults
+|eval query_laucher="$entity_select_rex$" 
+|eval entity_selected="$entity_text_selected$"
+          </query>
+          <done>
+            <set token="entity_selected">$result.entity_selected$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$step_3$">
+    <panel>
+      <html>
+        <h1>PATTERN</h1>
+      </html>
+    </panel>
+  </row>
+  <row depends="$step_3$">
+    <panel>
+      <input type="dropdown" token="pattern_type">
+        <label>Pattern type</label>
+        <choice value="exist">Pattern existant</choice>
+        <choice value="new">Nouveau pattern</choice>
+        <default>exist</default>
+        <initialValue>exist</initialValue>
         <change>
-          <eval token="entity_selected">if(isnotnull($entity_text_selected$) AND $entity_select_rex$=1,lower($entity_text_selected$),null())</eval>
+          <condition match="$pattern_type$=&quot;exist&quot;">
+            <set token="pattern_exist">1</set>
+            <unset token="pattern_new"></unset>
+            <unset token="dt_pattern_text"></unset>
+          </condition>
+          <condition match="$pattern_type$=&quot;new&quot;">
+            <set token="pattern_new">1</set>
+            <unset token="pattern_exist"></unset>
+            <unset token="dt_patern_select"></unset>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
+        <label>Downtime Pattern</label>
+        <change>
+          <set token="dt_pattern_selected">$dt_patern_select$</set>
+        </change>
+        <fieldForLabel>dt_pattern</fieldForLabel>
+        <fieldForValue>dt_pattern</fieldForValue>
+        <search>
+          <query>
+| inputlookup omni_kv_def 
+| stats count as _c by dt_pattern
+| appendpipe
+[| stats count 
+ | where count=0
+ | eval dt_pattern="-"
+ | table dt_pattern]
+          </query>
+        </search>
+      </input>
+      <input type="text" token="dt_pattern_text" depends="$pattern_new$">
+        <label>Downtime pattern</label>
+        <default></default>
+        <change>
+          <set token="dt_pattern_selected">$dt_pattern_text$</set>
         </change>
       </input>
     </panel>
   </row>
-  <row depends="$step_3$">
+  <row depends="$step_4$">
     <panel>
       <html>
         <center>
@@ -494,7 +698,7 @@
       </html>
     </panel>
   </row>
-  <row depends="$step_3$">
+  <row depends="$step_4$">
     <panel>
       <input type="checkbox" token="sendingEmail">
         <label></label>
@@ -503,14 +707,6 @@
       <input type="text" token="email" depends="$sendingEmail$">
         <label>Adresse Email du destinataire</label>
       </input>
-    </panel>
-  </row>
-  <row depends="$DT_ID$,$update_full_loading$">
-    <panel>
-      <html>
-        <div id="step_control_wizard_holder"/>
-        <div id="step-control-wizard"/>
-      </html>
     </panel>
   </row>
   <row depends="$hide_style$">
@@ -548,6 +744,190 @@
             </tr>
           </table>
         </div>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: #1977cc;
+}
+
+.loader h1 {
+  color: #FFFFFF;
+  text-align: center;
+  font-family: sans-serif;
+  text-transform: uppercase;
+  font-size: 20px;
+  position: relative;
+}
+
+.loader h1:after {
+  position: absolute;
+  content: "";
+  -webkit-animation: Dots 2s cubic-bezier(0, .39, 1, .68) infinite;
+  animation: Dots 2s cubic-bezier(0, .39, 1, .68) infinite;
+}
+
+.loader {
+  margin: 1% auto 0px;
+}
+
+.loader.container{
+width: 200px;
+height: 100px;
+background: #274685;
+}
+
+.loader.container:before{
+padding:10px;
+}
+
+.book {
+  border: 4px solid #FFFFFF;
+  width: 60px;
+  height: 45px;
+  position: relative;
+  perspective: 150px;
+}
+
+.loader.page {
+  display: block;
+  width: 30px;
+  height: 45px;
+  border: 4px solid #FFFFFF;
+  border-left: 1px solid #274685;
+  margin: 0;
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  overflow: hidden;
+  background: #274685;
+  transform-style: preserve-3d;
+  -webkit-transform-origin: left center;
+  transform-origin: left center;
+}
+
+.book .page:nth-child(1) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.6s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.6s infinite;
+}
+
+.book .page:nth-child(2) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.45s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.45s infinite;
+}
+
+.book .page:nth-child(3) {
+  -webkit-animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.2s infinite;
+  animation: pageTurn 1.2s cubic-bezier(0, .39, 1, .68) 1.2s infinite;
+}
+.loader.title{
+ color: #3c444d;
+ text-align:center;
+}
+
+
+/* Page turn */
+
+@-webkit-keyframes pageTurn {
+  0% {
+    -webkit-transform: rotateY( 0deg);
+    transform: rotateY( 0deg);
+  }
+  20% {
+    background: #1977cc;
+  }
+  40% {
+    background: #1977cc;
+    -webkit-transform: rotateY( -180deg);
+    transform: rotateY( -180deg);
+  }
+  100% {
+    background: #1977cc;
+    -webkit-transform: rotateY( -180deg);
+    transform: rotateY( -180deg);
+  }
+}
+
+@keyframes pageTurn {
+  0% {
+    transform: rotateY( 0deg);
+  }
+  20% {
+    background: #1977cc;
+  }
+  40% {
+    background: #1977cc;
+    transform: rotateY( -180deg);
+  }
+  100% {
+    background: #1977cc;
+    transform: rotateY( -180deg);
+  }
+}
+
+
+/* Dots */
+
+@-webkit-keyframes Dots {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+@keyframes Dots {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+.splunk-multidropdown{
+width:800px;
+height:300px;
+background:#e1e6eb;
+}
+
+.splunk-multidropdown [class^="BoxStyles__Styled-"]{
+width:800px !important;
+height:300px !important;
+background:#e1e6eb !important;
+}
+.splunk-multidropdown [class^="BoxStyles__Styled-"] [class^="ClickableStyles__StyledA-"]{
+background:#fff !important;
+background-color:#fff !important;
+color:#000 !important;
+}
+
+.add.square.icon:before{
+left:40px;
+content:"➕";
+}
+.add.square.icon{
+width:40px;
+padding:10px
+}
+
+
+</style>
       </html>
     </panel>
   </row>

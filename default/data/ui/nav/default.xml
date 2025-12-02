@@ -3,6 +3,7 @@
   <collection label="Maintenance">
     <view name="itsi__maintenance_search" />
     <view name="itsi__add_maintenance" />
+    <view name="itsi__add_custom_maintenance" />
     <view name="itsi__maintenance_target" />
   </collection>
   <collection label="Profil">
