@@ -11,6 +11,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 import sys
+
+bin_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+if bin_path not in sys.path:
+    sys.path.insert(0, bin_path)
+
+
 import json
 import datetime
 

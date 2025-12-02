@@ -7,10 +7,16 @@ from __future__ import (
     unicode_literals,
 )
 
-import datetime
-import json
 import os
 import sys
+
+bin_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+if bin_path not in sys.path:
+    sys.path.insert(0, bin_path)
+
+
+import datetime
+import json
 import re
 
 # Pour Python 3.7+
