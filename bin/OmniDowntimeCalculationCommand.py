@@ -401,6 +401,7 @@ def downtime_date_last_in_month(
         in_downtime = 0
     return in_downtime
 
+
 def parse_downtime_data(downtime_str):
     """
     Parse le downtime qu'il soit au format legacy (# séparé) ou JSON
@@ -465,6 +466,7 @@ def parse_downtime_data(downtime_str):
             'format': 'legacy',
             'original_str': downtime_str
         }
+
 
 def evaluate_filter(record, filter_expression, logger):
     """
@@ -542,11 +544,12 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
     Vérifie si une période est en downtime
     
     Syntaxe:
-        | downtimecalculation epoctime=<fieldname> dtfield=<fieldname> outputfield=<fieldname>
+        | omnidowntimecalculation epoctime=<fieldname> dtfield=<fieldname> outputfield=<fieldname> skip_filter=<bool>
     
     Exemple:
         | inputlookup tweets
-        | downtimecalculation epoctime=_time dtfield=downtimes outputfield=in_dt
+        | omnidowntimecalculation epoctime=_time dtfield=downtimes outputfield=in_dt
+        | omnidowntimecalculation epoctime=_time dtfield=downtimes outputfield=in_dt skip_filter=true
     """
 
     epoctime = Option(
@@ -573,10 +576,23 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
         validate=validators.Fieldname(),
     )
 
+    skip_filter = Option(
+        doc="""
+        **Syntax:** **skip_filter=***<bool>*
+        **Description:** Si true, ignore l'évaluation des filtres dt_filter et considère uniquement la période de downtime
+        **Default:** false""",
+        require=False,
+        default=False,
+        validate=validators.Boolean()
+    )
+
     def stream(self, records):
         epoctime = str(self.epoctime).rstrip()
         dtfield = str(self.dtfield).rstrip()
         outputfield = str(self.outputfield).rstrip()
+        skip_filter = self.skip_filter  # Récupération de l'option
+
+        self.logger.debug("DowntimeCalculationCommand => skip_filter: %s", skip_filter)
 
         for record in records:
             record[outputfield] = 0
@@ -687,22 +703,35 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                     modified_downtimes.append(downtime)
                     continue
                 
+                # ============================================
+                # LOGIQUE AVEC skip_filter
+                # ============================================
                 in_filter = 0
                 
                 if current_downtime_result == 1:
-                    self.logger.debug("DowntimeCalculationCommand => in_dt=1, testing filter: %s", dt_filter)
-                    
-                    if not dt_filter or dt_filter.strip() == '':
+                    if skip_filter:
+                        # Si skip_filter=true, on ignore l'évaluation du filtre
                         in_filter = 1
-                        self.logger.debug("DowntimeCalculationCommand => No filter defined, in_filter=1")
+                        self.logger.debug("DowntimeCalculationCommand => skip_filter=true, in_filter forcé à 1")
                     else:
-                        filter_result = evaluate_filter(record, dt_filter, self.logger)
-                        in_filter = 1 if filter_result else 0
-                        self.logger.debug("DowntimeCalculationCommand => Filter evaluation result: %s (in_filter=%d)", 
-                                        filter_result, in_filter)
+                        # Comportement normal : évaluation du filtre
+                        self.logger.debug("DowntimeCalculationCommand => in_dt=1, testing filter: %s", dt_filter)
+                        
+                        if not dt_filter or dt_filter.strip() == '':
+                            in_filter = 1
+                            self.logger.debug("DowntimeCalculationCommand => No filter defined, in_filter=1")
+                        else:
+                            filter_result = evaluate_filter(record, dt_filter, self.logger)
+                            in_filter = 1 if filter_result else 0
+                            self.logger.debug("DowntimeCalculationCommand => Filter evaluation result: %s (in_filter=%d)", 
+                                            filter_result, in_filter)
                 else:
                     in_filter = 0
                     self.logger.debug("DowntimeCalculationCommand => in_dt=0, skipping filter test")
+                
+                # ============================================
+                # FIN DE LA LOGIQUE skip_filter
+                # ============================================
                 
                 if parsed_dt.get('format') == 'json':
                     downtime_with_result = parsed_dt['original_json'].copy()
