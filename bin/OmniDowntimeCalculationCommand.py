@@ -113,17 +113,25 @@ def downtime_between_days(
         int(startDTTime[2]),
     )
     
-    if endDTTime[0] == "24":
-        endDTTime = [23, 59, 59]
-    
-    end_downtime = datetime.datetime(
-        int(endDTDate[0]),
-        int(endDTDate[1]),
-        int(endDTDate[2]),
-        int(endDTTime[0]),
-        int(endDTTime[1]),
-        int(endDTTime[2]),
-    )
+    # Gestion spéciale de 24:00:00 - ajouter un jour et mettre à 00:00:00
+    if endDTTime[0] == "24" or int(endDTTime[0]) == 24:
+        end_downtime = datetime.datetime(
+            int(endDTDate[0]),
+            int(endDTDate[1]),
+            int(endDTDate[2]),
+            0,  # Heure à 0
+            0,  # Minute à 0
+            0,  # Seconde à 0
+        ) + datetime.timedelta(days=1)  # Ajouter un jour
+    else:
+        end_downtime = datetime.datetime(
+            int(endDTDate[0]),
+            int(endDTDate[1]),
+            int(endDTDate[2]),
+            int(endDTTime[0]),
+            int(endDTTime[1]),
+            int(endDTTime[2]),
+        )
     
     if event >= start_downtime and event <= end_downtime:
         in_downtime = 1
@@ -393,7 +401,6 @@ def downtime_date_last_in_month(
         in_downtime = 0
     return in_downtime
 
-
 def parse_downtime_data(downtime_str):
     """
     Parse le downtime qu'il soit au format legacy (# séparé) ou JSON
@@ -407,6 +414,22 @@ def parse_downtime_data(downtime_str):
     """
     try:
         downtime_json = json.loads(downtime_str)
+        
+        # Handle case where JSON is a list - take the first element
+        if isinstance(downtime_json, list):
+            if len(downtime_json) == 0:
+                return {
+                    'error': "-999 : Empty JSON array",
+                    'format': 'error'
+                }
+            downtime_json = downtime_json[0]
+        
+        # Ensure downtime_json is a dictionary
+        if not isinstance(downtime_json, dict):
+            return {
+                'error': f"-999 : Invalid JSON format, expected dict or list, got {type(downtime_json).__name__}",
+                'format': 'error'
+            }
         
         return {
             'id': downtime_json.get('id', ''),
@@ -442,7 +465,6 @@ def parse_downtime_data(downtime_str):
             'format': 'legacy',
             'original_str': downtime_str
         }
-
 
 def evaluate_filter(record, filter_expression, logger):
     """

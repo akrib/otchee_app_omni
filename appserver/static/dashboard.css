@@ -1031,12 +1031,12 @@ div[data-test='control-group'][data-role='rangetype']{
 
 #queldate span[data-test='label']:after {
     visibility: visible;
-    content: "quel date";
+    content: "quelle date";
     visibility: visible;
     position: absolute;
     top: 0;
     left: 0;
-    content: "A quel date?";
+    content: "A quelle date?";
     color : #274685;
 }
 

@@ -1,5 +1,6 @@
+
 <dashboard version="2" theme="light">
-    <label>accueil v2</label>
+    <label>Accueil</label>
     <description></description>
     <definition><![CDATA[
 {
@@ -535,11 +536,9 @@
 			},
 			"eventHandlers": [
 				{
-					"type": "drilldown.linkToDashboard",
+					"type": "drilldown.switchToTab",
 					"options": {
-						"app": "otchee_app_omni",
-						"dashboard": "help",
-						"newTab": true
+						"tabId": "layout_m7UOhnkY"
 					}
 				}
 			]
@@ -668,11 +667,9 @@
 			},
 			"eventHandlers": [
 				{
-					"type": "drilldown.linkToDashboard",
+					"type": "drilldown.switchToTab",
 					"options": {
-						"app": "otchee_app_omni",
-						"dashboard": "help",
-						"newTab": true
+						"tabId": "layout_m7UOhnkY"
 					}
 				}
 			]
@@ -683,8 +680,619 @@
 				"preserveAspectRatio": true,
 				"src": "splunk-enterprise-kvstore://6928e572c74aa954760f074a"
 			}
+		},
+		"viz_m6b6Qtte": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6",
+				"strokeWidth": 0
+			}
+		},
+		"viz_hUk562HO": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_ywfCutYH": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#000000",
+				"strokeColor": "transparent",
+				"fillOpacity": 0.5
+			}
+		},
+		"viz_pPH98rbk": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Accueil**",
+				"fontSize": "custom",
+				"customFontSize": 18,
+				"fontColor": "#fff"
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.switchToTab",
+					"options": {
+						"tabId": "layout_1"
+					}
+				}
+			]
+		},
+		"viz_VYhb8AXO": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Maintenance**",
+				"fontSize": "custom",
+				"customFontSize": 18,
+				"fontColor": "#fff"
+			}
+		},
+		"viz_g7TQKao2": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/logo_omni.png"
+			}
+		},
+		"viz_IqA1vFda": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "splunk-enterprise-kvstore://6928e572c74aa954760f074a"
+			}
+		},
+		"viz_NKJG3qaB": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#ffffff",
+				"rx": 5,
+				"strokeWidth": 0
+			}
+		},
+		"viz_hXr4EYZo": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "# **Documentation**",
+				"fontSize": "custom",
+				"customFontSize": 36
+			}
+		},
+		"viz_1VQd0Mns": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/logo_omni.png"
+			}
+		},
+		"viz_7cG0QVpH": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#95afc0",
+				"fillOpacity": 0.3,
+				"rx": 10,
+				"strokeWidth": 0
+			}
+		},
+		"viz_ptKzA3Ok": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "### Table des matières\n* [1. Présentation générale](#presentation)\n* [2. Fonctionnalités principales](#2-fonctionnalites-principales)\n* [3. Accès à l'application](#3-acces-a-lapplication)\n* [4. Gestion des maintenances](#4-gestion-des-maintenances)\n* [5. Recherche et consultation](#5-recherche-et-consultation)\n* [6. Suivi et traçabilité](#6-suivi-et-tracabilite)\n* [7. Bonnes pratiques](#7-bonnes-pratiques)\n* [8. Support](#8-support)",
+				"fontColor": "#000000",
+				"fontSize": "custom",
+				"customFontSize": 18
+			}
+		},
+		"viz_5ymSjcEZ": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "## 1. Présentation générale\n\n### Qu'est-ce qu'OMNI ?\n**OMNI (Observability Maintenance Natural Interface)** est une application Splunk dédiée à la gestion avancée des périodes de maintenance pour **Splunk IT Service Intelligence (ITSI)**.\n\n### À quoi sert OMNI ?\nOMNI vous permet de :\n- **Planifier** vos maintenances\n- **Gérer** services, KPIs et entités\n- **Automatiser** récurrences\n- **Tracer** toutes les modifications\n- **Rechercher** vos politiques\n\n### Pourquoi utiliser OMNI ?\n\n\n\n\n\n\n\n\n",
+				"fontColor": "#000000",
+				"fontSize": "custom",
+				"customFontSize": 16
+			}
+		},
+		"viz_RZewupRF": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_wWWFknKx": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "---\n\n## 2. Fonctionnalités principales\n\n### 1. Piloter en un point unique\n\nGérez toutes vos maintenances depuis une interface unifiée qui couvre l'ensemble de votre Système d'Information.\n\n### 2. Interface de gestion avancée\n\nPlanifiez vos maintenances selon différents modes :\n\n- **Date à date** : Période spécifique avec début et fin\n- **Hebdomadaire** : Récurrence sur des jours de la semaine\n- **Mensuel** : Récurrence sur des jours du mois\n- **Spécifique** : Premier/dernier lundi du mois, etc.\n\n### 3. Intégration transparente avec ITSI\n\nMettez en maintenance vos :\n\n- **Services** ITSI\n- **KPIs** (indicateurs de performance)\n- **Entités** (serveurs, applications, etc.)\n\n### 4. Rapports et tableaux de bord dédiés\n\nAccédez à :\n\n- Recherche avancée de maintenances\n- Consultation des historiques\n- Votre espace personnel\n- Statistiques et métriques\n\n---",
+				"fontColor": "#000000",
+				"fontSize": "custom",
+				"customFontSize": 16
+			}
+		},
+		"viz_owurepCw": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillOpacity": 0.3,
+				"strokeColor": "#c3cbd4",
+				"fillColor": "#ffffff"
+			}
+		},
+		"viz_1ht0MTsu": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "#### Interface intuitive\nGestion simplifiée en quelques clics"
+			}
+		},
+		"viz_68QYzoAR": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "#### Flexibilité\nPlanification simple ou avancée"
+			}
+		},
+		"viz_WOIUEQ1O": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "#### Intégration native\nCompatible avec ITSI"
+			}
+		},
+		"viz_cC5mokPk": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "\n#### Gestion centralisée\nPoint d'entrée unique"
+			}
+		},
+		"viz_s2Eemw5o": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "\n#### Traçabilité complète\nHistorique détaillé"
+			}
+		},
+		"viz_WNZ0H00V": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_PilH6NPz": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillOpacity": 0.3,
+				"strokeColor": "#c3cbd4",
+				"fillColor": "#ffffff"
+			}
+		},
+		"viz_fuVlM1h2": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_M5ClSrAg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillOpacity": 0.3,
+				"strokeColor": "#c3cbd4",
+				"fillColor": "#ffffff"
+			}
+		},
+		"viz_XRZEFP1A": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_t4AcfphP": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillOpacity": 0.3,
+				"strokeColor": "#c3cbd4",
+				"fillColor": "#ffffff"
+			}
+		},
+		"viz_JN2aUCdK": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_D0lu8L0r": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillOpacity": 0.3,
+				"strokeColor": "#c3cbd4",
+				"fillColor": "#ffffff"
+			}
+		},
+		"viz_SJxjXPsk": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_rWYWb5ov": {
+			"options": {
+				"markdown": "# 3. Accès à l'application\n\n## Page d'accueil\n\nAprès connexion à Splunk, accédez à OMNI depuis le menu des applications.\n\nLa page d'accueil vous propose deux actions principales :\n"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_QNZXFioK": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Ajouter une maintenance** : Créer une nouvelle politique de maintenance\n\n**Rechercher une maintenance** : Trouver et consulter vos maintenances existantes"
+			}
+		},
+		"viz_iO83qFm5": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8f9fa",
+				"strokeWidth": 0
+			}
+		},
+		"viz_mAnI3Oe0": {
+			"options": {
+				"markdown": "## Menu de navigation\n\nL'application est organisée en sections :\n\n### Maintenance\n\n- **Search** : Rechercher des maintenances\n- **Add** : Ajouter une nouvelle maintenance\n- **Target** : Voir la portée d'une maintenance\n\n### Profil\n\n- **My Own Maintenance** : Vos maintenances personnelles\n- **Maintenance Logs** : Historique des modifications\n- **Dashboards** : Tableaux de bord personnalisés\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_8S4VcWul": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6"
+			}
+		},
+		"viz_eEh5GhC4": {
+			"context": {},
+			"options": {
+				"markdown": "# 4. Gestion des maintenances\n\n## Ajouter une maintenance\n\nLe processus se déroule en **4 étapes** guidées :\n\n### Étape 1 : Sélection des Services\n\nChoisissez le type de sélection :\n\n- **All** : Tous les services\n- **List** : Sélection multiple dans une liste\n- **Wildcard** : Utilisation de motifs (ex: *prod*)\n\n### Étape 2 : Sélection des KPIs\n\nMême principe que pour les services. Les KPIs affichés sont filtrés selon les services sélectionnés.\n\n### Étape 3 : Sélection des Entités\n\nSélectionnez les entités concernées par la maintenance. Les entités sont également filtrées selon vos choix précédents.\n\n### Étape 4 : Configuration de la période\n\nDéfinissez la ou les périodes de maintenance.\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_M0etMkjL": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "### Date à date\n- Date de début et heure de début\n- Date de fin et heure de fin"
+			}
+		},
+		"viz_HcgRExgb": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8f9fa",
+				"strokeWidth": 0
+			}
+		},
+		"viz_9ZdzzH06": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6"
+			}
+		},
+		"viz_ttMGWMc0": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8f9fa",
+				"strokeWidth": 0
+			}
+		},
+		"viz_QN1Mb12U": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "### Hebdomadaire\n- Jours de la semaine (ex: Lundi, Mercredi, Vendredi)\n- Heure de début et de fin\n\n"
+			}
+		},
+		"viz_ftoKfzxN": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6"
+			}
+		},
+		"viz_AGAsZcRT": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8f9fa",
+				"strokeWidth": 0
+			}
+		},
+		"viz_UA7WHR4F": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "### Mensuel\n- Jours du mois (ex: 1, 15, 30)\n- Heure de début et de fin"
+			}
+		},
+		"viz_0p2pgucz": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6"
+			}
+		},
+		"viz_eoYuKQwq": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8f9fa",
+				"strokeWidth": 0
+			}
+		},
+		"viz_PRvxb8Gu": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "### Spécifique\n- Premier/Deuxième/Troisième/Quatrième/Dernier du mois\n- Jour de la semaine\n- Heure de début et de fin"
+			}
+		},
+		"viz_sk084I2w": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0072c6"
+			}
+		},
+		"viz_EJRTxjK1": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Astuce :** Vous pouvez ajouter plusieurs périodes en cliquant sur le bouton d'ajout de période."
+			}
+		},
+		"viz_uZVGr0RY": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#22a6b3",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_BCjNFhdP": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#22a6b3",
+				"strokeWidth": 0
+			}
+		},
+		"viz_A6fjFYPP": {
+			"options": {
+				"markdown": "## Options finales\n\n- **Commentaire** : Ajoutez un ticket de référence ou une description\n- **Email de notification** : Recevez un récapitulatif par email\n\n## Modifier une maintenance\n\n1. Recherchez la maintenance à modifier\n2. Cliquez sur l'icône \"Modifier\"\n3. Suivez les mêmes étapes que pour la création\n4. Validez les modifications"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_QnR02nZ1": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_qFt1p4iz": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8be44",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_wEoI00Xz": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Important :** La modification crée une nouvelle version de la maintenance"
+			}
+		},
+		"viz_0l81E0Z2": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8be44",
+				"strokeWidth": 0
+			}
+		},
+		"viz_ez4EIRly": {
+			"options": {
+				"markdown": "## Supprimer une maintenance\n\n1. Recherchez la maintenance à supprimer\n2. Cliquez sur l'icône \"Supprimer\"\n3. Confirmez la suppression"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_vB7F2dbz": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8be44",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_UD1VVTEK": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "**Note :** La suppression est tracée et conservée dans l'historique"
+			}
+		},
+		"viz_6yihW7l7": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#f8be44",
+				"strokeWidth": 0
+			}
+		},
+		"viz_0crebt5r": {
+			"context": {},
+			"options": {
+				"markdown": "# 5. Recherche et consultation\n\n## Recherche simple\n\nUtilisez la barre de recherche comme un moteur de recherche classique :\n\n- Tapez n'importe quel mot-clé (équipement, commentaire, auteur, ticket...)\n- Les résultats affichent toutes les maintenances correspondantes\n\n### Exemples de recherche\n\n```\nSRVPROD01\n```\nTrouve les maintenances mentionnant ce serveur\n\n```\nR-287656\n```\nTrouve les maintenances liées à ce ticket\n\n```\ndupont maintenance\n```\nCombine plusieurs critères\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_Get7sQQo": {
+			"context": {},
+			"options": {
+				"markdown": "## Filtre par date\n\nUtilisez le sélecteur de date pour voir les maintenances :\n\n- **Actives** à une date donnée (indicateur vert)\n- **Inactives** à une date donnée (indicateur rouge)\n\nCochez \"Maintenance en cours\" pour filtrer uniquement les maintenances actives.\n\n## Détails d'une maintenance\n\nPour chaque maintenance trouvée, vous pouvez :\n\n- **Voir les détails** : Service, KPI, entités concernés\n- **Analyser la portée** : Nombre d'éléments impactés\n- **Consulter les informations** : Périodes, commentaires, auteur\n- **Accéder aux actions** : Modifier, supprimer, voir l'historique\n\n## Portée d'une maintenance\n\nCliquez sur l'icône \"Portée\" pour visualiser :\n\n- Nombre de services concernés\n- Nombre de KPIs impactés\n- Nombre d'entités en maintenance\n- Liste détaillée de chaque élément\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_e2HkPlpq": {
+			"context": {},
+			"options": {
+				"markdown": "# 6. Suivi et traçabilité\n\n## My Own Maintenance\n\nVotre espace personnel affiche :\n\n- **Vos maintenances actives**\n- **Vos maintenances supprimées**\n- **Statistiques personnelles**\n\n### Indicateurs\n\n| Indicateur | Signification |\n|------------|---------------|\n| Propriétaire | Vous avez créé la maintenance |\n| Modificateur | Vous avez modifié la maintenance |\n| Mise à jour externe | Un autre utilisateur l'a modifiée |\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_fj5XJ7yw": {
+			"options": {
+				"markdown": "## Maintenance Logs\n\nConsultez l'historique complet des modifications :\n\n- Date et heure de l'action\n- Type d'action (Ajout, Modification, Suppression)\n- Auteur de l'action\n- Détails des changements\n\n### Filtres disponibles\n\n- Par service\n- Par KPI\n- Par entité\n- Par auteur\n- Par ID de maintenance\n\n### Légende des actions\n\n| Action       | Description                     |\n|--------------|----------------------------------|\n| Ajout        | Nouvelle maintenance créée       |\n| Modification | Maintenance mise à jour          |\n| Obsolète     | Ancienne version remplacée       |\n| Suppression  | Maintenance supprimée            |\n\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_iziyAPo0": {
+			"options": {
+				"markdown": "# 7. Bonnes pratiques\n\n## Lors de la création"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_M5P0mDSX": {
+			"type": "splunk.image",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/otchee_app_omni/media/banner_gradient.png"
+			}
+		},
+		"viz_juvbRnWF": {
+			"options": {
+				"markdown": "## Gestion des périodes"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_G9huGsSN": {
+			"context": {},
+			"options": {
+				"markdown": "# 8. Support\n\n## Contact\n\nPour toute question ou assistance :\n\n**Email** : observability@otchee.fr\n\n## Aide contextuelle\n\nUn assistant est disponible dans l'interface (icône d'aide) pour vous guider selon le contexte.\n\n## Version actuelle\n\n**Version** : 1.0.27\n\nPour connaître les nouveautés et améliorations, consultez les notes de version de l'application.\n\n---\n\n## Documentation\n\nDocumentation OMNI - Application Splunk pour la gestion des maintenances ITSI\n\nCopyright © Otchee - Tous droits réservés\n\n---"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_owrRJ7Q8": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "1. **Soyez précis dans vos sélections** : Évitez \"All\" si possible\n2. **Ajoutez toujours un commentaire** : Référence ticket, description claire\n3. **Vérifiez les dates et heures** : Attention aux fuseaux horaires\n4. **Utilisez des wildcards intelligemment** : *prod* plutôt que *"
+			}
+		},
+		"viz_z7xgVEj9": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_KcXeua0B": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0
+			}
+		},
+		"viz_Og2wh5ls": {
+			"options": {
+				"markdown": "## Organisation\n\n"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_NklAADbT": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_sylmb0Gt": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0
+			}
+		},
+		"viz_I07216EE": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "1. **Convention de nommage** : Établissez des standards d'équipe\n2. **Commentaires structurés** : Ticket + description courte\n3. **Revue régulière** : Nettoyez les maintenances obsolètes\n4. **Documentation** : Notez les maintenances récurrentes importantes"
+			}
+		},
+		"viz_iTl6c0Ur": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_pktys2dh": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0
+			}
+		},
+		"viz_AT5cnusK": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "1. **Préférez des périodes courtes et précises** : Plus facile à gérer\n2. **Utilisez les récurrences** : Pour les maintenances planifiées\n3. **Anticipez les chevauchements** : Vérifiez les maintenances existantes\n4. **Testez sur un périmètre réduit** : Avant de généraliser"
+			}
+		},
+		"viz_h6xUwwy4": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0,
+				"fillOpacity": 0.3
+			}
+		},
+		"viz_4nMIUoyc": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#00cec9",
+				"strokeWidth": 0
+			}
+		},
+		"viz_R6GYzZ5X": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "1. **Ne supprimez pas sans raison** : Modifiez plutôt que supprimer\n2. **Consultez l'historique** : Avant toute modification importante\n3. **Utilisez les notifications email** : Pour les actions critiques\n4. **Vérifiez la portée** : Avant de valider"
+			}
+		},
+		"viz_u0R12i6J": {
+			"options": {
+				"markdown": "## Sécurité et traçabilité"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_5T64fEsB": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "transparent",
+				"rx": 10,
+				"strokeWidth": 0
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.switchToTab",
+					"options": {
+						"tabId": "layout_1"
+					}
+				}
+			]
+		},
+		"viz_P9uHsI0w": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "transparent",
+				"strokeWidth": 0
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.switchToTab",
+					"options": {
+						"tabId": "layout_3XedJ0GX"
+					}
+				}
+			]
 		}
 	},
+	"title": "accueil v2 Copy",
+	"description": "",
 	"defaults": {
 		"dataSources": {
 			"ds.search": {
@@ -716,6 +1324,10 @@
 				{
 					"layoutId": "layout_3XedJ0GX",
 					"label": "Maintenance"
+				},
+				{
+					"layoutId": "layout_m7UOhnkY",
+					"label": "Help"
 				}
 			]
 		},
@@ -1200,7 +1812,7 @@
 							"x": 1850,
 							"y": 10,
 							"w": 70,
-							"h": 40
+							"h": 30
 						}
 					},
 					{
@@ -1209,7 +1821,7 @@
 						"position": {
 							"x": 1840,
 							"y": 0,
-							"w": 60,
+							"w": 70,
 							"h": 50
 						}
 					}
@@ -1381,7 +1993,7 @@
 							"x": 160,
 							"y": -10,
 							"w": 140,
-							"h": 50
+							"h": 60
 						}
 					},
 					{
@@ -1491,17 +2103,17 @@
 							"x": 1850,
 							"y": 10,
 							"w": 70,
-							"h": 40
+							"h": 30
 						}
 					},
 					{
 						"item": "viz_OK2TR3f4",
 						"type": "block",
 						"position": {
-							"x": 1850,
+							"x": 1840,
 							"y": 0,
 							"w": 70,
-							"h": 45
+							"h": 40
 						}
 					}
 				],
@@ -1511,11 +2123,860 @@
 					"height": 1080,
 					"display": "fit-to-width"
 				}
+			},
+			"layout_m7UOhnkY": {
+				"type": "absolute",
+				"structure": [
+					{
+						"item": "viz_HcgRExgb",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2350,
+							"w": 320,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_D0lu8L0r",
+						"type": "block",
+						"position": {
+							"x": 1220,
+							"y": 610,
+							"w": 250,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_PilH6NPz",
+						"type": "block",
+						"position": {
+							"x": 380,
+							"y": 610,
+							"w": 250,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_M5ClSrAg",
+						"type": "block",
+						"position": {
+							"x": 660,
+							"y": 610,
+							"w": 250,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_t4AcfphP",
+						"type": "block",
+						"position": {
+							"x": 940,
+							"y": 610,
+							"w": 250,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_ywfCutYH",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 5,
+							"w": 1920,
+							"h": 50
+						}
+					},
+					{
+						"item": "viz_m6b6Qtte",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": -10,
+							"w": 1920,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_hUk562HO",
+						"type": "block",
+						"position": {
+							"x": -140,
+							"y": 0,
+							"w": 290,
+							"h": 1410
+						}
+					},
+					{
+						"item": "viz_pPH98rbk",
+						"type": "block",
+						"position": {
+							"x": 200,
+							"y": 10,
+							"w": 80,
+							"h": 50
+						}
+					},
+					{
+						"item": "viz_VYhb8AXO",
+						"type": "block",
+						"position": {
+							"x": 320,
+							"y": 10,
+							"w": 130,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_g7TQKao2",
+						"type": "block",
+						"position": {
+							"x": 10,
+							"y": 0,
+							"w": 120,
+							"h": 50
+						}
+					},
+					{
+						"item": "viz_IqA1vFda",
+						"type": "block",
+						"position": {
+							"x": 1860,
+							"y": 10,
+							"w": 60,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_NKJG3qaB",
+						"type": "block",
+						"position": {
+							"x": 1870,
+							"y": 30,
+							"w": 40,
+							"h": 5
+						}
+					},
+					{
+						"item": "viz_hXr4EYZo",
+						"type": "block",
+						"position": {
+							"x": 560,
+							"y": 90,
+							"w": 510,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_1VQd0Mns",
+						"type": "block",
+						"position": {
+							"x": 1050,
+							"y": -10,
+							"w": 300,
+							"h": 300
+						}
+					},
+					{
+						"item": "viz_7cG0QVpH",
+						"type": "block",
+						"position": {
+							"x": 1460,
+							"y": 250,
+							"w": 430,
+							"h": 240
+						}
+					},
+					{
+						"item": "viz_ptKzA3Ok",
+						"type": "block",
+						"position": {
+							"x": 1480,
+							"y": 270,
+							"w": 400,
+							"h": 300
+						}
+					},
+					{
+						"item": "viz_5ymSjcEZ",
+						"type": "block",
+						"position": {
+							"x": 80,
+							"y": 250,
+							"w": 1310,
+							"h": 340
+						}
+					},
+					{
+						"item": "viz_RZewupRF",
+						"type": "block",
+						"position": {
+							"x": -140,
+							"y": 1410,
+							"w": 290,
+							"h": 1420
+						}
+					},
+					{
+						"item": "viz_wWWFknKx",
+						"type": "block",
+						"position": {
+							"x": 80,
+							"y": 730,
+							"w": 1310,
+							"h": 710
+						}
+					},
+					{
+						"item": "viz_owurepCw",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 610,
+							"w": 250,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_1ht0MTsu",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 620,
+							"w": 300,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_68QYzoAR",
+						"type": "block",
+						"position": {
+							"x": 390,
+							"y": 620,
+							"w": 230,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_WOIUEQ1O",
+						"type": "block",
+						"position": {
+							"x": 670,
+							"y": 620,
+							"w": 300,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_cC5mokPk",
+						"type": "block",
+						"position": {
+							"x": 1230,
+							"y": 620,
+							"w": 230,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_s2Eemw5o",
+						"type": "block",
+						"position": {
+							"x": 950,
+							"y": 620,
+							"w": 300,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_WNZ0H00V",
+						"type": "block",
+						"position": {
+							"x": 20,
+							"y": 610,
+							"w": 160,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_fuVlM1h2",
+						"type": "block",
+						"position": {
+							"x": 300,
+							"y": 610,
+							"w": 160,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_XRZEFP1A",
+						"type": "block",
+						"position": {
+							"x": 580,
+							"y": 610,
+							"w": 160,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_JN2aUCdK",
+						"type": "block",
+						"position": {
+							"x": 860,
+							"y": 610,
+							"w": 160,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_SJxjXPsk",
+						"type": "block",
+						"position": {
+							"x": 1140,
+							"y": 610,
+							"w": 160,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_rWYWb5ov",
+						"type": "block",
+						"position": {
+							"x": 80,
+							"y": 1390,
+							"w": 1310,
+							"h": 130
+						}
+					},
+					{
+						"item": "viz_iO83qFm5",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 1530,
+							"w": 1300,
+							"h": 70
+						}
+					},
+					{
+						"item": "viz_mAnI3Oe0",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 1630,
+							"w": 1310,
+							"h": 290
+						}
+					},
+					{
+						"item": "viz_QNZXFioK",
+						"type": "block",
+						"position": {
+							"x": 120,
+							"y": 1540,
+							"w": 790,
+							"h": 50
+						}
+					},
+					{
+						"item": "viz_8S4VcWul",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 1530,
+							"w": 5,
+							"h": 70
+						}
+					},
+					{
+						"item": "viz_eEh5GhC4",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 1910,
+							"w": 1310,
+							"h": 430
+						}
+					},
+					{
+						"item": "viz_M0etMkjL",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 2360,
+							"w": 300,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_9ZdzzH06",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2350,
+							"w": 5,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_ttMGWMc0",
+						"type": "block",
+						"position": {
+							"x": 440,
+							"y": 2350,
+							"w": 320,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_QN1Mb12U",
+						"type": "block",
+						"position": {
+							"x": 450,
+							"y": 2360,
+							"w": 330,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_ftoKfzxN",
+						"type": "block",
+						"position": {
+							"x": 440,
+							"y": 2350,
+							"w": 5,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_AGAsZcRT",
+						"type": "block",
+						"position": {
+							"x": 790,
+							"y": 2350,
+							"w": 320,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_UA7WHR4F",
+						"type": "block",
+						"position": {
+							"x": 800,
+							"y": 2360,
+							"w": 330,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_0p2pgucz",
+						"type": "block",
+						"position": {
+							"x": 790,
+							"y": 2350,
+							"w": 5,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_eoYuKQwq",
+						"type": "block",
+						"position": {
+							"x": 1140,
+							"y": 2350,
+							"w": 320,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_PRvxb8Gu",
+						"type": "block",
+						"position": {
+							"x": 1150,
+							"y": 2360,
+							"w": 330,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_sk084I2w",
+						"type": "block",
+						"position": {
+							"x": 1140,
+							"y": 2350,
+							"w": 5,
+							"h": 100
+						}
+					},
+					{
+						"item": "viz_uZVGr0RY",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2480,
+							"w": 1370,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_BCjNFhdP",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2480,
+							"w": 5,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_EJRTxjK1",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 2490,
+							"w": 1260,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_A6fjFYPP",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2550,
+							"w": 1310,
+							"h": 190
+						}
+					},
+					{
+						"item": "viz_QnR02nZ1",
+						"type": "block",
+						"position": {
+							"x": -140,
+							"y": 2830,
+							"w": 290,
+							"h": 1420
+						}
+					},
+					{
+						"item": "viz_qFt1p4iz",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2750,
+							"w": 1370,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_wEoI00Xz",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 2760,
+							"w": 1260,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_0l81E0Z2",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2750,
+							"w": 5,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_ez4EIRly",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2810,
+							"w": 1310,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_vB7F2dbz",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2910,
+							"w": 1370,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_UD1VVTEK",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 2920,
+							"w": 1260,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_6yihW7l7",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2910,
+							"w": 5,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_0crebt5r",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 2980,
+							"w": 1370,
+							"h": 440
+						}
+					},
+					{
+						"item": "viz_Get7sQQo",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 3410,
+							"w": 1370,
+							"h": 440
+						}
+					},
+					{
+						"item": "viz_e2HkPlpq",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 3840,
+							"w": 1370,
+							"h": 300
+						}
+					},
+					{
+						"item": "viz_fj5XJ7yw",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 4090,
+							"w": 1370,
+							"h": 350
+						}
+					},
+					{
+						"item": "viz_iziyAPo0",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 4430,
+							"w": 1370,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_M5P0mDSX",
+						"type": "block",
+						"position": {
+							"x": -140,
+							"y": 4250,
+							"w": 290,
+							"h": 1250
+						}
+					},
+					{
+						"item": "viz_juvbRnWF",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 4780,
+							"w": 270,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_G9huGsSN",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 5100,
+							"w": 1400,
+							"h": 440
+						}
+					},
+					{
+						"item": "viz_z7xgVEj9",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4530,
+							"w": 1370,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_KcXeua0B",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4530,
+							"w": 5,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_owrRJ7Q8",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 4520,
+							"w": 530,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_Og2wh5ls",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 4630,
+							"w": 230,
+							"h": 40
+						}
+					},
+					{
+						"item": "viz_NklAADbT",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4680,
+							"w": 1370,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_sylmb0Gt",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4680,
+							"w": 5,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_I07216EE",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 4670,
+							"w": 530,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_iTl6c0Ur",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4830,
+							"w": 1370,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_pktys2dh",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4830,
+							"w": 5,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_AT5cnusK",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 4820,
+							"w": 530,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_h6xUwwy4",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4990,
+							"w": 1370,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_4nMIUoyc",
+						"type": "block",
+						"position": {
+							"x": 100,
+							"y": 4990,
+							"w": 5,
+							"h": 80
+						}
+					},
+					{
+						"item": "viz_R6GYzZ5X",
+						"type": "block",
+						"position": {
+							"x": 110,
+							"y": 4980,
+							"w": 530,
+							"h": 90
+						}
+					},
+					{
+						"item": "viz_u0R12i6J",
+						"type": "block",
+						"position": {
+							"x": 90,
+							"y": 4930,
+							"w": 620,
+							"h": 30
+						}
+					},
+					{
+						"item": "viz_5T64fEsB",
+						"type": "block",
+						"position": {
+							"x": 160,
+							"y": 0,
+							"w": 140,
+							"h": 50
+						}
+					},
+					{
+						"item": "viz_P9uHsI0w",
+						"type": "block",
+						"position": {
+							"x": 300,
+							"y": 0,
+							"w": 160,
+							"h": 50
+						}
+					}
+				],
+				"options": {
+					"width": 1920,
+					"height": 5500,
+					"display": "fit-to-width",
+					"backgroundColor": "#ffffff"
+				}
 			}
 		}
 	},
-	"description": "",
-	"title": "accueil v2",
 	"applicationProperties": {
 		"collapseNavigation": false,
 		"hideViewModeActionMenu": true,
