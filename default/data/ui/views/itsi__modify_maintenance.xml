@@ -746,7 +746,7 @@
           <tr>
             <td>debug_mod (0 = off; 1 = on)</td>
             <td>
-              <div id="debug">1</div>
+              <div id="debug">0</div>
             </td>
           </tr>
         </table>
