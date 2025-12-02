@@ -403,31 +403,31 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             /**
              * Reconstruit la chaîne dt_filter depuis l'objet parsé
              */
-            reconstruct(parsedFilter) {
-                if (!parsedFilter || !parsedFilter.expression1) {
-                    return '';
-                }
+            // reconstruct(parsedFilter) {
+            //     if (!parsedFilter || !parsedFilter.expression1) {
+            //         return '';
+            //     }
 
-                var result = '';
+            //     var result = '';
                 
-                // Expression 1
-                if (parsedFilter.hasNot1) {
-                    result += 'NOT ';
-                }
-                result += this.reconstructExpression(parsedFilter.expression1);
+            //     // Expression 1
+            //     if (parsedFilter.hasNot1) {
+            //         result += 'NOT ';
+            //     }
+            //     result += this.reconstructExpression(parsedFilter.expression1);
                 
-                // Expression 2 si elle existe
-                if (parsedFilter.expression2) {
-                    result += ' ' + parsedFilter.logicalOperator + ' ';
+            //     // Expression 2 si elle existe
+            //     if (parsedFilter.expression2) {
+            //         result += ' ' + parsedFilter.logicalOperator + ' ';
                     
-                    if (parsedFilter.hasNot2) {
-                        result += 'NOT ';
-                    }
-                    result += this.reconstructExpression(parsedFilter.expression2);
-                }
+            //         if (parsedFilter.hasNot2) {
+            //             result += 'NOT ';
+            //         }
+            //         result += this.reconstructExpression(parsedFilter.expression2);
+            //     }
                 
-                return result;
-            },
+            //     return result;
+            // },
 
             /**
              * Reconstruit une expression individuelle
@@ -754,132 +754,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return;
                 }
                 
-                // Interface pour update_custom
-                if (dashboardType === 'update_custom') {
-                    var html = `
-                        <div class="ui Omni_base">
-                            <table id="Omni_table">
-                                <tr><td width="100%">
-                                    <div class="ui small form segment Omni_segment">
-                                        <h3>Modification du filtre personnalisé</h3>
-                                        <div id="custom_filter_form">
-                                            <!-- Expression 1 -->
-                                            <div class="filter_expression_group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
-                                                <h4>Expression 1</h4>
-                                                <div style="margin-bottom: 10px;">
-                                                    <input type="checkbox" id="expr1_not" name="expr1_not">
-                                                    <label for="expr1_not">NOT (négation)</label>
-                                                </div>
-                                                <div style="margin-bottom: 10px;">
-                                                    <label>Champ :</label>
-                                                    <input type="text" id="expr1_field" name="expr1_field" style="width: 200px; padding: 5px;" placeholder="nom_du_champ">
-                                                </div>
-                                                <div style="margin-bottom: 10px;">
-                                                    <label>Opérateur :</label>
-                                                    <select id="expr1_operator" name="expr1_operator" style="width: 250px; padding: 5px;">
-                                                        <option value="">-- Sélectionner --</option>
-                                                        <option value="EQUAL_NUM">nombre égal à (=)</option>
-                                                        <option value="NOT_EQUAL_NUM">nombre différent de (!=)</option>
-                                                        <option value="LTE">nombre plus petit ou égal à (<=)</option>
-                                                        <option value="GTE">nombre plus grand ou égal à (>=)</option>
-                                                        <option value="LT">nombre plus petit que (<)</option>
-                                                        <option value="GT">nombre plus grand que (>)</option>
-                                                        <option value="ISNULL">string est vide (isnull)</option>
-                                                        <option value="ISNOTNULL">string n'est pas vide (isnotnull)</option>
-                                                        <option value="EQUAL_STR">string égal à</option>
-                                                        <option value="NOT_EQUAL_STR">string différent de</option>
-                                                        <option value="LIKE_CONTAINS">string contient (LIKE %...%)</option>
-                                                        <option value="LIKE_STARTS">string commence par (LIKE ...%)</option>
-                                                        <option value="LIKE_ENDS">string finit par (LIKE %...)</option>
-                                                    </select>
-                                                </div>
-                                                <div id="expr1_value_container" style="margin-bottom: 10px;">
-                                                    <label>Valeur :</label>
-                                                    <input type="text" id="expr1_value" name="expr1_value" style="width: 200px; padding: 5px;" placeholder="valeur">
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Opérateur logique -->
-                                            <div id="logical_operator_section" style="margin-bottom: 15px;">
-                                                <input type="checkbox" id="use_expr2" name="use_expr2">
-                                                <label for="use_expr2">Ajouter une seconde expression</label>
-                                                <div id="logical_operator_choice" style="margin-top: 10px; display: none;">
-                                                    <label>Opérateur logique :</label>
-                                                    <select id="logical_operator" name="logical_operator" style="width: 100px; padding: 5px;">
-                                                        <option value="AND">AND</option>
-                                                        <option value="OR">OR</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Expression 2 -->
-                                            <div id="expression2_container" class="filter_expression_group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 4px; display: none;">
-                                                <h4>Expression 2</h4>
-                                                <div style="margin-bottom: 10px;">
-                                                    <input type="checkbox" id="expr2_not" name="expr2_not">
-                                                    <label for="expr2_not">NOT (négation)</label>
-                                                </div>
-                                                <div style="margin-bottom: 10px;">
-                                                    <label>Champ :</label>
-                                                    <input type="text" id="expr2_field" name="expr2_field" style="width: 200px; padding: 5px;" placeholder="nom_du_champ">
-                                                </div>
-                                                <div style="margin-bottom: 10px;">
-                                                    <label>Opérateur :</label>
-                                                    <select id="expr2_operator" name="expr2_operator" style="width: 250px; padding: 5px;">
-                                                        <option value="">-- Sélectionner --</option>
-                                                        <option value="EQUAL_NUM">nombre égal à (=)</option>
-                                                        <option value="NOT_EQUAL_NUM">nombre différent de (!=)</option>
-                                                        <option value="LTE">nombre plus petit ou égal à (<=)</option>
-                                                        <option value="GTE">nombre plus grand ou égal à (>=)</option>
-                                                        <option value="LT">nombre plus petit que (<)</option>
-                                                        <option value="GT">nombre plus grand que (>)</option>
-                                                        <option value="ISNULL">string est vide (isnull)</option>
-                                                        <option value="ISNOTNULL">string n'est pas vide (isnotnull)</option>
-                                                        <option value="EQUAL_STR">string égal à</option>
-                                                        <option value="NOT_EQUAL_STR">string différent de</option>
-                                                        <option value="LIKE_CONTAINS">string contient (LIKE %...%)</option>
-                                                        <option value="LIKE_STARTS">string commence par (LIKE ...%)</option>
-                                                        <option value="LIKE_ENDS">string finit par (LIKE %...)</option>
-                                                    </select>
-                                                </div>
-                                                <div id="expr2_value_container" style="margin-bottom: 10px;">
-                                                    <label>Valeur :</label>
-                                                    <input type="text" id="expr2_value" name="expr2_value" style="width: 200px; padding: 5px;" placeholder="valeur">
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Aperçu du filtre -->
-                                            <div style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 15px;">
-                                                <strong>Aperçu du filtre :</strong>
-                                                <div id="filter_preview" style="font-family: monospace; margin-top: 5px; color: #333;">
-                                                    Aucun filtre configuré
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <label>Commentaire ou numéro de ticket</label>
-                                </td></tr>
-                                <tr><td>
-                                    <textarea class="Omni_commentaire" id="commentaire" cols="300" rows="3"></textarea>
-                                </td></tr>
-                            </table>
-                            <input id="CANCEL_button" type="button" value="Annuler" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">
-                            <input id="VALID_button" type="button" value="Valider" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">
-                            ${debugMode == '1' ? '<input id="TEST_button" type="button" value="Test" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">' : ''}
-                            <br/>
-                            <center><div id="loadSpinner" loading_msg=" " circle_color="#A64764" /></center>
-                        </div>
-                    `;
-                    
-                    $('#downtime').html(html);
-                    $('#username').html(userName);
-                    
-                    // Setup event listeners pour le formulaire de filtre custom
-                    this.setupCustomFilterListeners();
-                    return;
-                }
-                
-                // Interface normale pour add/update
+                // Interface normale pour add/update/update_custom
                 var html = `
                     <div class="ui Omni_base">
                         <table id="Omni_table">
@@ -1099,48 +974,48 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return mapping[operatorKey] || '=';
             },
 
-            collectCustomFilterFromForm() {
-                var parsedFilter = {
-                    hasNot1: $('#expr1_not').is(':checked'),
-                    expression1: null,
-                    logicalOperator: null,
-                    hasNot2: false,
-                    expression2: null
-                };
+            // collectCustomFilterFromForm() {
+            //     var parsedFilter = {
+            //         hasNot1: $('#expr1_not').is(':checked'),
+            //         expression1: null,
+            //         logicalOperator: null,
+            //         hasNot2: false,
+            //         expression2: null
+            //     };
                 
-                // Expression 1
-                var expr1Field = $('#expr1_field').val().trim();
-                var expr1Operator = $('#expr1_operator').val();
-                var expr1Value = $('#expr1_value').val().trim();
+            //     // Expression 1
+            //     var expr1Field = $('#expr1_field').val().trim();
+            //     var expr1Operator = $('#expr1_operator').val();
+            //     var expr1Value = $('#expr1_value').val().trim();
                 
-                if (expr1Field && expr1Operator) {
-                    parsedFilter.expression1 = {
-                        operatorKey: expr1Operator,
-                        field: expr1Field,
-                        value: expr1Value
-                    };
-                }
+            //     if (expr1Field && expr1Operator) {
+            //         parsedFilter.expression1 = {
+            //             operatorKey: expr1Operator,
+            //             field: expr1Field,
+            //             value: expr1Value
+            //         };
+            //     }
                 
-                // Expression 2
-                if ($('#use_expr2').is(':checked')) {
-                    parsedFilter.logicalOperator = $('#logical_operator').val();
-                    parsedFilter.hasNot2 = $('#expr2_not').is(':checked');
+            //     // Expression 2
+            //     if ($('#use_expr2').is(':checked')) {
+            //         parsedFilter.logicalOperator = $('#logical_operator').val();
+            //         parsedFilter.hasNot2 = $('#expr2_not').is(':checked');
                     
-                    var expr2Field = $('#expr2_field').val().trim();
-                    var expr2Operator = $('#expr2_operator').val();
-                    var expr2Value = $('#expr2_value').val().trim();
+            //         var expr2Field = $('#expr2_field').val().trim();
+            //         var expr2Operator = $('#expr2_operator').val();
+            //         var expr2Value = $('#expr2_value').val().trim();
                     
-                    if (expr2Field && expr2Operator) {
-                        parsedFilter.expression2 = {
-                            operatorKey: expr2Operator,
-                            field: expr2Field,
-                            value: expr2Value
-                        };
-                    }
-                }
+            //         if (expr2Field && expr2Operator) {
+            //             parsedFilter.expression2 = {
+            //                 operatorKey: expr2Operator,
+            //                 field: expr2Field,
+            //                 value: expr2Value
+            //             };
+            //         }
+            //     }
                 
-                return parsedFilter;
-            },
+            //     return parsedFilter;
+            // },
 
             appendPeriodTab(tab, nombre, downtimeType = 'between_date', beginDays = '', beginHours = '00:00:00', endDays = '', endHours = '24:00:00') {
                 Utils.log([tab, nombre, downtimeType], 'appendPeriodTab');
@@ -1738,17 +1613,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
                             // Cas 1: Pattern existant dans la maintenance
                             TokenManager.set('pattern_type', 'exist', true);
-                            TokenManager.set('form.pattern_type', 'exist');
                             TokenManager.set('pattern_exist', '1');
-                            TokenManager.set('dt_patern_select', dt_pattern, true);
-                            TokenManager.set('form.dt_patern_select', dt_pattern);
+                            TokenManager.set('dt_pattern_select', dt_pattern, true);
                             TokenManager.set('dt_pattern_selected', dt_pattern);
                             
                             Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
                         } else {
                             // Cas 2: Pas de pattern dans la maintenance
                             TokenManager.set('pattern_type', 'new', true);
-                            TokenManager.set('form.pattern_type', 'new');
                             TokenManager.set('pattern_new', '1');
                             TokenManager.set('dt_pattern_selected', '');
                             
@@ -2041,11 +1913,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
             
             // Récupérer le filtre personnalisé depuis le formulaire
-            var parsedFilter = UIManager.collectCustomFilterFromForm();
-            var dtFilterString = CustomFilterParser.reconstruct(parsedFilter);
+            // var parsedFilter = UIManager.collectCustomFilterFromForm();
+            // var dtFilterString = CustomFilterParser.reconstruct(parsedFilter);
             
-            Utils.log(parsedFilter, 'Parsed filter from form');
-            Utils.log(dtFilterString, 'Reconstructed dt_filter string');
+            // Utils.log(parsedFilter, 'Parsed filter from form');
+            // Utils.log(dtFilterString, 'Reconstructed dt_filter string');
             
             selected['dt_filter'] = dtFilterString;
             

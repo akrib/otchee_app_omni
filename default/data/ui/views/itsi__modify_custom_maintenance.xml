@@ -314,10 +314,10 @@
           </condition>
         </change>
       </input>
-      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
+      <input type="dropdown" token="dt_pattern_select" depends="$pattern_exist$">
         <label>Downtime Pattern</label>
         <change>
-          <set token="dt_pattern_selected">$dt_patern_select$</set>
+          <set token="dt_pattern_selected">$dt_pattern_select$</set>
         </change>
         <fieldForLabel>dt_pattern</fieldForLabel>
         <fieldForValue>dt_pattern</fieldForValue>
