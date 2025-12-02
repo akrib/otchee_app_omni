@@ -6,7 +6,7 @@
     <set token="modal_header"></set>
     <set token="modal_content"></set>
     <set token="modal_footer"></set>
-    <set token="hide">true</set>
+    <!--<set token="hide">true</set>-->
   </init>
   <search>
     <query>
@@ -685,10 +685,10 @@
           </condition>
         </change>
       </input>
-      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
+      <input type="dropdown" token="dt_pattern_select" depends="$pattern_exist$">
         <label>Downtime Pattern</label>
         <change>
-          <set token="dt_pattern_selected">$dt_patern_select$</set>
+          <set token="dt_pattern_selected">$dt_pattern_select$</set>
         </change>
         <fieldForLabel>dt_pattern</fieldForLabel>
         <fieldForValue>dt_pattern</fieldForValue>
@@ -746,7 +746,7 @@
           <tr>
             <td>debug_mod (0 = off; 1 = on)</td>
             <td>
-              <div id="debug">0</div>
+              <div id="debug">1</div>
             </td>
           </tr>
         </table>

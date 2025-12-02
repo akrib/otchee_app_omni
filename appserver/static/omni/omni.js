@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.8.2'; // Version corrigée
+var scriptVersion = '0.8.8'; // Version corrigée
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -52,9 +52,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 ENTITY_TYPE: 6,
                 ENTITY: 7,
                 DT_FILTER: 8,
-                COMMENTARY: 9,
-                VERSION: 10,
-                DT_PATTERN: 11
+                DT_PATTERN: 9,
+                COMMENTARY: 10,
+                VERSION: 11
+                
             },
             WEEK_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
             MONTH_DAYS: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
@@ -1390,8 +1391,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
         const DataManager = {
         fillDashboard(downtimeData, dashboardType) {
             Utils.log([downtimeData, dashboardType], 'fillDashboard');
-
             downtimeData.forEach(function (row) {
+                Utils.log(row, 'ROW');
                 var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
                 var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
                 var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
@@ -1441,11 +1442,11 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     UIManager.updateDescriptionDiv();
                     TokenManager.set('update_full_loading', 1);
                     TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
-                    } else if (dashboardType == "update_custom") {
+                 } else if (dashboardType == "update_custom") {
                         Utils.log('Mode UPDATE_CUSTOM détecté', 'fillDashboard');
                         
                         TokenManager.set("downtime_selected", downtime);
-                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+                        // TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
                         
                         // FIX : Initialisation du pattern (copié depuis le mode update)
                         if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
@@ -1474,7 +1475,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             Utils.log(error, 'unable to write in #commentaire', 1);
                         }
                         
-                        UIManager.updateDescriptionDiv();
+                        DataManager.updatePeriods(downtime, commentary);
                         TokenManager.set('update_full_loading', 1);
                     }
             });
@@ -1555,9 +1556,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 
                 //  Stocker les périodes pour update_custom
-                if (dashboardType === 'update_custom') {
-                    TokenManager.set('downtime_selected', text);
-                }
+                // if (dashboardType === 'update_custom') {
+                //     TokenManager.set('downtime_selected', text);
+                // }
                 
                 for (var i = 0; i < allPeriods.length; i++) {
                     var periodValue = allPeriods[i];
@@ -1591,9 +1592,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 
                 //  Mettre à jour la description pour update_custom
-                if (dashboardType === 'update_custom') {
-                    UIManager.updateDescriptionDiv();
-                }
+                // if (dashboardType === 'update_custom') {
+                //     UIManager.updateDescriptionDiv();
+                // }
                 
                 Utils.log('updatePeriods - END', 'updatePeriods');
             },
