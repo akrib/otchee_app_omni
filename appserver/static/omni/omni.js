@@ -1722,114 +1722,114 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             },
 
 
-        collectPeriods() {
-            Utils.log('Début collectPeriods', 'collectPeriods');
-            
-            var checkedBegin = [], checkedEnd = [], beginHours = [], endHours = [], type = [];
-            var downtimeFields = [];
-            var errors = 0;
-            var errorOutput = '';
-            var atLeastOne = 0;
-            var periodCount = 0;
-
-            $('[id^=content-tab-Period]').each(function () {
-                periodCount++;
-                Utils.log('Traitement période ' + periodCount, 'collectPeriods');
+             collectPeriods() {
+                Utils.log('Début collectPeriods', 'collectPeriods');
                 
-                var dateBegin = '', dateEnd = '', hoursBegin = '', hoursEnd = '';
-                var periodValid = false;
+                var checkedBegin = [], checkedEnd = [], beginHours = [], endHours = [], type = [];
+                var downtimeFields = [];
+                var errors = 0;
+                var errorOutput = '';
+                var atLeastOne = 0;
+                var periodCount = 0;
 
-                if ($(this).find('[periodID=radioD]').is(':checked')) {
-                    Utils.log('Type: Date à date', 'collectPeriods');
-                    dateBegin = $(this).find('[id^=datepicker_begin]').val();
-                    dateEnd = $(this).find('[id^=datepicker_end]').val();
-                    Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates collectées');
+                $('[id^=content-tab-Period]').each(function () {
+                    periodCount++;
+                    Utils.log('Traitement période ' + periodCount, 'collectPeriods');
                     
-                    if (dateBegin.length == 10 && dateEnd.length == 10) {
+                    var dateBegin = '', dateEnd = '', hoursBegin = '', hoursEnd = '';
+                    var periodValid = false;
+
+                    if ($(this).find('[periodID=radioD]').is(':checked')) {
+                        Utils.log('Type: Date à date', 'collectPeriods');
+                        dateBegin = $(this).find('[id^=datepicker_begin]').val();
+                        dateEnd = $(this).find('[id^=datepicker_end]').val();
+                        Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates collectées');
+                        
+                        if (dateBegin.length == 10 && dateEnd.length == 10) {
+                            atLeastOne = 1;
+                            periodValid = true;
+                            checkedBegin.push(dateBegin);
+                            checkedEnd.push(dateEnd);
+                            type.push('between_date');
+                        }
+                    } else if ($(this).find('[periodID=radioW]').is(':checked')) {
+                        Utils.log('Type: Hebdomadaire', 'collectPeriods');
+                        dateBegin = [];
+                        dateEnd = [];
                         atLeastOne = 1;
                         periodValid = true;
+                        $(this).find('.ui-selected').each(function () {
+                            dateBegin.push($(this).html());
+                            dateEnd.push($(this).html());
+                        });
+                        checkedBegin.push(dateBegin.join(';'));
+                        checkedEnd.push(dateEnd.join(';'));
+                        type.push('weekly');
+                    } else if ($(this).find('[periodID=radioM]').is(':checked')) {
+                        Utils.log('Type: Mensuel', 'collectPeriods');
+                        dateBegin = [];
+                        dateEnd = [];
+                        atLeastOne = 1;
+                        periodValid = true;
+                        $(this).find('.ui-selected').each(function () {
+                            dateBegin.push($(this).html());
+                            dateEnd.push($(this).html());
+                        });
+                        checkedBegin.push(dateBegin.join(';'));
+                        checkedEnd.push(dateEnd.join(';'));
+                        type.push('monthly');
+                    } else if ($(this).find('[periodID=radioS]').is(':checked')) {
+                        Utils.log('Type: Spécifique', 'collectPeriods');
+                        atLeastOne = 1;
+                        periodValid = true;
+                        dateBegin = $(this).find('#select_day').val();
+                        dateEnd = $(this).find('#select_day').val();
                         checkedBegin.push(dateBegin);
                         checkedEnd.push(dateEnd);
-                        type.push('between_date');
+                        var selectedType = $(this).find('#select_type').val();
+                        type.push('special_date_' + selectedType + '_in_month');
                     }
-                } else if ($(this).find('[periodID=radioW]').is(':checked')) {
-                    Utils.log('Type: Hebdomadaire', 'collectPeriods');
-                    dateBegin = [];
-                    dateEnd = [];
-                    atLeastOne = 1;
-                    periodValid = true;
-                    $(this).find('.ui-selected').each(function () {
-                        dateBegin.push($(this).html());
-                        dateEnd.push($(this).html());
-                    });
-                    checkedBegin.push(dateBegin.join(';'));
-                    checkedEnd.push(dateEnd.join(';'));
-                    type.push('weekly');
-                } else if ($(this).find('[periodID=radioM]').is(':checked')) {
-                    Utils.log('Type: Mensuel', 'collectPeriods');
-                    dateBegin = [];
-                    dateEnd = [];
-                    atLeastOne = 1;
-                    periodValid = true;
-                    $(this).find('.ui-selected').each(function () {
-                        dateBegin.push($(this).html());
-                        dateEnd.push($(this).html());
-                    });
-                    checkedBegin.push(dateBegin.join(';'));
-                    checkedEnd.push(dateEnd.join(';'));
-                    type.push('monthly');
-                } else if ($(this).find('[periodID=radioS]').is(':checked')) {
-                    Utils.log('Type: Spécifique', 'collectPeriods');
-                    atLeastOne = 1;
-                    periodValid = true;
-                    dateBegin = $(this).find('#select_day').val();
-                    dateEnd = $(this).find('#select_day').val();
-                    checkedBegin.push(dateBegin);
-                    checkedEnd.push(dateEnd);
-                    var selectedType = $(this).find('#select_type').val();
-                    type.push('special_date_' + selectedType + '_in_month');
-                }
 
-                if (periodValid) {
-                    hoursBegin = $(this).find('.inputPeriodBegin').val();
-                    hoursEnd = $(this).find('.inputPeriodEnd').val();
-                    
-                    Utils.log({hoursBegin: hoursBegin, hoursEnd: hoursEnd}, 'Heures collectées');
-                    
-                    if (!Validator.timeFormat(hoursBegin)) {
-                        errors++;
-                        errorOutput += '- Format heure de début invalide (HH:MM)<br />';
+                    if (periodValid) {
+                        hoursBegin = $(this).find('.inputPeriodBegin').val();
+                        hoursEnd = $(this).find('.inputPeriodEnd').val();
+                        
+                        Utils.log({hoursBegin: hoursBegin, hoursEnd: hoursEnd}, 'Heures collectées');
+                        
+                        if (!Validator.timeFormat(hoursBegin)) {
+                            errors++;
+                            errorOutput += '- Format heure de début invalide (HH:MM)<br />';
+                        }
+                        if (!Validator.timeFormat(hoursEnd)) {
+                            errors++;
+                            errorOutput += '- Format heure de fin invalide (HH:MM)<br />';
+                        }
+                        if (hoursBegin == hoursEnd && dateBegin == dateEnd) {
+                            errors++;
+                            errorOutput += '- Les heures de début et fin ne peuvent être identiques<br />';
+                        }
+                        if (Validator.endAfterBegin(dateBegin, dateEnd, hoursBegin, hoursEnd)) {
+                            errors++;
+                            errorOutput += '- L\'heure de début ne peut être supérieure à l\'heure de fin<br />';
+                        }
+                    } else {
+                        hoursBegin = '00:00';
+                        hoursEnd = '00:00';
                     }
-                    if (!Validator.timeFormat(hoursEnd)) {
-                        errors++;
-                        errorOutput += '- Format heure de fin invalide (HH:MM)<br />';
-                    }
-                    if (hoursBegin == hoursEnd && dateBegin == dateEnd) {
-                        errors++;
-                        errorOutput += '- Les heures de début et fin ne peuvent être identiques<br />';
-                    }
-                    if (Validator.endAfterBegin(dateBegin, dateEnd, hoursBegin, hoursEnd)) {
-                        errors++;
-                        errorOutput += '- L\'heure de début ne peut être supérieure à l\'heure de fin<br />';
-                    }
-                } else {
-                    // Si aucune période n'est configurée, on met des valeurs par défaut
-                    hoursBegin = '00:00';
-                    hoursEnd = '00:00';
-                }
 
-                beginHours.push(hoursBegin);
-                endHours.push(hoursEnd);
+                    beginHours.push(hoursBegin);
+                    endHours.push(hoursEnd);
+                    
+                    var downtimeField = DataManager.transformDowntimeField(
+                        type[type.length - 1] || 'between_date',
+                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1] || '')),
+                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1] || '')),
+                        (beginHours[beginHours.length - 1] || '00:00') + ':00',
+                        (endHours[endHours.length - 1] || '00:00') + ':00'
+                    );
+
                 
-                var downtimeField = DataManager.transformDowntimeField(
-                    type[type.length - 1] || 'between_date',
-                    TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1] || '')),
-                    TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1] || '')),
-                    (beginHours[beginHours.length - 1] || '00:00') + ':00',
-                    (endHours[endHours.length - 1] || '00:00') + ':00'
-                );
-                
-                downtimeFields.push(downtimeField);
+downtimeFields.push(downtimeField);
                 Utils.log(downtimeField, 'Downtime field créé');
             });
 
@@ -1850,7 +1850,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             var tokenValue = TokenManager.get("step_opt_for_delete");
             if (Utils.isNotNull(tokenValue)) return tokenValue;
             
-            // CORRECTION: utiliser les bons noms de tokens des dashboards
+            // ✅ FIX : Vérifier les deux noms de tokens possibles
             var serviceToken = TokenManager.get('service_select_input_type');
             var kpiToken = TokenManager.get('kpi_select_input_type');
             var entityToken = TokenManager.get('entity_select_input_type');
@@ -1933,7 +1933,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 var dashboardType = $('#dashboardType').html();
                 
-                // En mode delete ou update_custom, pas de validation des datepickers
                 if (dashboardType !== 'delete' && dashboardType !== 'update_custom') {
                     Utils.log('Validation des datepickers', 'sendData');
                     var dateValidationErrors = Validator.allDatepickers();
@@ -1965,7 +1964,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return;
                 }
                 
-                // Cacher les boutons
                 $('input#VALID_button').hide();
                 $('input#CANCEL_button').hide();
                 LoadSpinner.changeMsg('Mise à jour 0%');
@@ -2140,7 +2138,6 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
         var $tab = $('#' + cur);
         var $content = $('#content-' + cur);
         
-        // Nettoyer les tooltips
         $tab.find('[data-ui-tooltip]').each(function() {
             if ($(this).data('ui-tooltip')) {
                 $(this).tooltip('destroy');
