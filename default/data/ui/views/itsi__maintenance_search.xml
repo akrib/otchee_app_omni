@@ -36,29 +36,19 @@
     <query>
 <![CDATA[
 | inputlookup omni_kv_def
-| eval orig_time=$queldate.latest_epoch$ , nbperiode=mvcount(downtime)
-| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt"
-| eval downtimes=mvjoin(downtime, "£"),
-       entity=mvjoin(entity, ";"),
+| eval orig_time=$queldate.latest_epoch$
+| spath input=downtime
+| rename {}.id as dt_id, {}.dt_type as dt_type, {}.begin_date as begin_date, {}.end_date as end_date, {}.begin_time as begin_time, {}.end_time as end_time, {}.dt_filter as period_dt_filter, {}.dt_pattern as period_dt_pattern
+| eval nbperiode=mvcount(dt_id)
+| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=true
+| eval entity=mvjoin(entity, ";"),
        kpi=mvjoin(kpi,";"),
-       service=mvjoin(service, ";"),
-  downtimes=replace(replace(replace(replace(replace(replace(replace(downtimes,"Tuesday","Mardi"),"Monday","Lundi"),"Wednesday","Mercredi"),"Thursday","Jeudi"),"Friday","Vendredi"),"Saturday","Samedi"),"Sunday","Dimanche")
-| eval _raw=downtimes.";".commentary.";".creator.";".dt_update.";".entity.";".kpi.";".service.";".version.";".ID
-| eval downtimes=replace(downtimes,"^","<br><table width='100%'><tr class='dt_period'><td><b>Type:</b></td>
-       <td><span class=tag_dt>")+"</tr></table>",
-       downtimes=replace(downtimes,"\£","</tr><tr class='dt_period'><td><b>Type:</b></td>
-       <td><span class=tag_dt>"),
-       downtimes=replace(downtimes,
-       "(\<tr\sclass\=\'dt_period\'\>[^\#]*)\#([^\#]*)\#([^\#]*)\#([^\#]*)\#([^\#]*\<\/tr\>)",
-       "\1</span></td>
-       <td><b>Date de début:</b></td>
-       <td><span class=tag_dt>\2</span></td>
-       <td><b>Heure de début:</b></td>
-       <td><span class=tag_dt>\4</span></td>
-       <td><b>Date de fin:</b></td>
-       <td><span class=tag_dt>\3</span></td>
-       <td><b>Heure de fin:</b></td>
-       <td><span class=tag_dt>\5</span></td>")
+       service=mvjoin(service, ";")
+| eval _raw=downtime.";".commentary.";".creator.";".dt_update.";".entity.";".kpi.";".service.";".version.";".ID.";".dt_filter.";".dt_pattern
+| eval downtimes=""
+| foreach dt_type 
+    [eval downtimes=downtimes."<tr class='dt_period'><td><b>Type:</b></td><td><span class=tag_dt>".replace(replace(replace(replace(replace(replace(replace('<<FIELD>>',"Tuesday","Mardi"),"Monday","Lundi"),"Wednesday","Mercredi"),"Thursday","Jeudi"),"Friday","Vendredi"),"Saturday","Samedi"),"Sunday","Dimanche")."</span></td><td><b>Date de début:</b></td><td><span class=tag_dt>".mvindex(begin_date,<<MATCHSEG1>>-1)."</span></td><td><b>Heure de début:</b></td><td><span class=tag_dt>".mvindex(begin_time,<<MATCHSEG1>>-1)."</span></td><td><b>Date de fin:</b></td><td><span class=tag_dt>".mvindex(end_date,<<MATCHSEG1>>-1)."</span></td><td><b>Heure de fin:</b></td><td><span class=tag_dt>".mvindex(end_time,<<MATCHSEG1>>-1)."</span></td></tr>"]
+| eval downtimes="<br><table width='100%'>".downtimes."</table>"
 | eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S")
 | eval entity=if(entity=="*", "Tous", entity),
        kpi=if(kpi=="*", "Tous", kpi), 
@@ -70,6 +60,8 @@
        + "</span>", service_tag="<span class='tag'>" 
        + replace(service, ";", "</span><span class='tag'>") 
        + "</span>"
+| eval dt_filter_display=if(isnotnull(dt_filter) AND dt_filter!="", "<br><span class='fieldlist'>Custom filter(s) : </span><span class='tag'>".replace(dt_filter, ";", "</span><span class='tag'>")."</span>", "")
+| eval dt_pattern_display=if(isnotnull(dt_pattern) AND dt_pattern!="", "<br><span class='fieldlist'>Pattern(s) : </span><span class='tag'>".replace(dt_pattern, ";", "</span><span class='tag'>")."</span>", "")
 | eval data2HTML="<tr class='row-search'>"
 + "<td class='col-search'><div class='title-search'> ID [ " 
 + ID 
@@ -79,6 +71,8 @@
 + "<span class='fieldlist'>entity : </span>" + entity_tag + "<br>"
 + "<span class='fieldlist'>kpi : </span>" + kpi_tag + "<br>"
 + "<span class='fieldlist'>service : </span>" + service_tag + "<br>"
++ dt_filter_display
++ dt_pattern_display
 + "<div class='accordion'><div>"
 + "<input type='checkbox' name='panel' id='panel-".ID."'>"
 + "<label for='panel-".ID."'>Informations complémentaire</label>"

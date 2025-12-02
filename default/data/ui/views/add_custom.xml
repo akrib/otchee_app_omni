@@ -285,9 +285,6 @@
   </row>
 <row depends="$hide$">
   <html>
- <!--<div id="debug">1</div>   -->
-    
-    
 <div id="help_tour_00" data-element=".omni-title-second-part" data-title="Bienvenue" data-description="Bienvenue sur le dashboard d'ajout de filtre custom" data-side="left" data-align="start"></div>    
 <div id="help_tour_01" data-element="#show_sup" data-title="Ajouter un champ" data-description="Ce bouton permet d'avoir un deuxième champ personnalisé pour affiner le filtre" data-side="left" data-align="start"></div>
 <div id="help_tour_02" data-element="#field_not_1" data-title="Négation du filtre" data-description="Permet d'appliquer le NOT au paramètre du filtre. Exemple &lt;br/&gt;| where NOT number=8" data-side="left" data-align="start"></div>
@@ -326,7 +323,7 @@
           <tr>
             <td>debug_mod (0 = off; 1 = on)</td>
             <td>
-              <div id="debug">0</div>
+              <div id="debug">1</div>
             </td>
           </tr>
         </table>
