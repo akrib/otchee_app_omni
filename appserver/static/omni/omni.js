@@ -1004,38 +1004,99 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 
                 // Expression 1
-                $('#expr1_not').prop('checked', parsedFilter.hasNot1);
-                $('#expr1_field').val(parsedFilter.expression1.field || '');
-                $('#expr1_operator').val(parsedFilter.expression1.operatorKey || '');
-                $('#expr1_value').val(parsedFilter.expression1.value || '');
-                
-                // Masquer le champ valeur si nécessaire
-                var op1 = parsedFilter.expression1.operatorKey;
-                if (op1 === 'ISNULL' || op1 === 'ISNOTNULL') {
-                    $('#expr1_value_container').hide();
+                // Checkbox NOT 1
+                if (parsedFilter.hasNot1) {
+                    TokenManager.set('not_1', 'NOT', true);
+                } else {
+                    TokenManager.unset('not_1');
                 }
+                
+                // Champ nom 1
+                var fieldName1 = parsedFilter.expression1.field || '';
+                TokenManager.set('field_name_1', fieldName1, true);
+                
+                // Type de champ 1 (déterminer si c'est string ou number)
+                var fieldType1 = 'string';
+                var op1Key = parsedFilter.expression1.operatorKey;
+                if (['EQUAL_NUM', 'NOT_EQUAL_NUM', 'LTE', 'GTE', 'LT', 'GT'].indexOf(op1Key) !== -1) {
+                    fieldType1 = 'number';
+                }
+                TokenManager.set('field_type_1', fieldType1, true);
+                
+                // Opérateur 1 - convertir depuis l'operatorKey vers la valeur du dropdown
+                var operator1Value = UIManager.convertOperatorKeyToDropdownValue(op1Key);
+                TokenManager.set('field_operator_1', operator1Value, true);
+                
+                // Valeur 1
+                var fieldValue1 = parsedFilter.expression1.value || '';
+                TokenManager.set('field_value_1', fieldValue1, true);
                 
                 // Expression 2
                 if (parsedFilter.expression2) {
-                    $('#use_expr2').prop('checked', true);
-                    $('#logical_operator_choice').show();
-                    $('#expression2_container').show();
+                    // Activer le checkbox pour la 2ème expression
+                    TokenManager.set('show_custom_field_sup', '1', true);
+                    TokenManager.set('field_sup', '1');
                     
-                    $('#logical_operator').val(parsedFilter.logicalOperator || 'AND');
-                    $('#expr2_not').prop('checked', parsedFilter.hasNot2);
-                    $('#expr2_field').val(parsedFilter.expression2.field || '');
-                    $('#expr2_operator').val(parsedFilter.expression2.operatorKey || '');
-                    $('#expr2_value').val(parsedFilter.expression2.value || '');
+                    // Opérateur logique
+                    var logicalOp = parsedFilter.logicalOperator || 'AND';
+                    TokenManager.set('operator', logicalOp, true);
                     
-                    // Masquer le champ valeur si nécessaire
-                    var op2 = parsedFilter.expression2.operatorKey;
-                    if (op2 === 'ISNULL' || op2 === 'ISNOTNULL') {
-                        $('#expr2_value_container').hide();
+                    // Checkbox NOT 2
+                    if (parsedFilter.hasNot2) {
+                        TokenManager.set('not_2', 'NOT', true);
+                    } else {
+                        TokenManager.unset('not_2');
                     }
+                    
+                    // Champ nom 2
+                    var fieldName2 = parsedFilter.expression2.field || '';
+                    TokenManager.set('field_name_2', fieldName2, true);
+                    
+                    // Type de champ 2
+                    var fieldType2 = 'string';
+                    var op2Key = parsedFilter.expression2.operatorKey;
+                    if (['EQUAL_NUM', 'NOT_EQUAL_NUM', 'LTE', 'GTE', 'LT', 'GT'].indexOf(op2Key) !== -1) {
+                        fieldType2 = 'number';
+                    }
+                    TokenManager.set('field_type_2', fieldType2, true);
+                    
+                    // Opérateur 2
+                    var operator2Value = UIManager.convertOperatorKeyToDropdownValue(op2Key);
+                    TokenManager.set('field_operator_2', operator2Value, true);
+                    
+                    // Valeur 2
+                    var fieldValue2 = parsedFilter.expression2.value || '';
+                    TokenManager.set('field_value_2', fieldValue2, true);
+                } else {
+                    // Pas de 2ème expression
+                    TokenManager.unset('show_custom_field_sup');
+                    TokenManager.set('field_sup', '0');
                 }
                 
-                // Mettre à jour l'aperçu
-                UIManager.updateCustomFilterPreview();
+                Utils.log('Tokens définis avec succès', 'populateCustomFilterForm');
+            },
+
+            /**
+             * Convertit un operatorKey (ex: 'EQUAL_STR') vers la valeur du dropdown (ex: '=')
+             */
+            convertOperatorKeyToDropdownValue(operatorKey) {
+                var mapping = {
+                    'EQUAL_NUM': '=',
+                    'NOT_EQUAL_NUM': '!=',
+                    'LTE': '<=',
+                    'GTE': '>=',
+                    'LT': '<',
+                    'GT': '>',
+                    'ISNULL': 'isnull()',
+                    'ISNOTNULL': 'isnotnull()',
+                    'EQUAL_STR': '=',
+                    'NOT_EQUAL_STR': '!=',
+                    'LIKE_CONTAINS': 'LIKE',
+                    'LIKE_STARTS': 'LIKEC',
+                    'LIKE_ENDS': 'LIKEF'
+                };
+                
+                return mapping[operatorKey] || '=';
             },
 
             collectCustomFilterFromForm() {
