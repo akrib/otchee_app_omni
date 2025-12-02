@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.6.1'; // Version avec amélioration delete page et unification description
+var scriptVersion = '0.7.1'; // Version avec update_custom
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -59,7 +59,23 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
             WEEK_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
             MONTH_DAYS: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',
                 '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
-                '25', '26', '27', '28', '29', '30', '31']
+                '25', '26', '27', '28', '29', '30', '31'],
+            // Configuration des filtres personnalisés
+            FILTER_OPERATORS: {
+                'EQUAL_NUM': { pattern: /^([^=!<>]+)=(\d+(?:\.\d+)?)$/, label: 'nombre égal à', type: 'number' },
+                'NOT_EQUAL_NUM': { pattern: /^([^=!<>]+)!=(\d+(?:\.\d+)?)$/, label: 'nombre différent de', type: 'number' },
+                'LTE': { pattern: /^([^=!<>]+)<=(\d+(?:\.\d+)?)$/, label: 'nombre plus petit ou égal à', type: 'number' },
+                'GTE': { pattern: /^([^=!<>]+)>=(\d+(?:\.\d+)?)$/, label: 'nombre plus grand ou égal à', type: 'number' },
+                'LT': { pattern: /^([^=!<>]+)<(\d+(?:\.\d+)?)$/, label: 'nombre plus petit que', type: 'number' },
+                'GT': { pattern: /^([^=!<>]+)>(\d+(?:\.\d+)?)$/, label: 'nombre plus grand que', type: 'number' },
+                'ISNULL': { pattern: /^isnull\(([^)]+)\)$/, label: 'string est vide', type: 'null' },
+                'ISNOTNULL': { pattern: /^isnotnull\(([^)]+)\)$/, label: 'string n\'est pas vide', type: 'null' },
+                'EQUAL_STR': { pattern: /^([^=!]+)="([^"]*)"$/, label: 'string égal à', type: 'string' },
+                'NOT_EQUAL_STR': { pattern: /^([^=!]+)!="([^"]*)"$/, label: 'string différent de', type: 'string' },
+                'LIKE_CONTAINS': { pattern: /^([^=!]+)\s+LIKE\s+"%([^"]+)%"$/, label: 'string contient', type: 'string' },
+                'LIKE_STARTS': { pattern: /^([^=!]+)\s+LIKE\s+"([^"]+)%"$/, label: 'string commence par', type: 'string' },
+                'LIKE_ENDS': { pattern: /^([^=!]+)\s+LIKE\s+"%([^"]+)"$/, label: 'string finit par', type: 'string' }
+            }
         };
 
         var numberTabs = 1;
@@ -265,6 +281,194 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 } catch (error) {
                     Utils.log(error, 'Error in toVisualTags', 2);
                     return '';
+                }
+            }
+        };
+
+        // ==================== PARSEUR DE FILTRES PERSONNALISÉS ====================
+        const CustomFilterParser = {
+            /**
+             * Parse une expression dt_filter complète
+             * Format: [NOT] expression1 [AND|OR [NOT] expression2]
+             */
+            parse(dtFilterString) {
+                Utils.log(dtFilterString, 'CustomFilterParser.parse - Input');
+                
+                if (Utils.isNull(dtFilterString) || dtFilterString.trim() === '') {
+                    return null;
+                }
+
+                var result = {
+                    raw: dtFilterString,
+                    hasNot1: false,
+                    expression1: null,
+                    logicalOperator: null, // 'AND' ou 'OR'
+                    hasNot2: false,
+                    expression2: null
+                };
+
+                // Nettoyer la chaîne
+                var cleaned = dtFilterString.trim();
+                
+                // Détecter le premier NOT
+                if (cleaned.toUpperCase().startsWith('NOT ')) {
+                    result.hasNot1 = true;
+                    cleaned = cleaned.substring(4).trim();
+                }
+
+                // Chercher l'opérateur logique (AND ou OR)
+                var andMatch = cleaned.match(/\s+(AND)\s+/i);
+                var orMatch = cleaned.match(/\s+(OR)\s+/i);
+                
+                var logicalOpMatch = null;
+                var logicalOpIndex = -1;
+                
+                if (andMatch && orMatch) {
+                    // Les deux existent, prendre le premier
+                    logicalOpIndex = Math.min(andMatch.index, orMatch.index);
+                    logicalOpMatch = andMatch.index < orMatch.index ? andMatch : orMatch;
+                } else if (andMatch) {
+                    logicalOpMatch = andMatch;
+                    logicalOpIndex = andMatch.index;
+                } else if (orMatch) {
+                    logicalOpMatch = orMatch;
+                    logicalOpIndex = orMatch.index;
+                }
+
+                if (logicalOpMatch) {
+                    // Il y a deux expressions
+                    result.logicalOperator = logicalOpMatch[1].toUpperCase();
+                    
+                    var expr1String = cleaned.substring(0, logicalOpIndex).trim();
+                    var expr2String = cleaned.substring(logicalOpIndex + logicalOpMatch[0].length).trim();
+                    
+                    // Détecter le second NOT
+                    if (expr2String.toUpperCase().startsWith('NOT ')) {
+                        result.hasNot2 = true;
+                        expr2String = expr2String.substring(4).trim();
+                    }
+                    
+                    result.expression1 = this.parseExpression(expr1String);
+                    result.expression2 = this.parseExpression(expr2String);
+                } else {
+                    // Une seule expression
+                    result.expression1 = this.parseExpression(cleaned);
+                }
+
+                Utils.log(result, 'CustomFilterParser.parse - Result');
+                return result;
+            },
+
+            /**
+             * Parse une expression individuelle
+             */
+            parseExpression(exprString) {
+                Utils.log(exprString, 'parseExpression - Input');
+                
+                if (Utils.isNull(exprString)) return null;
+
+                var expr = exprString.trim();
+                
+                // Tester chaque pattern d'opérateur
+                for (var opKey in CONFIG.FILTER_OPERATORS) {
+                    var operator = CONFIG.FILTER_OPERATORS[opKey];
+                    var match = expr.match(operator.pattern);
+                    
+                    if (match) {
+                        var result = {
+                            operatorKey: opKey,
+                            operatorLabel: operator.label,
+                            type: operator.type,
+                            field: match[1].trim(),
+                            value: operator.type === 'null' ? null : (match[2] ? match[2].trim() : null),
+                            raw: expr
+                        };
+                        
+                        Utils.log(result, 'parseExpression - Matched');
+                        return result;
+                    }
+                }
+
+                Utils.log('parseExpression - No match found', 'parseExpression', 1);
+                return {
+                    operatorKey: 'UNKNOWN',
+                    operatorLabel: 'Expression non reconnue',
+                    type: 'unknown',
+                    field: null,
+                    value: null,
+                    raw: expr
+                };
+            },
+
+            /**
+             * Reconstruit la chaîne dt_filter depuis l'objet parsé
+             */
+            reconstruct(parsedFilter) {
+                if (!parsedFilter || !parsedFilter.expression1) {
+                    return '';
+                }
+
+                var result = '';
+                
+                // Expression 1
+                if (parsedFilter.hasNot1) {
+                    result += 'NOT ';
+                }
+                result += this.reconstructExpression(parsedFilter.expression1);
+                
+                // Expression 2 si elle existe
+                if (parsedFilter.expression2) {
+                    result += ' ' + parsedFilter.logicalOperator + ' ';
+                    
+                    if (parsedFilter.hasNot2) {
+                        result += 'NOT ';
+                    }
+                    result += this.reconstructExpression(parsedFilter.expression2);
+                }
+                
+                return result;
+            },
+
+            /**
+             * Reconstruit une expression individuelle
+             */
+            reconstructExpression(expr) {
+                if (!expr || !expr.field) {
+                    return '';
+                }
+
+                var field = expr.field;
+                var value = expr.value;
+
+                switch (expr.operatorKey) {
+                    case 'EQUAL_NUM':
+                        return field + '=' + value;
+                    case 'NOT_EQUAL_NUM':
+                        return field + '!=' + value;
+                    case 'LTE':
+                        return field + '<=' + value;
+                    case 'GTE':
+                        return field + '>=' + value;
+                    case 'LT':
+                        return field + '<' + value;
+                    case 'GT':
+                        return field + '>' + value;
+                    case 'ISNULL':
+                        return 'isnull(' + field + ')';
+                    case 'ISNOTNULL':
+                        return 'isnotnull(' + field + ')';
+                    case 'EQUAL_STR':
+                        return field + '="' + value + '"';
+                    case 'NOT_EQUAL_STR':
+                        return field + '!="' + value + '"';
+                    case 'LIKE_CONTAINS':
+                        return field + ' LIKE "%' + value + '%"';
+                    case 'LIKE_STARTS':
+                        return field + ' LIKE "' + value + '%"';
+                    case 'LIKE_ENDS':
+                        return field + ' LIKE "%' + value + '"';
+                    default:
+                        return expr.raw || '';
                 }
             }
         };
@@ -550,6 +754,131 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     return;
                 }
                 
+                // Interface pour update_custom
+                if (dashboardType === 'update_custom') {
+                    var html = `
+                        <div class="ui Omni_base">
+                            <table id="Omni_table">
+                                <tr><td width="100%">
+                                    <div class="ui small form segment Omni_segment">
+                                        <h3>Modification du filtre personnalisé</h3>
+                                        <div id="custom_filter_form">
+                                            <!-- Expression 1 -->
+                                            <div class="filter_expression_group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                                                <h4>Expression 1</h4>
+                                                <div style="margin-bottom: 10px;">
+                                                    <input type="checkbox" id="expr1_not" name="expr1_not">
+                                                    <label for="expr1_not">NOT (négation)</label>
+                                                </div>
+                                                <div style="margin-bottom: 10px;">
+                                                    <label>Champ :</label>
+                                                    <input type="text" id="expr1_field" name="expr1_field" style="width: 200px; padding: 5px;" placeholder="nom_du_champ">
+                                                </div>
+                                                <div style="margin-bottom: 10px;">
+                                                    <label>Opérateur :</label>
+                                                    <select id="expr1_operator" name="expr1_operator" style="width: 250px; padding: 5px;">
+                                                        <option value="">-- Sélectionner --</option>
+                                                        <option value="EQUAL_NUM">nombre égal à (=)</option>
+                                                        <option value="NOT_EQUAL_NUM">nombre différent de (!=)</option>
+                                                        <option value="LTE">nombre plus petit ou égal à (<=)</option>
+                                                        <option value="GTE">nombre plus grand ou égal à (>=)</option>
+                                                        <option value="LT">nombre plus petit que (<)</option>
+                                                        <option value="GT">nombre plus grand que (>)</option>
+                                                        <option value="ISNULL">string est vide (isnull)</option>
+                                                        <option value="ISNOTNULL">string n'est pas vide (isnotnull)</option>
+                                                        <option value="EQUAL_STR">string égal à</option>
+                                                        <option value="NOT_EQUAL_STR">string différent de</option>
+                                                        <option value="LIKE_CONTAINS">string contient (LIKE %...%)</option>
+                                                        <option value="LIKE_STARTS">string commence par (LIKE ...%)</option>
+                                                        <option value="LIKE_ENDS">string finit par (LIKE %...)</option>
+                                                    </select>
+                                                </div>
+                                                <div id="expr1_value_container" style="margin-bottom: 10px;">
+                                                    <label>Valeur :</label>
+                                                    <input type="text" id="expr1_value" name="expr1_value" style="width: 200px; padding: 5px;" placeholder="valeur">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Opérateur logique -->
+                                            <div id="logical_operator_section" style="margin-bottom: 15px;">
+                                                <input type="checkbox" id="use_expr2" name="use_expr2">
+                                                <label for="use_expr2">Ajouter une seconde expression</label>
+                                                <div id="logical_operator_choice" style="margin-top: 10px; display: none;">
+                                                    <label>Opérateur logique :</label>
+                                                    <select id="logical_operator" name="logical_operator" style="width: 100px; padding: 5px;">
+                                                        <option value="AND">AND</option>
+                                                        <option value="OR">OR</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Expression 2 -->
+                                            <div id="expression2_container" class="filter_expression_group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 4px; display: none;">
+                                                <h4>Expression 2</h4>
+                                                <div style="margin-bottom: 10px;">
+                                                    <input type="checkbox" id="expr2_not" name="expr2_not">
+                                                    <label for="expr2_not">NOT (négation)</label>
+                                                </div>
+                                                <div style="margin-bottom: 10px;">
+                                                    <label>Champ :</label>
+                                                    <input type="text" id="expr2_field" name="expr2_field" style="width: 200px; padding: 5px;" placeholder="nom_du_champ">
+                                                </div>
+                                                <div style="margin-bottom: 10px;">
+                                                    <label>Opérateur :</label>
+                                                    <select id="expr2_operator" name="expr2_operator" style="width: 250px; padding: 5px;">
+                                                        <option value="">-- Sélectionner --</option>
+                                                        <option value="EQUAL_NUM">nombre égal à (=)</option>
+                                                        <option value="NOT_EQUAL_NUM">nombre différent de (!=)</option>
+                                                        <option value="LTE">nombre plus petit ou égal à (<=)</option>
+                                                        <option value="GTE">nombre plus grand ou égal à (>=)</option>
+                                                        <option value="LT">nombre plus petit que (<)</option>
+                                                        <option value="GT">nombre plus grand que (>)</option>
+                                                        <option value="ISNULL">string est vide (isnull)</option>
+                                                        <option value="ISNOTNULL">string n'est pas vide (isnotnull)</option>
+                                                        <option value="EQUAL_STR">string égal à</option>
+                                                        <option value="NOT_EQUAL_STR">string différent de</option>
+                                                        <option value="LIKE_CONTAINS">string contient (LIKE %...%)</option>
+                                                        <option value="LIKE_STARTS">string commence par (LIKE ...%)</option>
+                                                        <option value="LIKE_ENDS">string finit par (LIKE %...)</option>
+                                                    </select>
+                                                </div>
+                                                <div id="expr2_value_container" style="margin-bottom: 10px;">
+                                                    <label>Valeur :</label>
+                                                    <input type="text" id="expr2_value" name="expr2_value" style="width: 200px; padding: 5px;" placeholder="valeur">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Aperçu du filtre -->
+                                            <div style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 15px;">
+                                                <strong>Aperçu du filtre :</strong>
+                                                <div id="filter_preview" style="font-family: monospace; margin-top: 5px; color: #333;">
+                                                    Aucun filtre configuré
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label>Commentaire ou numéro de ticket</label>
+                                </td></tr>
+                                <tr><td>
+                                    <textarea class="Omni_commentaire" id="commentaire" cols="300" rows="3"></textarea>
+                                </td></tr>
+                            </table>
+                            <input id="CANCEL_button" type="button" value="Annuler" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">
+                            <input id="VALID_button" type="button" value="Valider" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">
+                            ${debugMode == '1' ? '<input id="TEST_button" type="button" value="Test" style="padding: 5px 10px; border-radius: 4px" class="btn-primary Omni_button">' : ''}
+                            <br/>
+                            <center><div id="loadSpinner" loading_msg=" " circle_color="#A64764" /></center>
+                        </div>
+                    `;
+                    
+                    $('#downtime').html(html);
+                    $('#username').html(userName);
+                    
+                    // Setup event listeners pour le formulaire de filtre custom
+                    this.setupCustomFilterListeners();
+                    return;
+                }
+                
                 // Interface normale pour add/update
                 var html = `
                     <div class="ui Omni_base">
@@ -580,6 +909,176 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 $('#downtime').html(html);
                 $('#username').html(userName);
+            },
+
+            setupCustomFilterListeners() {
+                // Toggle expression 2
+                $('#use_expr2').on('change', function() {
+                    if ($(this).is(':checked')) {
+                        $('#logical_operator_choice').show();
+                        $('#expression2_container').show();
+                    } else {
+                        $('#logical_operator_choice').hide();
+                        $('#expression2_container').hide();
+                    }
+                    UIManager.updateCustomFilterPreview();
+                });
+                
+                // Gestion de l'affichage du champ valeur selon l'opérateur
+                $('#expr1_operator').on('change', function() {
+                    var operator = $(this).val();
+                    if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
+                        $('#expr1_value_container').hide();
+                    } else {
+                        $('#expr1_value_container').show();
+                    }
+                    UIManager.updateCustomFilterPreview();
+                });
+                
+                $('#expr2_operator').on('change', function() {
+                    var operator = $(this).val();
+                    if (operator === 'ISNULL' || operator === 'ISNOTNULL') {
+                        $('#expr2_value_container').hide();
+                    } else {
+                        $('#expr2_value_container').show();
+                    }
+                    UIManager.updateCustomFilterPreview();
+                });
+                
+                // Mise à jour de l'aperçu en temps réel
+                $('#expr1_not, #expr1_field, #expr1_value, #logical_operator, #expr2_not, #expr2_field, #expr2_value').on('input change', function() {
+                    UIManager.updateCustomFilterPreview();
+                });
+            },
+
+            updateCustomFilterPreview() {
+                var preview = '';
+                
+                // Expression 1
+                var expr1Not = $('#expr1_not').is(':checked');
+                var expr1Field = $('#expr1_field').val().trim();
+                var expr1Operator = $('#expr1_operator').val();
+                var expr1Value = $('#expr1_value').val().trim();
+                
+                if (expr1Field && expr1Operator) {
+                    if (expr1Not) preview += 'NOT ';
+                    
+                    var expr1 = {
+                        operatorKey: expr1Operator,
+                        field: expr1Field,
+                        value: expr1Value
+                    };
+                    preview += CustomFilterParser.reconstructExpression(expr1);
+                }
+                
+                // Expression 2 si activée
+                if ($('#use_expr2').is(':checked')) {
+                    var logicalOp = $('#logical_operator').val();
+                    var expr2Not = $('#expr2_not').is(':checked');
+                    var expr2Field = $('#expr2_field').val().trim();
+                    var expr2Operator = $('#expr2_operator').val();
+                    var expr2Value = $('#expr2_value').val().trim();
+                    
+                    if (expr2Field && expr2Operator && preview) {
+                        preview += ' ' + logicalOp + ' ';
+                        
+                        if (expr2Not) preview += 'NOT ';
+                        
+                        var expr2 = {
+                            operatorKey: expr2Operator,
+                            field: expr2Field,
+                            value: expr2Value
+                        };
+                        preview += CustomFilterParser.reconstructExpression(expr2);
+                    }
+                }
+                
+                $('#filter_preview').html(preview || 'Aucun filtre configuré');
+            },
+
+            populateCustomFilterForm(parsedFilter) {
+                Utils.log(parsedFilter, 'populateCustomFilterForm');
+                
+                if (!parsedFilter || !parsedFilter.expression1) {
+                    return;
+                }
+                
+                // Expression 1
+                $('#expr1_not').prop('checked', parsedFilter.hasNot1);
+                $('#expr1_field').val(parsedFilter.expression1.field || '');
+                $('#expr1_operator').val(parsedFilter.expression1.operatorKey || '');
+                $('#expr1_value').val(parsedFilter.expression1.value || '');
+                
+                // Masquer le champ valeur si nécessaire
+                var op1 = parsedFilter.expression1.operatorKey;
+                if (op1 === 'ISNULL' || op1 === 'ISNOTNULL') {
+                    $('#expr1_value_container').hide();
+                }
+                
+                // Expression 2
+                if (parsedFilter.expression2) {
+                    $('#use_expr2').prop('checked', true);
+                    $('#logical_operator_choice').show();
+                    $('#expression2_container').show();
+                    
+                    $('#logical_operator').val(parsedFilter.logicalOperator || 'AND');
+                    $('#expr2_not').prop('checked', parsedFilter.hasNot2);
+                    $('#expr2_field').val(parsedFilter.expression2.field || '');
+                    $('#expr2_operator').val(parsedFilter.expression2.operatorKey || '');
+                    $('#expr2_value').val(parsedFilter.expression2.value || '');
+                    
+                    // Masquer le champ valeur si nécessaire
+                    var op2 = parsedFilter.expression2.operatorKey;
+                    if (op2 === 'ISNULL' || op2 === 'ISNOTNULL') {
+                        $('#expr2_value_container').hide();
+                    }
+                }
+                
+                // Mettre à jour l'aperçu
+                UIManager.updateCustomFilterPreview();
+            },
+
+            collectCustomFilterFromForm() {
+                var parsedFilter = {
+                    hasNot1: $('#expr1_not').is(':checked'),
+                    expression1: null,
+                    logicalOperator: null,
+                    hasNot2: false,
+                    expression2: null
+                };
+                
+                // Expression 1
+                var expr1Field = $('#expr1_field').val().trim();
+                var expr1Operator = $('#expr1_operator').val();
+                var expr1Value = $('#expr1_value').val().trim();
+                
+                if (expr1Field && expr1Operator) {
+                    parsedFilter.expression1 = {
+                        operatorKey: expr1Operator,
+                        field: expr1Field,
+                        value: expr1Value
+                    };
+                }
+                
+                // Expression 2
+                if ($('#use_expr2').is(':checked')) {
+                    parsedFilter.logicalOperator = $('#logical_operator').val();
+                    parsedFilter.hasNot2 = $('#expr2_not').is(':checked');
+                    
+                    var expr2Field = $('#expr2_field').val().trim();
+                    var expr2Operator = $('#expr2_operator').val();
+                    var expr2Value = $('#expr2_value').val().trim();
+                    
+                    if (expr2Field && expr2Operator) {
+                        parsedFilter.expression2 = {
+                            operatorKey: expr2Operator,
+                            field: expr2Field,
+                            value: expr2Value
+                        };
+                    }
+                }
+                
+                return parsedFilter;
             },
 
             appendPeriodTab(tab, nombre, downtimeType = 'between_date', beginDays = '', beginHours = '00:00:00', endDays = '', endHours = '24:00:00') {
@@ -781,8 +1280,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 Utils.log('Début buildPeriodsDescriptionFromSource', 'buildPeriodsDescriptionFromSource');
                 Utils.log(dashboardType, 'Dashboard type');
                 
-                if (dashboardType === 'delete') {
-                    // Mode DELETE : lire depuis le JSON stocké
+                if (dashboardType === 'delete' || dashboardType === 'update_custom') {
+                    // Mode DELETE ou UPDATE_CUSTOM : lire depuis le JSON stocké
                     var downtimeSelected = TokenManager.get('downtime_selected');
                     
                     if (Utils.isNull(downtimeSelected)) {
@@ -1008,7 +1507,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 // Ajout des filtres personnalisés si présents
                 if (Utils.isNotNull(dt_filterToken) && dt_filterToken !== '') {
-                    selectionDescHtml += `<tr><td><strong>Custom filter(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_filterToken)}</td></tr>`;
+                    selectionDescHtml += `<tr><td><strong>Custom filter(s)</strong></td><td></td><td><code style="background: #f5f5f5; padding: 2px 5px;">${dt_filterToken}</code></td></tr>`;
                 }
                 
                 // Ajout des patterns si présents
@@ -1021,7 +1520,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 if (periodsHtml !== '') {
                     var periodTitle = dashboardType === 'delete' 
                         ? 'Périodes de maintenance à supprimer :' 
-                        : 'Périodes de maintenance :';
+                        : (dashboardType === 'update_custom' 
+                            ? 'Périodes de maintenance :' 
+                            : 'Périodes de maintenance :');
                     selectionDescHtml += `<tr><td colspan="3"><br/><strong>${periodTitle}</strong></td></tr>`;
                     selectionDescHtml += periodsHtml;
                 }
@@ -1146,69 +1647,94 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
 
         // ==================== GESTION DES DONNÉES ====================
         const DataManager = {
-    fillDashboard(downtimeData, dashboardType) {
-        Utils.log([downtimeData, dashboardType], 'fillDashboard');
+            fillDashboard(downtimeData, dashboardType) {
+                Utils.log([downtimeData, dashboardType], 'fillDashboard');
 
-        downtimeData.forEach(function (row) {
-            var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
-            var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
-            var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
-            var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
-            var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
-            var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
-            var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
-            var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
-            var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
-            var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
+                downtimeData.forEach(function (row) {
+                    var service = row[CONFIG.DOWNTIME_FIELDS.SERVICE];
+                    var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
+                    var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
+                    var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
+                    var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
+                    var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
+                    var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
+                    var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
+                    var downtime = row[CONFIG.DOWNTIME_FIELDS.DOWNTIME];
+                    var commentary = row[CONFIG.DOWNTIME_FIELDS.COMMENTARY];
 
-            TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
-            TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
-            
-            DataManager.setTypeTokens('service', service, service_type, dashboardType);
-            DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
-            DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
-            TokenManager.set('dt_filter', dt_filter);
-            TokenManager.set('dt_pattern', dt_pattern);
-            
-            if (dashboardType == "update") {
-                // Initialiser le pattern_type à "exist" et sélectionner le pattern existant
-                if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
-                    // Cas 1: Pattern existant dans la maintenance
-                    TokenManager.set('pattern_type', 'exist', true);
-                    TokenManager.set('form.pattern_type', 'exist');
-                    TokenManager.set('pattern_exist', '1');
-                    TokenManager.set('dt_patern_select', dt_pattern, true);
-                    TokenManager.set('form.dt_patern_select', dt_pattern);
-                    TokenManager.set('dt_pattern_selected', dt_pattern);
+                    TokenManager.set('selected_version', row[CONFIG.DOWNTIME_FIELDS.VERSION]);
+                    TokenManager.set('key', row[CONFIG.DOWNTIME_FIELDS.KEY]);
                     
-                    Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
-                } else {
-                    // Cas 2: Pas de pattern dans la maintenance
-                    TokenManager.set('pattern_type', 'new', true);
-                    TokenManager.set('form.pattern_type', 'new');
-                    TokenManager.set('pattern_new', '1');
-                    TokenManager.set('dt_pattern_selected', '');
+                    DataManager.setTypeTokens('service', service, service_type, dashboardType);
+                    DataManager.setTypeTokens('kpi', kpi, kpi_type, dashboardType);
+                    DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
+                    TokenManager.set('dt_filter', dt_filter);
+                    TokenManager.set('dt_filter_selected', dt_filter);
+                    TokenManager.set('dt_pattern', dt_pattern);
                     
-                    Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
-                }
-                
-                DataManager.updatePeriods(downtime, commentary);
-                TokenManager.set('update_full_loading', 1);
-            } else if (dashboardType == "delete") {
-                TokenManager.set("downtime_selected", downtime);
-                DataManager.updatePeriods(downtime, commentary);
-                UIManager.updateDescriptionDiv();
-                TokenManager.set('update_full_loading', 1);
-                TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
-            }
-        });
-    },
+                    if (dashboardType == "update") {
+                        // Initialiser le pattern_type à "exist" et sélectionner le pattern existant
+                        if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
+                            // Cas 1: Pattern existant dans la maintenance
+                            TokenManager.set('pattern_type', 'exist', true);
+                            TokenManager.set('form.pattern_type', 'exist');
+                            TokenManager.set('pattern_exist', '1');
+                            TokenManager.set('dt_patern_select', dt_pattern, true);
+                            TokenManager.set('form.dt_patern_select', dt_pattern);
+                            TokenManager.set('dt_pattern_selected', dt_pattern);
+                            
+                            Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
+                        } else {
+                            // Cas 2: Pas de pattern dans la maintenance
+                            TokenManager.set('pattern_type', 'new', true);
+                            TokenManager.set('form.pattern_type', 'new');
+                            TokenManager.set('pattern_new', '1');
+                            TokenManager.set('dt_pattern_selected', '');
+                            
+                            Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
+                        }
+                        
+                        DataManager.updatePeriods(downtime, commentary);
+                        TokenManager.set('update_full_loading', 1);
+                    } else if (dashboardType == "delete") {
+                        TokenManager.set("downtime_selected", downtime);
+                        DataManager.updatePeriods(downtime, commentary);
+                        UIManager.updateDescriptionDiv();
+                        TokenManager.set('update_full_loading', 1);
+                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+                    } else if (dashboardType == "update_custom") {
+                        // Mode update_custom - remplir le formulaire de filtre personnalisé
+                        Utils.log('Mode UPDATE_CUSTOM détecté', 'fillDashboard');
+                        
+                        TokenManager.set("downtime_selected", downtime);
+                        TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
+                        
+                        // Parser le dt_filter
+                        var parsedFilter = CustomFilterParser.parse(dt_filter);
+                        Utils.log(parsedFilter, 'Filtre parsé');
+                        
+                        // Remplir le formulaire
+                        UIManager.populateCustomFilterForm(parsedFilter);
+                        
+                        // Remplir le commentaire
+                        try {
+                            $('#commentaire').val(commentary);
+                        } catch (error) {
+                            Utils.log(error, 'unable to write in #commentaire', 1);
+                        }
+                        
+                        // Mettre à jour la description
+                        UIManager.updateDescriptionDiv();
+                        TokenManager.set('update_full_loading', 1);
+                    }
+                });
+            },
 
             setTypeTokens(prefix, value, type, dashboardType) {
                 TokenManager.set(prefix + '_selected', value);
                 TokenManager.set(prefix + '_select_input_type', type, CONFIG.UPDATE_FORM);
                 
-                if (type == 2 && dashboardType == "update") {
+                if (type == 2 && (dashboardType == "update" || dashboardType == "update_custom")) {
                     TokenManager.set(prefix + '_for_concat', value.replace(';', ','));
                     TokenManager.set(prefix + '_concat', value, CONFIG.UPDATE_FORM);
                     TokenManager.set(prefix + '_select_dual', '  ');
@@ -1225,9 +1751,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 Utils.log({text: text, commentary: commentary, dashboardType: dashboardType}, 'updatePeriods - START');
                 
-                if (dashboardType === 'delete') {
-                    // En mode delete, on stocke juste les données sans créer l'interface
-                    Utils.log('Mode delete - stockage des données seulement', 'updatePeriods');
+                if (dashboardType === 'delete' || dashboardType === 'update_custom') {
+                    // En mode delete ou update_custom, on stocke juste les données sans créer l'interface de périodes
+                    Utils.log('Mode delete/update_custom - stockage des données seulement', 'updatePeriods');
                     TokenManager.set('downtime_selected', text);
                     
                     try {
@@ -1278,613 +1804,685 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     var periodStrings = text.split('£');
                     allPeriods = periodStrings.map(function(periodStr) {
                         return periodStr.split('#');
-                    });
+});
+                
+                Utils.log(allPeriods, 'Périodes du format ancien');
+            }
+            
+            // Créer les onglets de périodes
+            for (var i = 0; i < allPeriods.length; i++) {
+                var periodValue = allPeriods[i];
+                var periodNumber = (i + 1).toString();
+                
+                Utils.log(periodValue, 'Création période ' + periodNumber);
+                
+                UIManager.appendPeriodTab(
+                    'tabs',
+                    'Periode ' + periodNumber,
+                    periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0],
+                    periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1],
+                    periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || periodValue[3],
+                    periodValue[CONFIG.PERIOD_FIELDS.END_DAY] || periodValue[2],
+                    periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
+                );
+                
+                var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
+                if (periodType == 'between_date') {
+                    var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
+                    DatePickerManager.apply(beginDay);
+                }
+            }
+            
+            $('[id^=selectable]').selectable();
+            
+            try {
+                $('#commentaire').val(commentary);
+            } catch (error) {
+                Utils.log(error, 'unable to write in #commentaire', 1);
+            }
+            
+            Utils.log('updatePeriods - END', 'updatePeriods');
+        },
+
+        getSelectedInDashboard() {
+            Utils.log('', 'getSelectedInDashboard - START');
+            
+            var selected = {};
+            var errors = 0;
+            var errorOutput = 'Impossible de valider le downtime :<br />';
+            var dashboardType = $('#dashboardType').html();
+            
+            Utils.log(dashboardType, 'Dashboard type');
+            
+            // Configuration email
+            var sendingEmail = TokenManager.get("sendingEmail");
+            var email = TokenManager.get("email");
+            var sendEmail = '';
+            
+            if (Utils.isNotNull(sendingEmail) && Utils.checkEmail(email)) {
+                var action = dashboardType == 'add' ? 'Ajout' : (dashboardType == 'update' ? 'Modification' : 'Suppression');
+                sendEmail = `| table ID,result | transpose column_name="Champs"
+                    | sendemail to="${email}" subject="${action} de downtime" sendresults=true inline=true format=table
+                    message="Le downtime ${selected['ID']} vient d'être ${action == 'Ajout' ? 'soumis' : 'mis à jour'}, voici le récapitulatif"`;
+            }
+
+            if (dashboardType == "delete") {
+                Utils.log('Mode DELETE détecté', 'getSelectedInDashboard');
+                return DataManager.getDeleteData(selected, sendEmail);
+            }
+            
+            if (dashboardType == "update_custom") {
+                Utils.log('Mode UPDATE_CUSTOM détecté', 'getSelectedInDashboard');
+                return DataManager.getUpdateCustomData(selected, sendEmail);
+            }
+
+            // Données communes
+            selected['sendEmail'] = sendEmail;
+            selected['key'] = TokenManager.get('key') || '';
+            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+            selected['username'] = Splunk.util.getConfigValue('USERNAME');
+            selected['lookup_name'] = 'omni_kv';
+            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+            selected['step_opt'] = DataManager.getStepOpt();
+            selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+            selected['downtimeFields'] = [];
+            
+            Utils.log(selected, 'Données de base collectées');
+            
+            // Version
+            if (dashboardType == "add") {
+                selected['version'] = TokenManager.get('selected_version') || 1;
+            } else if (dashboardType == "update") {
+                selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
+            }
+
+            // Récupération des périodes
+            Utils.log('Collecte des périodes', 'getSelectedInDashboard');
+            var periodData = DataManager.collectPeriods();
+            selected['downtimeFields'] = periodData.downtimeFields;
+            errors += periodData.errors;
+            errorOutput += periodData.errorOutput;
+            
+            Utils.log(periodData, 'Données des périodes');
+
+            // Validations finales
+            if (Utils.isNull(selected['service'])) {
+                errors++;
+                errorOutput += '- Veuillez sélectionner un ou plusieurs services<br />';
+            }
+            if (Utils.isNull(selected['kpi'])) {
+                errors++;
+                errorOutput += '- Veuillez sélectionner une ou plusieurs kpi<br />';
+            }
+            if (Utils.isNull(selected['entity'])) {
+                errors++;
+                errorOutput += '- Veuillez sélectionner une ou plusieurs entités<br />';
+            }
+            if (Utils.isNull(selected['commentary'])) {
+                errors++;
+                errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
+            }
+
+            Utils.log({errors: errors, errorOutput: errorOutput}, 'Résultat validation finale');
+            
+            return [selected, errors, errorOutput];
+        },
+
+        getDeleteData(selected, sendEmail) {
+            selected['key'] = TokenManager.get('key') || '';
+            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+            selected['sendEmail'] = sendEmail;
+            selected['username'] = Splunk.util.getConfigValue('USERNAME');
+            selected['lookup_name'] = 'omni_kv';
+            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+            selected['step_opt'] = DataManager.getStepOpt();
+            selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
+            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+            selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+            selected['version'] = TokenManager.get('selected_version') || 99999;
+            
+            // Validation du commentaire
+            var errors = 0;
+            var errorOutput = '';
+            
+            if (Utils.isNull(selected['commentary'])) {
+                errors++;
+                errorOutput = 'Impossible de valider le downtime :<br /><br />- Veuillez entrer un commentaire détaillé<br />';
+            }
+            
+            Utils.log(selected, 'Delete data collectée');
+            
+            return [selected, errors, errorOutput];
+        },
+
+        getUpdateCustomData(selected, sendEmail) {
+            Utils.log('getUpdateCustomData - START', 'getUpdateCustomData');
+            
+            selected['key'] = TokenManager.get('key') || '';
+            selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
+            selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
+            selected['sendEmail'] = sendEmail;
+            selected['username'] = Splunk.util.getConfigValue('USERNAME');
+            selected['lookup_name'] = 'omni_kv';
+            selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
+            selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
+            selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
+            selected['step_opt'] = DataManager.getStepOpt();
+            selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+            selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+            selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
+            
+            // Récupérer le filtre personnalisé depuis le formulaire
+            var parsedFilter = UIManager.collectCustomFilterFromForm();
+            var dtFilterString = CustomFilterParser.reconstruct(parsedFilter);
+            
+            Utils.log(parsedFilter, 'Parsed filter from form');
+            Utils.log(dtFilterString, 'Reconstructed dt_filter string');
+            
+            selected['dt_filter'] = dtFilterString;
+            
+            // Validation
+            var errors = 0;
+            var errorOutput = '';
+            
+            if (Utils.isNull(selected['commentary'])) {
+                errors++;
+                errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
+            }
+            
+            if (!parsedFilter.expression1 || !parsedFilter.expression1.field) {
+                errors++;
+                errorOutput += '- Veuillez configurer au moins une expression de filtre valide<br />';
+            }
+            
+            if (parsedFilter.expression2 && !parsedFilter.expression2.field) {
+                errors++;
+                errorOutput += '- La seconde expression de filtre est incomplète<br />';
+            }
+            
+            if (errors > 0) {
+                errorOutput = 'Impossible de valider le downtime :<br /><br />' + errorOutput;
+            }
+            
+            Utils.log(selected, 'Update custom data collectée');
+            Utils.log({errors: errors, errorOutput: errorOutput}, 'Validation result');
+            
+            return [selected, errors, errorOutput];
+        },
+
+        collectPeriods() {
+            Utils.log('Début collectPeriods', 'collectPeriods');
+            
+            var checkedBegin = [], checkedEnd = [], beginHours = [], endHours = [], type = [];
+            var downtimeFields = [];
+            var errors = 0;
+            var errorOutput = '';
+            var atLeastOne = 0;
+            var periodCount = 0;
+
+            $('[id^=content-tab-Period]').each(function () {
+                periodCount++;
+                Utils.log('Traitement période ' + periodCount, 'collectPeriods');
+                
+                var dateBegin = '', dateEnd = '', hoursBegin = '', hoursEnd = '';
+                var periodValid = false;
+
+                if ($(this).find('[periodID=radioD]').is(':checked')) {
+                    Utils.log('Type: Date à date', 'collectPeriods');
+                    dateBegin = $(this).find('[id^=datepicker_begin]').val();
+                    dateEnd = $(this).find('[id^=datepicker_end]').val();
+                    Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates collectées');
                     
-                    Utils.log(allPeriods, 'Périodes du format ancien');
-                }
-                
-                // Créer les onglets de périodes
-                for (var i = 0; i < allPeriods.length; i++) {
-                    var periodValue = allPeriods[i];
-                    var periodNumber = (i + 1).toString();
-                    
-                    Utils.log(periodValue, 'Création période ' + periodNumber);
-                    
-                    UIManager.appendPeriodTab(
-                        'tabs',
-                        'Periode ' + periodNumber,
-                        periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0],
-                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1],
-                        periodValue[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || periodValue[3],
-                        periodValue[CONFIG.PERIOD_FIELDS.END_DAY] || periodValue[2],
-                        periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
-                    );
-                    
-                    var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
-                    if (periodType == 'between_date') {
-                        var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
-                        DatePickerManager.apply(beginDay);
-                    }
-                }
-                
-                $('[id^=selectable]').selectable();
-                
-                try {
-                    $('#commentaire').val(commentary);
-                } catch (error) {
-                    Utils.log(error, 'unable to write in #commentaire', 1);
-                }
-                
-                Utils.log('updatePeriods - END', 'updatePeriods');
-            },
-
-            getSelectedInDashboard() {
-                Utils.log('', 'getSelectedInDashboard - START');
-                
-                var selected = {};
-                var errors = 0;
-                var errorOutput = 'Impossible de valider le downtime :<br />';
-                var dashboardType = $('#dashboardType').html();
-                
-                Utils.log(dashboardType, 'Dashboard type');
-                
-                // Configuration email
-                var sendingEmail = TokenManager.get("sendingEmail");
-                var email = TokenManager.get("email");
-                var sendEmail = '';
-                
-                if (Utils.isNotNull(sendingEmail) && Utils.checkEmail(email)) {
-                    var action = dashboardType == 'add' ? 'Ajout' : (dashboardType == 'update' ? 'Modification' : 'Suppression');
-                    sendEmail = `| table ID,result | transpose column_name="Champs"
-                        | sendemail to="${email}" subject="${action} de downtime" sendresults=true inline=true format=table
-                        message="Le downtime ${selected['ID']} vient d'être ${action == 'Ajout' ? 'soumis' : 'mis à jour'}, voici le récapitulatif"`;
-                }
-
-                if (dashboardType == "delete") {
-                    Utils.log('Mode DELETE détecté', 'getSelectedInDashboard');
-                    return DataManager.getDeleteData(selected, sendEmail);
-                }
-
-                // Données communes
-                selected['sendEmail'] = sendEmail;
-                selected['key'] = TokenManager.get('key') || '';
-                selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
-                selected['username'] = Splunk.util.getConfigValue('USERNAME');
-                selected['lookup_name'] = 'omni_kv';
-                selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
-                selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
-                selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
-                selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
-                selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
-                selected['downtimeFields'] = [];
-                
-                Utils.log(selected, 'Données de base collectées');
-                
-                // Version
-                if (dashboardType == "add") {
-                    selected['version'] = TokenManager.get('selected_version') || 1;
-                } else if (dashboardType == "update") {
-                    selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
-                }
-
-                // Récupération des périodes
-                Utils.log('Collecte des périodes', 'getSelectedInDashboard');
-                var periodData = DataManager.collectPeriods();
-                selected['downtimeFields'] = periodData.downtimeFields;
-                errors += periodData.errors;
-                errorOutput += periodData.errorOutput;
-                
-                Utils.log(periodData, 'Données des périodes');
-
-                // Validations finales
-                if (Utils.isNull(selected['service'])) {
-                    errors++;
-                    errorOutput += '- Veuillez sélectionner un ou plusieurs services<br />';
-                }
-                if (Utils.isNull(selected['kpi'])) {
-                    errors++;
-                    errorOutput += '- Veuillez sélectionner une ou plusieurs kpi<br />';
-                }
-                if (Utils.isNull(selected['entity'])) {
-                    errors++;
-                    errorOutput += '- Veuillez sélectionner une ou plusieurs entités<br />';
-                }
-                if (Utils.isNull(selected['commentary'])) {
-                    errors++;
-                    errorOutput += '- Veuillez entrer un commentaire détaillé<br />';
-                }
-
-                Utils.log({errors: errors, errorOutput: errorOutput}, 'Résultat validation finale');
-                
-                return [selected, errors, errorOutput];
-            },
-
-            getDeleteData(selected, sendEmail) {
-                selected['key'] = TokenManager.get('key') || '';
-                selected['ID'] = TokenManager.get('DT_ID') || Utils.createID();
-                selected['commentary'] = TextTransformer.removeAccents($('#commentaire').val());
-                selected['sendEmail'] = sendEmail;
-                selected['username'] = Splunk.util.getConfigValue('USERNAME');
-                selected['lookup_name'] = 'omni_kv';
-                selected['service'] = TextTransformer.forKV(TokenManager.get('service_selected'));
-                selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
-                selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
-                selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
-                selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
-                selected['version'] = TokenManager.get('selected_version') || 99999;
-                
-                // Validation du commentaire
-                var errors = 0;
-                var errorOutput = '';
-                
-                if (Utils.isNull(selected['commentary'])) {
-                    errors++;
-                    errorOutput = 'Impossible de valider le downtime :<br /><br />- Veuillez entrer un commentaire détaillé<br />';
-                }
-                
-                Utils.log(selected, 'Delete data collectée');
-                
-                return [selected, errors, errorOutput];
-            },
-
-            collectPeriods() {
-                Utils.log('Début collectPeriods', 'collectPeriods');
-                
-                var checkedBegin = [], checkedEnd = [], beginHours = [], endHours = [], type = [];
-                var downtimeFields = [];
-                var errors = 0;
-                var errorOutput = '';
-                var atLeastOne = 0;
-                var periodCount = 0;
-
-                $('[id^=content-tab-Period]').each(function () {
-                    periodCount++;
-                    Utils.log('Traitement période ' + periodCount, 'collectPeriods');
-                    
-                    var dateBegin = '', dateEnd = '', hoursBegin = '', hoursEnd = '';
-                    var periodValid = false;
-
-                    if ($(this).find('[periodID=radioD]').is(':checked')) {
-                        Utils.log('Type: Date à date', 'collectPeriods');
-                        dateBegin = $(this).find('[id^=datepicker_begin]').val();
-                        dateEnd = $(this).find('[id^=datepicker_end]').val();
-                        Utils.log({dateBegin: dateBegin, dateEnd: dateEnd}, 'Dates collectées');
-                        
-                        if (dateBegin.length == 10 && dateEnd.length == 10) {
-                            atLeastOne = 1;
-                            periodValid = true;
-                            checkedBegin.push(dateBegin);
-                            checkedEnd.push(dateEnd);
-                            type.push('between_date');
-                        }
-                    } else if ($(this).find('[periodID=radioW]').is(':checked')) {
-                        Utils.log('Type: Hebdomadaire', 'collectPeriods');
-                        dateBegin = [];
-                        dateEnd = [];
+                    if (dateBegin.length == 10 && dateEnd.length == 10) {
                         atLeastOne = 1;
                         periodValid = true;
-                        $(this).find('.ui-selected').each(function () {
-                            dateBegin.push($(this).html());
-                            dateEnd.push($(this).html());
-                        });
-                        checkedBegin.push(dateBegin.join(';'));
-                        checkedEnd.push(dateEnd.join(';'));
-                        type.push('weekly');
-                    } else if ($(this).find('[periodID=radioM]').is(':checked')) {
-                        Utils.log('Type: Mensuel', 'collectPeriods');
-                        dateBegin = [];
-                        dateEnd = [];
-                        atLeastOne = 1;
-                        periodValid = true;
-                        $(this).find('.ui-selected').each(function () {
-                            dateBegin.push($(this).html());
-                            dateEnd.push($(this).html());
-                        });
-                        checkedBegin.push(dateBegin.join(';'));
-                        checkedEnd.push(dateEnd.join(';'));
-                        type.push('monthly');
-                    } else if ($(this).find('[periodID=radioS]').is(':checked')) {
-                        Utils.log('Type: Spécifique', 'collectPeriods');
-                        atLeastOne = 1;
-                        periodValid = true;
-                        dateBegin = $(this).find('#select_day').val();
-                        dateEnd = $(this).find('#select_day').val();
                         checkedBegin.push(dateBegin);
                         checkedEnd.push(dateEnd);
-                        var selectedType = $(this).find('#select_type').val();
-                        type.push('special_date_' + selectedType + '_in_month');
+                        type.push('between_date');
                     }
+                } else if ($(this).find('[periodID=radioW]').is(':checked')) {
+                    Utils.log('Type: Hebdomadaire', 'collectPeriods');
+                    dateBegin = [];
+                    dateEnd = [];
+                    atLeastOne = 1;
+                    periodValid = true;
+                    $(this).find('.ui-selected').each(function () {
+                        dateBegin.push($(this).html());
+                        dateEnd.push($(this).html());
+                    });
+                    checkedBegin.push(dateBegin.join(';'));
+                    checkedEnd.push(dateEnd.join(';'));
+                    type.push('weekly');
+                } else if ($(this).find('[periodID=radioM]').is(':checked')) {
+                    Utils.log('Type: Mensuel', 'collectPeriods');
+                    dateBegin = [];
+                    dateEnd = [];
+                    atLeastOne = 1;
+                    periodValid = true;
+                    $(this).find('.ui-selected').each(function () {
+                        dateBegin.push($(this).html());
+                        dateEnd.push($(this).html());
+                    });
+                    checkedBegin.push(dateBegin.join(';'));
+                    checkedEnd.push(dateEnd.join(';'));
+                    type.push('monthly');
+                } else if ($(this).find('[periodID=radioS]').is(':checked')) {
+                    Utils.log('Type: Spécifique', 'collectPeriods');
+                    atLeastOne = 1;
+                    periodValid = true;
+                    dateBegin = $(this).find('#select_day').val();
+                    dateEnd = $(this).find('#select_day').val();
+                    checkedBegin.push(dateBegin);
+                    checkedEnd.push(dateEnd);
+                    var selectedType = $(this).find('#select_type').val();
+                    type.push('special_date_' + selectedType + '_in_month');
+                }
 
-                    if (periodValid) {
-                        hoursBegin = $(this).find('.inputPeriodBegin').val();
-                        hoursEnd = $(this).find('.inputPeriodEnd').val();
-                        
-                        Utils.log({hoursBegin: hoursBegin, hoursEnd: hoursEnd}, 'Heures collectées');
-                        
-                        if (!Validator.timeFormat(hoursBegin)) {
-                            errors++;
-                            errorOutput += '- Format heure de début invalide (HH:MM)<br />';
-                        }
-                        if (!Validator.timeFormat(hoursEnd)) {
-                            errors++;
-                            errorOutput += '- Format heure de fin invalide (HH:MM)<br />';
-                        }
-                        if (hoursBegin == hoursEnd && dateBegin == dateEnd) {
-                            errors++;
-                            errorOutput += '- Les heures de début et fin ne peuvent être identiques<br />';
-                        }
-                        if (Validator.endAfterBegin(dateBegin, dateEnd, hoursBegin, hoursEnd)) {
-                            errors++;
-                            errorOutput += '- L\'heure de début ne peut être supérieure à l\'heure de fin<br />';
-                        }
-                    } else {
-                        // Si aucune période n'est configurée, on met des valeurs par défaut
-                        hoursBegin = '00:00';
-                        hoursEnd = '00:00';
+                if (periodValid) {
+                    hoursBegin = $(this).find('.inputPeriodBegin').val();
+                    hoursEnd = $(this).find('.inputPeriodEnd').val();
+                    
+                    Utils.log({hoursBegin: hoursBegin, hoursEnd: hoursEnd}, 'Heures collectées');
+                    
+                    if (!Validator.timeFormat(hoursBegin)) {
+                        errors++;
+                        errorOutput += '- Format heure de début invalide (HH:MM)<br />';
                     }
-
-                    beginHours.push(hoursBegin);
-                    endHours.push(hoursEnd);
-                    
-                    var downtimeField = DataManager.transformDowntimeField(
-                        type[type.length - 1] || 'between_date',
-                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1] || '')),
-                        TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1] || '')),
-                        (beginHours[beginHours.length - 1] || '00:00') + ':00',
-                        (endHours[endHours.length - 1] || '00:00') + ':00'
-                    );
-                    
-                    downtimeFields.push(downtimeField);
-                    Utils.log(downtimeField, 'Downtime field créé');
-                });
-
-                if (errors > 0) {
-                    errorOutput += '- Au moins une période ne respecte pas les pré-requis<br />';
+                    if (!Validator.timeFormat(hoursEnd)) {
+                        errors++;
+                        errorOutput += '- Format heure de fin invalide (HH:MM)<br />';
+                    }
+                    if (hoursBegin == hoursEnd && dateBegin == dateEnd) {
+                        errors++;
+                        errorOutput += '- Les heures de début et fin ne peuvent être identiques<br />';
+                    }
+                    if (Validator.endAfterBegin(dateBegin, dateEnd, hoursBegin, hoursEnd)) {
+                        errors++;
+                        errorOutput += '- L\'heure de début ne peut être supérieure à l\'heure de fin<br />';
+                    }
+                } else {
+                    // Si aucune période n'est configurée, on met des valeurs par défaut
+                    hoursBegin = '00:00';
+                    hoursEnd = '00:00';
                 }
-                
-                Utils.log({downtimeFields: downtimeFields, errors: errors}, 'Résultat collectPeriods');
 
-                return { downtimeFields, errors, errorOutput };
-            },
+                beginHours.push(hoursBegin);
+                endHours.push(hoursEnd);
+                
+                var downtimeField = DataManager.transformDowntimeField(
+                    type[type.length - 1] || 'between_date',
+                    TextTransformer.forKV(TextTransformer.daysToEnglish(checkedBegin[checkedBegin.length - 1] || '')),
+                    TextTransformer.forKV(TextTransformer.daysToEnglish(checkedEnd[checkedEnd.length - 1] || '')),
+                    (beginHours[beginHours.length - 1] || '00:00') + ':00',
+                    (endHours[endHours.length - 1] || '00:00') + ':00'
+                );
+                
+                downtimeFields.push(downtimeField);
+                Utils.log(downtimeField, 'Downtime field créé');
+            });
 
-            transformDowntimeField(downtimeType, begin_day, end_day, begin_hour, end_hour) {
-                return `${downtimeType}#${begin_day}#${end_day}#${begin_hour}#${end_hour}`;
-            },
-
-            getStepOpt() {
-                var tokenValue = TokenManager.get("step_opt_for_delete");
-                if (Utils.isNotNull(tokenValue)) return tokenValue;
-                
-                // CORRECTION: utiliser les bons noms de tokens des dashboards
-                var serviceToken = TokenManager.get('service_select_input_type');
-                var kpiToken = TokenManager.get('kpi_select_input_type');
-                var entityToken = TokenManager.get('entity_select_input_type');
-                
-                Utils.log({
-                    serviceToken: serviceToken,
-                    kpiToken: kpiToken,
-                    entityToken: entityToken
-                }, 'getStepOpt - tokens récupérés');
-                
-                if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken)) {
-                    var stepOpt = serviceToken.toString() + kpiToken.toString() + entityToken.toString();
-                    Utils.log(stepOpt, 'step_opt calculé');
-                    return stepOpt;
-                }
-                
-                Utils.log('step_opt par défaut: 000', 'getStepOpt', 1);
-                return "000";
+            if (errors > 0) {
+                errorOutput += '- Au moins une période ne respecte pas les pré-requis<br />';
             }
-        };
+            
+            Utils.log({downtimeFields: downtimeFields, errors: errors}, 'Résultat collectPeriods');
 
-        // ==================== DASHBOARD ====================
-        const Dashboard = {
-            createAdd() {
-                UIManager.create();
-                UIManager.appendPeriodTab('tabs', 'Periode 1');
-                DatePickerManager.apply();
-                $('[id^=selectable]').selectable();
-            },
+            return { downtimeFields, errors, errorOutput };
+        },
 
-            createUpdate(downtimeID) {
-                Utils.log(downtimeID, 'createUpdate');
-                Dashboard.loadDowntimeData(downtimeID, 'update');
-            },
+        transformDowntimeField(downtimeType, begin_day, end_day, begin_hour, end_hour) {
+            return `${downtimeType}#${begin_day}#${end_day}#${begin_hour}#${end_hour}`;
+        },
 
-            createDelete(downtimeID) {
-                Utils.log(downtimeID, 'createDelete');
-                Dashboard.loadDowntimeData(downtimeID, 'delete');
-            },
+        getStepOpt() {
+            var tokenValue = TokenManager.get("step_opt_for_delete");
+            if (Utils.isNotNull(tokenValue)) return tokenValue;
+            
+            // CORRECTION: utiliser les bons noms de tokens des dashboards
+            var serviceToken = TokenManager.get('service_select_input_type');
+            var kpiToken = TokenManager.get('kpi_select_input_type');
+            var entityToken = TokenManager.get('entity_select_input_type');
+            
+            Utils.log({
+                serviceToken: serviceToken,
+                kpiToken: kpiToken,
+                entityToken: entityToken
+            }, 'getStepOpt - tokens récupérés');
+            
+            if (Utils.isNotNull(serviceToken) && Utils.isNotNull(kpiToken) && Utils.isNotNull(entityToken)) {
+                var stepOpt = serviceToken.toString() + kpiToken.toString() + entityToken.toString();
+                Utils.log(stepOpt, 'step_opt calculé');
+                return stepOpt;
+            }
+            
+            Utils.log('step_opt par défaut: 000', 'getStepOpt', 1);
+            return "000";
+        }
+    };
 
-            loadDowntimeData(downtimeID, type) {
-                var query = QueryBuilder.withDowntimeID(downtimeID);
-                var epoch = (new Date).getTime();
+    // ==================== DASHBOARD ====================
+    const Dashboard = {
+        createAdd() {
+            UIManager.create();
+            UIManager.appendPeriodTab('tabs', 'Periode 1');
+            DatePickerManager.apply();
+            $('[id^=selectable]').selectable();
+        },
+
+        createUpdate(downtimeID) {
+            Utils.log(downtimeID, 'createUpdate');
+            Dashboard.loadDowntimeData(downtimeID, 'update');
+        },
+
+        createDelete(downtimeID) {
+            Utils.log(downtimeID, 'createDelete');
+            Dashboard.loadDowntimeData(downtimeID, 'delete');
+        },
+
+        createUpdateCustom(downtimeID) {
+            Utils.log(downtimeID, 'createUpdateCustom');
+            Dashboard.loadDowntimeData(downtimeID, 'update_custom');
+        },
+
+        loadDowntimeData(downtimeID, type) {
+            var query = QueryBuilder.withDowntimeID(downtimeID);
+            var epoch = (new Date).getTime();
+            
+            var existingDowntimeSearch = new SearchManager({
+                id: 'existingDowntimeSearch' + epoch,
+                preview: false,
+                cache: false,
+                search: mvc.tokenSafe(query),
+            });
+
+            existingDowntimeSearch.on('search:done', function (properties) {
+                Utils.log(properties, 'existingDowntimeSearch done');
                 
-                var existingDowntimeSearch = new SearchManager({
-                    id: 'existingDowntimeSearch' + epoch,
-                    preview: false,
-                    cache: false,
-                    search: mvc.tokenSafe(query),
-                });
+                if (properties.content.resultCount > 0) {
+                    var myResults = this.data('results', { count: 0 });
+                    myResults.on('data', function () {
+                        var downtimeData = myResults.data().rows;
+                        DataManager.fillDashboard(downtimeData, type);
+                    });
+                }
+            });
 
-                existingDowntimeSearch.on('search:done', function (properties) {
-                    Utils.log(properties, 'existingDowntimeSearch done');
+            existingDowntimeSearch.on('search:failed', function(properties) {
+                Utils.log(properties, 'existingDowntimeSearch failed', 2);
+            });
+        },
+
+        sendData(sendingType) {
+            Utils.log(sendingType, '============ sendData - START ============');
+            
+            try {
+                LoadSpinner.changeMsg('Verification des données en entrée');
+                LoadSpinner.state('ON');
+                
+                var dashboardType = $('#dashboardType').html();
+                
+                // En mode delete ou update_custom, pas de validation des datepickers
+                if (dashboardType !== 'delete' && dashboardType !== 'update_custom') {
+                    Utils.log('Validation des datepickers', 'sendData');
+                    var dateValidationErrors = Validator.allDatepickers();
+                    Utils.log(dateValidationErrors, 'Erreurs de validation dates');
                     
-                    if (properties.content.resultCount > 0) {
-                        var myResults = this.data('results', { count: 0 });
-                        myResults.on('data', function () {
-                            var downtimeData = myResults.data().rows;
-                            DataManager.fillDashboard(downtimeData, type);
-                        });
+                    if (dateValidationErrors.length > 0) {
+                        Utils.log('Erreurs de validation détectées', 'sendData', 1);
+                        LoadSpinner.state('OFF');
+                        TokenManager.set('modal_header', 'ERREUR');
+                        TokenManager.set('modal_content', dateValidationErrors);
+                        $('#modal_link')[0].click();
+                        return;
                     }
-                });
-
-                existingDowntimeSearch.on('search:failed', function(properties) {
-                    Utils.log(properties, 'existingDowntimeSearch failed', 2);
-                });
-            },
-
-            sendData(sendingType) {
-                Utils.log(sendingType, '============ sendData - START ============');
+                }
                 
+                Utils.log('Collecte des données du dashboard', 'sendData');
+                var [selected, errors, errorOutput] = DataManager.getSelectedInDashboard();
+                
+                Utils.log(selected, 'Selected data');
+                Utils.log(errors, 'Nombre d\'erreurs');
+                Utils.log(errorOutput, 'Messages d\'erreur');
+                
+                if (errors > 0) {
+                    Utils.log('Erreurs de validation des données', 'sendData', 1);
+                    LoadSpinner.state('OFF');
+                    TokenManager.set('modal_header', 'ERREUR');
+                    TokenManager.set('modal_content', errorOutput);
+                    $('#modal_link')[0].click();
+                    return;
+                }
+                
+                // Cacher les boutons
+                $('input#VALID_button').hide();
+                $('input#CANCEL_button').hide();
+                LoadSpinner.changeMsg('Mise à jour 0%');
+                
+                var query = '';
                 try {
-                    LoadSpinner.changeMsg('Verification des données en entrée');
-                    LoadSpinner.state('ON');
-                    
-                    var dashboardType = $('#dashboardType').html();
-                    
-                    // En mode delete, pas de validation des datepickers
-                    if (dashboardType !== 'delete') {
-                        Utils.log('Validation des datepickers', 'sendData');
-                        var dateValidationErrors = Validator.allDatepickers();
-                        Utils.log(dateValidationErrors, 'Erreurs de validation dates');
-                        
-                        if (dateValidationErrors.length > 0) {
-                            Utils.log('Erreurs de validation détectées', 'sendData', 1);
-                            LoadSpinner.state('OFF');
-                            TokenManager.set('modal_header', 'ERREUR');
-                            TokenManager.set('modal_content', dateValidationErrors);
-                            $('#modal_link')[0].click();
-                            return;
-                        }
+                    Utils.log('Création de la query', 'sendData');
+                    if (dashboardType == 'add') {
+                        Utils.log('Création query ADD', 'Dashboard type');
+                        query = QueryBuilder.createAdd(selected);
+                    } else if (dashboardType == 'update' || dashboardType == 'update_custom') {
+                        Utils.log('Création query UPDATE', 'Dashboard type');
+                        query = QueryBuilder.createUpdate(selected);
+                    } else if (dashboardType == 'delete') {
+                        Utils.log('Création query DELETE', 'Dashboard type');
+                        query = QueryBuilder.createDelete(selected);
                     }
                     
-                    Utils.log('Collecte des données du dashboard', 'sendData');
-                    var [selected, errors, errorOutput] = DataManager.getSelectedInDashboard();
+                    Utils.log(query, '========== QUERY FINALE GÉNÉRÉE ==========', 0);
                     
-                    Utils.log(selected, 'Selected data');
-                    Utils.log(errors, 'Nombre d\'erreurs');
-                    Utils.log(errorOutput, 'Messages d\'erreur');
-                    
-                    if (errors > 0) {
-                        Utils.log('Erreurs de validation des données', 'sendData', 1);
-                        LoadSpinner.state('OFF');
-                        TokenManager.set('modal_header', 'ERREUR');
-                        TokenManager.set('modal_content', errorOutput);
-                        $('#modal_link')[0].click();
-                        return;
-                    }
-                    
-                    // Cacher les boutons
-                    $('input#VALID_button').hide();
-                    $('input#CANCEL_button').hide();
-                    LoadSpinner.changeMsg('Mise à jour 0%');
-                    
-                    var query = '';
-                    try {
-                        Utils.log('Création de la query', 'sendData');
-                        if (dashboardType == 'add') {
-                            Utils.log('Création query ADD', 'Dashboard type');
-                            query = QueryBuilder.createAdd(selected);
-                        } else if (dashboardType == 'update') {
-                            Utils.log('Création query UPDATE', 'Dashboard type');
-                            query = QueryBuilder.createUpdate(selected);
-                        } else if (dashboardType == 'delete') {
-                            Utils.log('Création query DELETE', 'Dashboard type');
-                            query = QueryBuilder.createDelete(selected);
-                        }
-                        
-                        Utils.log(query, '========== QUERY FINALE GÉNÉRÉE ==========', 0);
-                        
-                    } catch (queryError) {
-                        Utils.log(queryError, 'ERREUR lors de la création de la query', 2);
-                        console.error('Stack trace:', queryError.stack);
-                        LoadSpinner.state('OFF');
-                        $('input#VALID_button').show();
-                        $('input#CANCEL_button').show();
-                        TokenManager.set('modal_header', 'ERREUR');
-                        TokenManager.set('modal_content', 'Erreur lors de la génération de la requête: ' + queryError.message);
-                        $('#modal_link')[0].click();
-                        return;
-                    }
-                    
-                    if (sendingType == 'valid') {
-                        Utils.log('Lancement de la recherche Splunk', 'SendingType valid');
-                        
-                        var omni_kv = new SearchManager({
-                            id: 'omni_kv' + selected['ID'],
-                            preview: false,
-                            cache: false,
-                            search: mvc.tokenSafe(query),
-                        });
-                        
-                        omni_kv.on('search:done', function (properties) {
-                            Utils.log(properties, 'omni_kv search done');
-                            
-                            var closingLink = dashboardType == 'add' 
-                                ? '<a href="/app/' + app_path + '/' + viewName + '">Fermer la fenêtre</a>'
-                                : '<a href="/app/' + app_path + '/accueil">Fermer la fenêtre</a>';
-                            
-                            var successMessage = dashboardType == 'delete'
-                                ? 'Suppression de la maintenance effectuée avec succès'
-                                : 'Mise à jour de la base des downtimes OK';
-                            
-                            Dashboard.showSuccessMessage('Information', successMessage, closingLink);
-                        });
-                        
-                        omni_kv.on('search:failed', function(properties) {
-                            Utils.log(properties, 'omni_kv search FAILED', 2);
-                            LoadSpinner.state('OFF');
-                            $('input#VALID_button').show();
-                            $('input#CANCEL_button').show();
-                            TokenManager.set('modal_header', 'ERREUR');
-                            TokenManager.set('modal_content', 'La recherche Splunk a échoué. Vérifiez les logs.');
-                            $('#modal_link')[0].click();
-                        });
-                        
-                        omni_kv.on('search:error', function(properties) {
-                            Utils.log(properties, 'omni_kv search ERROR', 2);
-                            LoadSpinner.state('OFF');
-                            $('input#VALID_button').show();
-                            $('input#CANCEL_button').show();
-                        });
-                    } else {
-                        Utils.log('Mode test - query générée mais non exécutée', 'sendData');
-                        LoadSpinner.state('OFF');
-                        $('input#VALID_button').show();
-                        $('input#CANCEL_button').show();
-                    }
-                    
-                } catch (error) {
-                    Utils.log(error, 'ERREUR CRITIQUE dans sendData', 2);
-                    console.error('Erreur complète:', error);
-                    console.error('Stack trace:', error.stack);
+                } catch (queryError) {
+                    Utils.log(queryError, 'ERREUR lors de la création de la query', 2);
+                    console.error('Stack trace:', queryError.stack);
                     LoadSpinner.state('OFF');
                     $('input#VALID_button').show();
                     $('input#CANCEL_button').show();
-                    TokenManager.set('modal_header', 'ERREUR CRITIQUE');
-                    TokenManager.set('modal_content', 'Une erreur inattendue s\'est produite: ' + error.message);
+                    TokenManager.set('modal_header', 'ERREUR');
+                    TokenManager.set('modal_content', 'Erreur lors de la génération de la requête: ' + queryError.message);
                     $('#modal_link')[0].click();
+                    return;
                 }
-            },
-
-            showSuccessMessage(header, content, footer) {
-                Utils.log([header, content, footer], 'showSuccessMessage');
                 
-                LoadSpinner.changeMsg('Mise à jour 50%');
-                Utils.applySleep(1000);
-                LoadSpinner.changeMsg('Mise à jour 100%');
+                if (sendingType == 'valid') {
+                    Utils.log('Lancement de la recherche Splunk', 'SendingType valid');
+                    
+                    var omni_kv = new SearchManager({
+                        id: 'omni_kv' + selected['ID'],
+                        preview: false,
+                        cache: false,
+                        search: mvc.tokenSafe(query),
+                    });
+                    
+                    omni_kv.on('search:done', function (properties) {
+                        Utils.log(properties, 'omni_kv search done');
+                        
+                        var closingLink = dashboardType == 'add' 
+                            ? '<a href="/app/' + app_path + '/' + viewName + '">Fermer la fenêtre</a>'
+                            : '<a href="/app/' + app_path + '/accueil">Fermer la fenêtre</a>';
+                        
+                        var successMessage = dashboardType == 'delete'
+                            ? 'Suppression de la maintenance effectuée avec succès'
+                            : (dashboardType == 'update_custom' 
+                                ? 'Modification du filtre personnalisé effectuée avec succès'
+                                : 'Mise à jour de la base des downtimes OK');
+                        
+                        Dashboard.showSuccessMessage('Information', successMessage, closingLink);
+                    });
+                    
+                    omni_kv.on('search:failed', function(properties) {
+                        Utils.log(properties, 'omni_kv search FAILED', 2);
+                        LoadSpinner.state('OFF');
+                        $('input#VALID_button').show();
+                        $('input#CANCEL_button').show();
+                        TokenManager.set('modal_header', 'ERREUR');
+                        TokenManager.set('modal_content', 'La recherche Splunk a échoué. Vérifiez les logs.');
+                        $('#modal_link')[0].click();
+                    });
+                    
+                    omni_kv.on('search:error', function(properties) {
+                        Utils.log(properties, 'omni_kv search ERROR', 2);
+                        LoadSpinner.state('OFF');
+                        $('input#VALID_button').show();
+                        $('input#CANCEL_button').show();
+                    });
+                } else {
+                    Utils.log('Mode test - query générée mais non exécutée', 'sendData');
+                    LoadSpinner.state('OFF');
+                    $('input#VALID_button').show();
+                    $('input#CANCEL_button').show();
+                }
                 
-                $('#modal_popup').modal({
-                    escapeClose: false,
-                    clickClose: false,
-                    showClose: false,
-                });
-                
-                TokenManager.set('modal_header', header);
-                TokenManager.set('modal_content', content);
-                TokenManager.set('modal_footer', footer);
-                $('#modal_link')[0].click();
+            } catch (error) {
+                Utils.log(error, 'ERREUR CRITIQUE dans sendData', 2);
+                console.error('Erreur complète:', error);
+                console.error('Stack trace:', error.stack);
                 LoadSpinner.state('OFF');
+                $('input#VALID_button').show();
+                $('input#CANCEL_button').show();
+                TokenManager.set('modal_header', 'ERREUR CRITIQUE');
+                TokenManager.set('modal_content', 'Une erreur inattendue s\'est produite: ' + error.message);
+                $('#modal_link')[0].click();
             }
-        };
+        },
 
-        // ==================== GESTION DES TOOLTIPS ====================
-        var originalTooltip = $.fn.tooltip;
-        $.fn.tooltip = function(options) {
-            try {
-                if (options === 'destroy' && !this.data('ui-tooltip')) {
-                    return this;
-                }
-                return originalTooltip.apply(this, arguments);
-            } catch (e) {
-                Utils.log(e, 'Tooltip error', 1);
+        showSuccessMessage(header, content, footer) {
+            Utils.log([header, content, footer], 'showSuccessMessage');
+            
+            LoadSpinner.changeMsg('Mise à jour 50%');
+            Utils.applySleep(1000);
+            LoadSpinner.changeMsg('Mise à jour 100%');
+            
+            $('#modal_popup').modal({
+                escapeClose: false,
+                clickClose: false,
+                showClose: false,
+            });
+            
+            TokenManager.set('modal_header', header);
+            TokenManager.set('modal_content', content);
+            TokenManager.set('modal_footer', footer);
+            $('#modal_link')[0].click();
+            LoadSpinner.state('OFF');
+        }
+    };
+
+    // ==================== GESTION DES TOOLTIPS ====================
+    var originalTooltip = $.fn.tooltip;
+    $.fn.tooltip = function(options) {
+        try {
+            if (options === 'destroy' && !this.data('ui-tooltip')) {
                 return this;
             }
-        };
+            return originalTooltip.apply(this, arguments);
+        } catch (e) {
+            Utils.log(e, 'Tooltip error', 1);
+            return this;
+        }
+    };
 
-        // ==================== INITIALISATION ====================
-        $(document).ready(function () {
-            Utils.log('Document ready', 'Initialisation');
-            
-            UIManager.create();
-            var downtimeID = TokenManager.get('DT_ID');
-            var dashboardType = $('#dashboardType').html();
-            
-            Utils.log({downtimeID: downtimeID, dashboardType: dashboardType}, 'Paramètres initialisation');
-            
-            if (dashboardType == 'add') {
-                Utils.log('Mode ADD', 'Initialisation');
-                Dashboard.createAdd();
-            } else if (dashboardType == 'update') {
-                Utils.log('Mode UPDATE', 'Initialisation');
-                if (Utils.isNotNull(downtimeID)) {
-                    Dashboard.createUpdate(downtimeID);
-                }
-            } else if (dashboardType == 'delete') {
-                Utils.log('Mode DELETE', 'Initialisation');
-                if (Utils.isNotNull(downtimeID)) {
-                    Dashboard.createDelete(downtimeID);
-                }
+    // ==================== INITIALISATION ====================
+    $(document).ready(function () {
+        Utils.log('Document ready', 'Initialisation');
+        
+        UIManager.create();
+        var downtimeID = TokenManager.get('DT_ID');
+        var dashboardType = $('#dashboardType').html();
+        
+        Utils.log({downtimeID: downtimeID, dashboardType: dashboardType}, 'Paramètres initialisation');
+        
+        if (dashboardType == 'add') {
+            Utils.log('Mode ADD', 'Initialisation');
+            Dashboard.createAdd();
+        } else if (dashboardType == 'update') {
+            Utils.log('Mode UPDATE', 'Initialisation');
+            if (Utils.isNotNull(downtimeID)) {
+                Dashboard.createUpdate(downtimeID);
+            }
+        } else if (dashboardType == 'delete') {
+            Utils.log('Mode DELETE', 'Initialisation');
+            if (Utils.isNotNull(downtimeID)) {
+                Dashboard.createDelete(downtimeID);
+            }
+        } else if (dashboardType == 'update_custom') {
+            Utils.log('Mode UPDATE_CUSTOM', 'Initialisation');
+            if (Utils.isNotNull(downtimeID)) {
+                Dashboard.createUpdateCustom(downtimeID);
+            }
+        }
+    });
+
+    // ==================== ÉVÉNEMENTS ====================
+    $(document).on('click', '#tAdd', function () {
+        Utils.log('Click sur tAdd', 'Événements');
+        UIManager.appendPeriodTab('tabs', 'Periode ' + numberTabs);
+        $('[id^=selectable]').selectable();
+        DatePickerManager.apply();
+    });
+
+    $(document).on('click', '.btnx', function () {
+        Utils.log('Click sur btnx', 'Événements');
+        var cur = $(this).attr('id').replace('btnx', 'tab');
+        var $tab = $('#' + cur);
+        var $content = $('#content-' + cur);
+        
+        // Nettoyer les tooltips
+        $tab.find('[data-ui-tooltip]').each(function() {
+            if ($(this).data('ui-tooltip')) {
+                $(this).tooltip('destroy');
             }
         });
-
-        // ==================== ÉVÉNEMENTS ====================
-        $(document).on('click', '#tAdd', function () {
-            Utils.log('Click sur tAdd', 'Événements');
-            UIManager.appendPeriodTab('tabs', 'Periode ' + numberTabs);
-            $('[id^=selectable]').selectable();
-            DatePickerManager.apply();
+        $content.find('[data-ui-tooltip]').each(function() {
+            if ($(this).data('ui-tooltip')) {
+                $(this).tooltip('destroy');
+            }
         });
+        
+        $tab.remove();
+        $content.remove();
+        numberTabs -= 1;
+    });
 
-        $(document).on('click', '.btnx', function () {
-            Utils.log('Click sur btnx', 'Événements');
-            var cur = $(this).attr('id').replace('btnx', 'tab');
-            var $tab = $('#' + cur);
-            var $content = $('#content-' + cur);
-            
-            // Nettoyer les tooltips
-            $tab.find('[data-ui-tooltip]').each(function() {
-                if ($(this).data('ui-tooltip')) {
-                    $(this).tooltip('destroy');
-                }
-            });
-            $content.find('[data-ui-tooltip]').each(function() {
-                if ($(this).data('ui-tooltip')) {
-                    $(this).tooltip('destroy');
-                }
-            });
-            
-            $tab.remove();
-            $content.remove();
-            numberTabs -= 1;
-        });
+    $(document).on('click', '.tab', function () {
+        Utils.log('Click sur tab', 'Événements');
+        $('.tab-content').removeClass('current');
+        var cur = 'content-' + $(this).attr('id');
+        $('#' + cur).addClass('current');
+    });
 
-        $(document).on('click', '.tab', function () {
-            Utils.log('Click sur tab', 'Événements');
-            $('.tab-content').removeClass('current');
-            var cur = 'content-' + $(this).attr('id');
-            $('#' + cur).addClass('current');
-        });
+    $(document).on('click', 'input#VALID_button', function () {
+        Utils.log('========== CLICK SUR VALIDER ==========', 'Événements', 0);
+        Dashboard.sendData('valid');
+    });
 
-        $(document).on('click', 'input#VALID_button', function () {
-            Utils.log('========== CLICK SUR VALIDER ==========', 'Événements', 0);
-            Dashboard.sendData('valid');
-        });
+    $(document).on('click', 'input#TEST_button', function () {
+        Utils.log('========== CLICK SUR TEST ==========', 'Événements', 0);
+        Dashboard.sendData('test');
+    });
 
-        $(document).on('click', 'input#TEST_button', function () {
-            Utils.log('========== CLICK SUR TEST ==========', 'Événements', 0);
-            Dashboard.sendData('test');
-        });
+    $(document).on('click', 'input#CANCEL_button', function () {
+        Utils.log('Click sur Cancel', 'Événements');
+        window.location.href = '/app/' + app_path + '/' + viewName;
+    });
 
-        $(document).on('click', 'input#CANCEL_button', function () {
-            Utils.log('Click sur Cancel', 'Événements');
-            window.location.href = '/app/' + app_path + '/' + viewName;
-        });
+    $('body').on('change', '.radiobasis', function () {
+        Utils.log('Change radiobasis', 'Événements');
+        var cur = $(this).attr('id').replace('form-', '');
+        var selected_value = $('input[name="basis-' + cur + '"]:checked').val();
+        Utils.log({cur: cur, selected_value: selected_value}, 'Radiobasis change');
+        $('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value));
+        $('[id^=selectable]').selectable();
+        DatePickerManager.apply();
+    });
 
-        $('body').on('change', '.radiobasis', function () {
-            Utils.log('Change radiobasis', 'Événements');
-            var cur = $(this).attr('id').replace('form-', '');
-            var selected_value = $('input[name="basis-' + cur + '"]:checked').val();
-            Utils.log({cur: cur, selected_value: selected_value}, 'Radiobasis change');
-            $('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value));
-            $('[id^=selectable]').selectable();
-            DatePickerManager.apply();
-        });
-
-    }); // Fin du require principal
+}); // Fin du require principal
 }); // Fin du require initial

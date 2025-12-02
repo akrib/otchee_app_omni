@@ -62,8 +62,11 @@
        + "</span>"
 | eval dt_filter_display=if(isnotnull(dt_filter) AND dt_filter!="", "<br><span class='fieldlist'>Custom filter(s) : </span><span class='tag'>".replace(dt_filter, ";", "</span><span class='tag'>")."</span>", "")
 | eval dt_pattern_display=if(isnotnull(dt_pattern) AND dt_pattern!="", "<br><span class='fieldlist'>Pattern(s) : </span><span class='tag'>".replace(dt_pattern, ";", "</span><span class='tag'>")."</span>", "")
+| eval dt_type_category=if(dt_filter=="1=1", "ITSI", "CUSTOM")
+| eval dt_type_badge=if(dt_type_category=="ITSI", "<span class='dt-type-badge dt-type-itsi'>ITSI</span>", "<span class='dt-type-badge dt-type-custom'>CUSTOM</span>")
+| eval modify_link=if(dt_type_category=="ITSI", "./itsi__modify_maintenance?DT_ID=".ID."&selected_version=".version, "./itsi__modify_custom_maintenance?DT_ID=".ID."&selected_version=".version)
 | eval data2HTML="<tr class='row-search'>"
-+ "<td class='col-search'><div class='title-search'> ID [ " 
++ "<td class='col-search'><div class='title-search'> ".dt_type_badge." ID [ " 
 + ID 
 + " ] ".if(flag_dt==1,"<span class='led' type='up'></span>","<span class='led' type='down'></span>")." <span class='tag-search-li pull-right'><b class='search-bold'>  Auteur:</b> " + creator +"</span>"
 + "<span class='tag-search-li pull-right'><b class='search-bold'>  Derniere MAJ:</b> " + last_update + "</span>"
@@ -86,8 +89,8 @@
 +"<a href='./itsi__maintenance_logs?form.input_ID="
 + ID
 + "' target='_blank'><img class='img-option' src='/static/app/otchee_app_omni/media/analytics.gif' width='75px' alt='Trace Logs' title='Trace Logs'></img></a><br>"
-+"<a href='./itsi__modify_maintenance?DT_ID="
-+ ID  + "&selected_version=" + version
++"<a href='"
++ modify_link
 + "' target='_blank'><img class='img-option' src='/static/app/otchee_app_omni/media/browser.gif' width='75px' alt='Modifier' title='Modifier'></img></a><br>"
 +"<a href='./itsi__maintenance_target?form.DT_ID="
 + ID
@@ -548,6 +551,32 @@ i.icon-downtime {
 	margin: 3px 3px 3px 3px !important;
 	padding: 3px 7px !important;
 	margin-right: 0;
+}
+
+/* Styles pour les badges ITSI/CUSTOM */
+.dt-type-badge {
+	font-family: "Roboto", sans-serif;
+	font-size: 11px;
+	font-weight: 700;
+	border-radius: 3px;
+	color: #fff;
+	cursor: default;
+	display: inline-block;
+	margin-right: 8px !important;
+	padding: 4px 8px !important;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	vertical-align: middle;
+}
+
+.dt-type-itsi {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.dt-type-custom {
+	background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+	box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);
 }
 
 .omniassistant {

@@ -1,13 +1,13 @@
 <form version="1.1" theme="light" script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js" hideEdit="true">
-  <label>ITSI : Add Maintenance_v2</label>
+  <label>ITSI : Add Maintenance</label>
   <init>
     <set token="toast_message">information incomplete</set>
     <unset token="service_selected"></unset>
     <unset token="kpi_selected"></unset>
     <unset token="entity_selected"></unset>
-    <set token="dt_filter_selected">isnotnull(omni_service)</set>
+    <set token="dt_filter_selected">1=1</set>
     <!--<unset token="service_select_input_type"></unset>-->
-    <set token="hide">1</set>
+    <!-- <set token="hide">1</set> -->
     <!--<eval token="email">$env:user_email$</eval>-->
     <!--<eval token="form.email">$env:user_email$</eval>-->
   </init>

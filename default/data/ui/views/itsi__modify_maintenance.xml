@@ -1,5 +1,5 @@
 <form script="common\assets\js\step_wizard_control\step_wizard_control_v2.js,common\assets\js\modal_popup\modal_popup.js,omni/omni.js" hideEdit="true" version="1.1">
-  <label>ITSI : Modify Maintenance v2</label>
+  <label>ITSI : Modify Maintenance</label>
   <init>
     <eval token="update">now()</eval>
     <set token="stepLabel">firstStep</set>
@@ -94,7 +94,7 @@
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
     </query>
-  </search>  
+  </search>
   <fieldset submitButton="false"></fieldset>
   <row depends="$DT_ID$" rejects="$update_full_loading$">
     <panel>
@@ -256,20 +256,44 @@
   <row depends="$step_0$,$hide$">
     <html>
       <table>
-        <tr><th>update_full_loading</th><th>$update_full_loading$</th></tr>
-        <tr><td>DT_ID</td><td>$DT_ID$</td></tr>
-        <tr><td>form.service_select_input_type</td><td>$form.service_select_input_type$</td></tr>
-        <tr><td>form.service_concat</td><td>$form.service_concat$</td></tr>
-        <tr><td>form.kpi_select_input_type</td><td>$form.kpi_select_input_type$</td></tr>
-        <tr><td>form.kpi_concat</td><td>$form.kpi_concat$</td></tr>
-        <tr><td>form.entity_select_input_type</td><td>$form.entity_select_input_type$</td></tr>
-        <tr><td>form.entity_concat</td><td>$form.entity_concat$</td></tr>
+        <tr>
+          <th>update_full_loading</th>
+          <th>$update_full_loading$</th>
+        </tr>
+        <tr>
+          <td>DT_ID</td>
+          <td>$DT_ID$</td>
+        </tr>
+        <tr>
+          <td>form.service_select_input_type</td>
+          <td>$form.service_select_input_type$</td>
+        </tr>
+        <tr>
+          <td>form.service_concat</td>
+          <td>$form.service_concat$</td>
+        </tr>
+        <tr>
+          <td>form.kpi_select_input_type</td>
+          <td>$form.kpi_select_input_type$</td>
+        </tr>
+        <tr>
+          <td>form.kpi_concat</td>
+          <td>$form.kpi_concat$</td>
+        </tr>
+        <tr>
+          <td>form.entity_select_input_type</td>
+          <td>$form.entity_select_input_type$</td>
+        </tr>
+        <tr>
+          <td>form.entity_concat</td>
+          <td>$form.entity_concat$</td>
+        </tr>
       </table>
     </html>
-    </row>  
+  </row>
   <row depends="$step_0$,$service_select_input_type$,$hide$">
     <panel>
-      <title>DEBUG =&gt; service_selected : $service_selected$     </title>
+      <title>DEBUG =&gt; service_selected : $service_selected$</title>
       <table>
         <title>service query</title>
         <search base="base_service">
