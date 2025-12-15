@@ -1334,9 +1334,9 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     var downtimeJsonString = JSON.stringify(downtimeJsonArray);
                     Utils.log(downtimeJsonString, 'JSON string avant échappement');
                     
-                    downtimeJsonString = downtimeJsonString
-                        .replace(/\\/g, '\\\\')
-                        .replace(/"/g, '\\"');
+                    // downtimeJsonString = downtimeJsonString
+                    //     .replace(/\\/g, '\\\\')
+                    //     .replace(/"/g, '\\"');
                     
                     Utils.log(downtimeJsonString, 'JSON string après échappement');
                     
