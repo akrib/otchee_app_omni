@@ -86,13 +86,21 @@
   </search>
   <search id="base_entity">
     <query>   
-| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
+| inputlookup itsi_entities | rename title as entity_title
+| lookup service_kpi_lookup _key AS services._key OUTPUT title AS service_title
+| eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
+| where valid&gt;0
+| stats count as _c by entity_title
+```| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
 | eval value=spath(value,"{}") 
 | stats count by value 
 | fromjson value 
+| stats values(itsi_event_name) as itsi_event_name by services
 | spath input=services path=title output=service_title 
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
+| stats count as _c by itsi_event_name
+| rename itsi_event_name as entity_title```
     </query>
   </search>
   <fieldset submitButton="false"></fieldset>
