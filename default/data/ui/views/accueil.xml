@@ -630,7 +630,7 @@
 					"type": "drilldown.linkToDashboard",
 					"options": {
 						"app": "otchee_app_omni",
-						"dashboard": "add_maintenance"
+						"dashboard": "itsi__add_maintenance"
 					}
 				}
 			]
@@ -646,7 +646,7 @@
 					"type": "drilldown.linkToDashboard",
 					"options": {
 						"app": "otchee_app_omni",
-						"dashboard": "add_custom"
+						"dashboard": "itsi__add_custom_maintenance"
 					}
 				}
 			]
@@ -2988,3 +2988,4 @@
 }
     ]]></definition>
 </dashboard>
+
