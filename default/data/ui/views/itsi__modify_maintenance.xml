@@ -68,6 +68,7 @@
 | spath input=kpi path=_key output=search_id 
 | spath input=kpi path=service_id output=service_id 
 | fields service_title service_id
+| eval service_title=lower(service_title)
 | table *
     </query>
   </search>
@@ -81,6 +82,7 @@
 | where valid&gt;0
 | stats count by kpis
 | spath input=kpis path=title output=kpi_title
+| eval kpi_title=lower(kpi_title)
 | table kpi_title
       </query>
   </search>
@@ -91,6 +93,7 @@
 | eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
 | stats count as _c by entity_title
+| eval entity_title=lower(entity_title)
 ```| rest splunk_server=local /servicesNS/nobody/SA-ITOA/itoa_interface/entity report_as=text 
 | eval value=spath(value,"{}") 
 | stats count by value 
