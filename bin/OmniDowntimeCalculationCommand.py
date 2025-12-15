@@ -472,8 +472,9 @@ def evaluate_filter(record, filter_expression, logger):
     """
     Évalue si un événement correspond à une expression de filtre
     
-    Supporte les opérateurs: =, !=, <, >, <=, >=
-    Supporte les opérateurs logiques: AND, OR
+    Supporte les opérateurs: =, !=, <, >, <=, >=, LIKE
+    Supporte les opérateurs logiques: AND, OR, NOT
+    Supporte LIKE avec wildcards: %value%, value%, %value
     
     Args:
         record: L'enregistrement Splunk
@@ -486,55 +487,194 @@ def evaluate_filter(record, filter_expression, logger):
     try:
         if not filter_expression or filter_expression.strip() == '':
             return True
-            
-        pattern = r'(\w+)\s*(<=|>=|!=|=|<|>)\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[\d.]+)'
         
-        def evaluate_comparison(match):
-            field_name = match.group(1)
-            operator = match.group(2)
-            expected_value = match.group(3).strip('"\'')
+        # Traiter NOT en premier
+        expression = filter_expression.strip()
+        negate = False
+        
+        if expression.upper().startswith('NOT '):
+            negate = True
+            expression = expression[4:].strip()
+        
+        # Séparer les expressions AND/OR
+        # On cherche AND et OR en dehors des guillemets
+        def split_logical_operators(expr):
+            """Divise l'expression par AND/OR en respectant les guillemets"""
+            parts = []
+            current = []
+            in_quotes = False
+            quote_char = None
+            i = 0
             
-            actual_value = record.get(field_name, '')
+            while i < len(expr):
+                char = expr[i]
+                
+                if char in ('"', "'") and (i == 0 or expr[i-1] != '\\'):
+                    if not in_quotes:
+                        in_quotes = True
+                        quote_char = char
+                    elif char == quote_char:
+                        in_quotes = False
+                        quote_char = None
+                
+                if not in_quotes:
+                    # Chercher AND
+                    if expr[i:i+5].upper() == ' AND ':
+                        parts.append((''.join(current).strip(), 'AND'))
+                        current = []
+                        i += 5
+                        continue
+                    # Chercher OR
+                    elif expr[i:i+4].upper() == ' OR ':
+                        parts.append((''.join(current).strip(), 'OR'))
+                        current = []
+                        i += 4
+                        continue
+                
+                current.append(char)
+                i += 1
             
-            try:
-                expected_num = float(expected_value)
-                actual_num = float(actual_value)
-                is_numeric = True
-            except (ValueError, TypeError):
-                is_numeric = False
+            if current:
+                parts.append((''.join(current).strip(), None))
             
-            if is_numeric:
-                if operator == '=': return actual_num == expected_num
-                elif operator == '!=': return actual_num != expected_num
-                elif operator == '<': return actual_num < expected_num
-                elif operator == '>': return actual_num > expected_num
-                elif operator == '<=': return actual_num <= expected_num
-                elif operator == '>=': return actual_num >= expected_num
-            else:
-                actual_str = str(actual_value)
-                expected_str = str(expected_value)
-                if operator == '=': return actual_str == expected_str
-                elif operator == '!=': return actual_str != expected_str
-                elif operator == '<': return actual_str < expected_str
-                elif operator == '>': return actual_str > expected_str
-                elif operator == '<=': return actual_str <= expected_str
-                elif operator == '>=': return actual_str >= expected_str
+            return parts
+        
+        # Pattern pour LIKE avec gestion des wildcards
+        like_pattern = r'(\w+)\s+LIKE\s+(["\'])([^"\']*)\2'
+        
+        # Pattern pour les opérateurs de comparaison standard
+        comparison_pattern = r'(\w+)\s*(<=|>=|!=|=|<|>)\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[\d.]+)'
+        
+        # Pattern pour isnull et isnotnull
+        isnull_pattern = r'isnull\((\w+)\)'
+        isnotnull_pattern = r'isnotnull\((\w+)\)'
+        
+        def evaluate_single_expression(expr):
+            """Évalue une expression unique (sans AND/OR)"""
+            expr = expr.strip()
             
+            # Gérer NOT au début de l'expression
+            local_negate = False
+            if expr.upper().startswith('NOT '):
+                local_negate = True
+                expr = expr[4:].strip()
+            
+            # Vérifier isnull
+            isnull_match = re.match(isnull_pattern, expr, re.IGNORECASE)
+            if isnull_match:
+                field_name = isnull_match.group(1)
+                actual_value = record.get(field_name, '')
+                result = (actual_value == '' or actual_value is None)
+                return not result if local_negate else result
+            
+            # Vérifier isnotnull
+            isnotnull_match = re.match(isnotnull_pattern, expr, re.IGNORECASE)
+            if isnotnull_match:
+                field_name = isnotnull_match.group(1)
+                actual_value = record.get(field_name, '')
+                result = (actual_value != '' and actual_value is not None)
+                return not result if local_negate else result
+            
+            # Vérifier LIKE
+            like_match = re.match(like_pattern, expr, re.IGNORECASE)
+            if like_match:
+                field_name = like_match.group(1)
+                pattern_value = like_match.group(3)
+                actual_value = str(record.get(field_name, ''))
+                
+                # Convertir le pattern LIKE en regex
+                # Échapper les caractères spéciaux regex sauf %
+                import re as regex_module
+                escaped_pattern = regex_module.escape(pattern_value)
+                # Remplacer \% (échappé) par .*
+                regex_pattern = escaped_pattern.replace(r'\%', '.*')
+                
+                # Ancrer le pattern pour correspondance exacte
+                regex_pattern = '^' + regex_pattern + '$'
+                
+                try:
+                    result = bool(regex_module.match(regex_pattern, actual_value, regex_module.IGNORECASE))
+                    logger.debug(f"LIKE evaluation: field={field_name}, pattern={pattern_value}, "
+                               f"actual={actual_value}, regex={regex_pattern}, result={result}")
+                    return not result if local_negate else result
+                except Exception as e:
+                    logger.error(f"Erreur regex LIKE: {str(e)}")
+                    return False
+            
+            # Vérifier les comparaisons standard
+            comparison_match = re.match(comparison_pattern, expr)
+            if comparison_match:
+                field_name = comparison_match.group(1)
+                operator = comparison_match.group(2)
+                expected_value = comparison_match.group(3).strip('"\'')
+                
+                actual_value = record.get(field_name, '')
+                
+                # Tenter une comparaison numérique
+                try:
+                    expected_num = float(expected_value)
+                    actual_num = float(actual_value)
+                    is_numeric = True
+                except (ValueError, TypeError):
+                    is_numeric = False
+                
+                if is_numeric:
+                    if operator == '=': result = actual_num == expected_num
+                    elif operator == '!=': result = actual_num != expected_num
+                    elif operator == '<': result = actual_num < expected_num
+                    elif operator == '>': result = actual_num > expected_num
+                    elif operator == '<=': result = actual_num <= expected_num
+                    elif operator == '>=': result = actual_num >= expected_num
+                    else: result = False
+                else:
+                    actual_str = str(actual_value)
+                    expected_str = str(expected_value)
+                    if operator == '=': result = actual_str == expected_str
+                    elif operator == '!=': result = actual_str != expected_str
+                    elif operator == '<': result = actual_str < expected_str
+                    elif operator == '>': result = actual_str > expected_str
+                    elif operator == '<=': result = actual_str <= expected_str
+                    elif operator == '>=': result = actual_str >= expected_str
+                    else: result = False
+                
+                return not result if local_negate else result
+            
+            logger.warning(f"Expression non reconnue: {expr}")
             return False
         
-        comparisons = re.finditer(pattern, filter_expression)
-        result_expr = filter_expression
+        # Séparer l'expression par AND/OR
+        parts = split_logical_operators(expression)
         
-        for match in comparisons:
-            comparison_result = evaluate_comparison(match)
-            result_expr = result_expr.replace(match.group(0), str(comparison_result))
+        if len(parts) == 1:
+            # Expression simple
+            result = evaluate_single_expression(parts[0][0])
+            return not result if negate else result
         
-        result_expr = result_expr.replace(' AND ', ' and ').replace(' OR ', ' or ')
+        # Expression complexe avec AND/OR
+        results = []
+        operators = []
         
-        return eval(result_expr)
+        for part, operator in parts:
+            results.append(evaluate_single_expression(part))
+            if operator:
+                operators.append(operator)
+        
+        # Évaluer avec les opérateurs logiques
+        # Priorité: AND avant OR
+        final_result = results[0]
+        
+        for i, op in enumerate(operators):
+            if op == 'AND':
+                final_result = final_result and results[i + 1]
+            elif op == 'OR':
+                final_result = final_result or results[i + 1]
+        
+        return not final_result if negate else final_result
         
     except Exception as e:
         logger.error(f"Erreur lors de l'évaluation du filtre '{filter_expression}': {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return False
 
 
@@ -769,4 +909,5 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
 
 
 if __name__ == '__main__':
+
     dispatch(DLTDowntimeCalculationCommand, sys.argv, sys.stdin, sys.stdout, __name__)
