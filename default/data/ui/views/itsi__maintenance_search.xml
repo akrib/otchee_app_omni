@@ -39,8 +39,8 @@
 | eval orig_time=$queldate.latest_epoch$
 | spath input=downtime
 | rename {}.id as dt_id, {}.dt_type as dt_type, {}.begin_date as begin_date, {}.end_date as end_date, {}.begin_time as begin_time, {}.end_time as end_time, {}.dt_filter as period_dt_filter, {}.dt_pattern as period_dt_pattern
-| eval nbperiode=mvcount(dt_id)
-| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=true
+| eval nbperiode=mvcount(dt_id), omni_skip_filter=1
+| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=omni_skip_filter
 | eval entity=mvjoin(entity, ";"),
        kpi=mvjoin(kpi,";"),
        service=mvjoin(service, ";")

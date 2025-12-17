@@ -718,21 +718,21 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
 
     skip_filter = Option(
         doc="""
-        **Syntax:** **skip_filter=***<bool>*
-        **Description:** Si true, ignore l'évaluation des filtres dt_filter et considère uniquement la période de downtime
-        **Default:** false""",
+        **Syntax:** **skip_filter=***<fieldname>*
+        **Description:** Nom du champ à évaluer. Si la valeur du champ est 1, ignore l'évaluation des filtres dt_filter
+        **Default:** Aucun (le filtre est toujours évalué si non spécifié)""",
         require=False,
-        default=False,
-        validate=validators.Boolean()
+        default=None,
+        validate=validators.Fieldname()
     )
 
     def stream(self, records):
         epoctime = str(self.epoctime).rstrip()
         dtfield = str(self.dtfield).rstrip()
         outputfield = str(self.outputfield).rstrip()
-        skip_filter = self.skip_filter  # Récupération de l'option
+        skip_filter_field = str(self.skip_filter).rstrip() if self.skip_filter else None
 
-        self.logger.debug("DowntimeCalculationCommand => skip_filter: %s", skip_filter)
+        self.logger.debug("DowntimeCalculationCommand => skip_filter_field: %s", skip_filter_field)
 
         for record in records:
             record[outputfield] = 0
@@ -848,11 +848,25 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                 # ============================================
                 in_filter = 0
                 
+                # Déterminer si on doit skip le filtre en fonction du champ
+                should_skip_filter = False
+                
+                if skip_filter_field:
+                    field_value = record.get(skip_filter_field, "0")
+                    # Convertir en int si possible
+                    try:
+                        should_skip_filter = (int(field_value) == 1)
+                    except (ValueError, TypeError):
+                        should_skip_filter = (str(field_value).lower() in ["1", "true", "yes"])
+                    
+                    self.logger.debug("DowntimeCalculationCommand => skip_filter from field '%s': value=%s, should_skip=%s", 
+                                    skip_filter_field, field_value, should_skip_filter)
+                
                 if current_downtime_result == 1:
-                    if skip_filter:
-                        # Si skip_filter=true, on ignore l'évaluation du filtre
+                    if should_skip_filter:
+                        # Si le champ vaut 1, on ignore l'évaluation du filtre
                         in_filter = 1
-                        self.logger.debug("DowntimeCalculationCommand => skip_filter=true, in_filter forcé à 1")
+                        self.logger.debug("DowntimeCalculationCommand => skip_filter active (field=%s), in_filter forcé à 1", skip_filter_field)
                     else:
                         # Comportement normal : évaluation du filtre
                         self.logger.debug("DowntimeCalculationCommand => in_dt=1, testing filter: %s", dt_filter)
