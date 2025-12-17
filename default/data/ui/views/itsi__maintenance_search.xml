@@ -60,9 +60,9 @@
        + "</span>", service_tag="<span class='tag'>" 
        + replace(service, ";", "</span><span class='tag'>") 
        + "</span>"
-| eval dt_filter_display=if(isnotnull(dt_filter) AND dt_filter!="", "<br><span class='fieldlist'>Custom filter(s) : </span><span class='tag'>".replace(dt_filter, ";", "</span><span class='tag'>")."</span>", "")
-| eval dt_pattern_display=if(isnotnull(dt_pattern) AND dt_pattern!="", "<br><span class='fieldlist'>Pattern(s) : </span><span class='tag'>".replace(dt_pattern, ";", "</span><span class='tag'>")."</span>", "")
-| eval dt_type_category=if(dt_filter=="1=1", "ITSI", "CUSTOM")
+| eval dt_filter_display=if(step_opt=="000", "<br><span class='fieldlist'>Custom filter(s) : </span><span class='tag'>".replace(dt_filter, ";", "</span><span class='tag'>")."</span>", "")
+| eval dt_pattern_display="<br><span class='fieldlist'>Pattern(s) : </span><span class='tag'>".replace(dt_pattern, ";", "</span><span class='tag'>")."</span>"
+| eval dt_type_category=if(step_opt=="000", "CUSTOM" , "ITSI")
 | eval dt_type_badge=if(dt_type_category=="ITSI", "<span class='dt-type-badge dt-type-itsi'>ITSI</span>", "<span class='dt-type-badge dt-type-custom'>CUSTOM</span>")
 | eval modify_link=if(dt_type_category=="ITSI", "./itsi__modify_maintenance?DT_ID=".ID."&selected_version=".version, "./itsi__modify_custom_maintenance?DT_ID=".ID."&selected_version=".version)
 | eval data2HTML="<tr class='row-search'>"
