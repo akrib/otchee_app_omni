@@ -5,7 +5,8 @@
     <unset token="service_selected"></unset>
     <unset token="kpi_selected"></unset>
     <unset token="entity_selected"></unset>
-    <set token="dt_filter_selected">1=1</set>
+    <unset token="entity_selection"></unset>
+    <set token="dt_filter_selected">omni_skip_filter=1</set>
     <!--<unset token="service_select_input_type"></unset>-->
     <!-- <set token="hide">1</set> -->
     <!--<eval token="email">$env:user_email$</eval>-->
@@ -22,7 +23,6 @@
 | spath input=kpi path=_key output=search_id 
 | spath input=kpi path=service_id output=service_id 
 | fields service_title service_id
-| eval service_title=lower(service_title)
 | table *
     </query>
   </search>
@@ -36,7 +36,6 @@
 | where valid&gt;0
 | stats count by kpis
 | spath input=kpis path=title output=kpi_title
-| eval kpi_title=lower(kpi_title)
 | table kpi_title
       </query>
   </search>
@@ -44,7 +43,10 @@
     <query> 
 | inputlookup itsi_entities | rename title as entity_title
 | lookup service_kpi_lookup _key AS services._key OUTPUT title AS service_title
-| eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
+| lookup itsi_entity_types _key as entity_type_ids OUTPUT title as entity_type
+| fillnull value="No Entity Type" entity_type
+| search entity_type="$entity_input_type$"
+| eval service_data=replace("$service_selected$","\*","%"), service_data=split(lower(service_data),";"),valid=0, service_title=if(isnull(service_title), "*", service_title), valid=mvmap(service_data,valid+if(lower(service_title) LIKE(service_data),1,0)), valid=sum(valid)
 | where valid&gt;0
 | stats count as _c by entity_title
 | eval entity_title=lower(entity_title)
@@ -67,7 +69,7 @@
         <h2 style="font-size:16px !important;">
           <a href="./accueil">
             <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
-            <strong>Revenir à l'écran "Menu des Maintenances"</strong>
+            <strong>Revenir Ã  l'Ã©cran "Menu des Maintenances"</strong>
           </a>
         </h2>
       </html>
@@ -96,9 +98,9 @@
            <p id="swc_step_0" data-label="Service" data-value="" data-showPreviousButton="0" data-validateToken="service_selected"/>  
            <p id="swc_step_1" data-label="KPI" data-validateToken="kpi_selected"/>    
            <p id="swc_step_2" data-label="Entity" data-validateToken="entity_selected"/>
-           <p id="swc_step_3" data-label="Pattern" data-validateToken="dt_pattern_selected" data-showNextButton="false"/>  
+           <p id="swc_step_3" data-label="Source" data-validateToken="dt_pattern_selected" data-showNextButton="false"/>  
            <p id="swc_step_4" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
-           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
+           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="TerminÃ©"/>-->
         <div id="step-control-wizard"/>
         </html>
     </panel>
@@ -113,7 +115,7 @@
   <row depends="$step_0$">
     <panel>
       <input type="dropdown" token="service_select_input_type">
-        <label>Type de sélection</label>
+        <label>Type de sÃ©lection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -123,7 +125,7 @@
             <unset token="service_selected"></unset>
             <unset token="service_select_dual"></unset>
             <unset token="service_select_rex"></unset>
-            <!-- Pour "All", on définit directement calculated -->
+            <!-- Pour "All", on dÃ©finit directement calculated -->
             <set token="service_calculated">%</set>
           </condition>
           <condition value="2">
@@ -226,7 +228,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non défini"
+         true(), "Non dÃ©fini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -261,7 +263,7 @@
   <row depends="$step_1$">
     <panel>
       <input type="dropdown" token="kpi_select_input_type">
-        <label>Type de sélection</label>
+        <label>Type de sÃ©lection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -271,7 +273,7 @@
             <unset token="kpi_selected"></unset>
             <unset token="kpi_select_dual"></unset>
             <unset token="kpi_select_rex"></unset>
-            <!-- Pour "All", on définit directement calculated -->
+            <!-- Pour "All", on dÃ©finit directement calculated -->
             <set token="kpi_calculated">%</set>
           </condition>
           <condition value="2">
@@ -374,7 +376,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non défini"
+         true(), "Non dÃ©fini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -408,8 +410,30 @@
   </row>
   <row depends="$step_2$">
     <panel>
+    <input type="dropdown" token="entity_input_type" searchWhenChanged="true">
+        <label>Entity Type</label>
+        <fieldForLabel>entity_type</fieldForLabel>
+        <fieldForValue>entity_type</fieldForValue>
+        <search>
+          <query>| inputlookup itsi_entities | rename title as entity_title | fields entity_type_ids entity_title
+| lookup itsi_entity_types _key as entity_type_ids OUTPUT title as entity_type
+| fillnull value="No Entity Type" entity_type
+| dedup entity_type
+| mvexpand entity_type
+| dedup entity_type
+| table entity_type</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+
+      </input>
+      </panel>
+  </row>
+  <row depends="$step_2$,$entity_input_type$">
+    <panel>
+      
       <input type="dropdown" token="entity_select_input_type">
-        <label>Type de sélection</label>
+        <label>Type de sÃ©lection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -419,7 +443,7 @@
             <unset token="entity_selected"></unset>
             <unset token="entity_select_dual"></unset>
             <unset token="entity_select_rex"></unset>
-            <!-- Pour "All", on définit directement calculated -->
+            <!-- Pour "All", on dÃ©finit directement calculated -->
             <set token="entity_calculated">%</set>
           </condition>
           <condition value="2">
@@ -522,7 +546,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non défini"
+         true(), "Non dÃ©fini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -550,9 +574,9 @@
   <row depends="$step_3$">
     <panel>
       <input type="dropdown" token="pattern_type">
-        <label>pattern type</label>
-        <choice value="exist">pattern existant</choice>
-        <choice value="new">Nouveau pattern</choice>
+        <label>Source</label>
+        <choice value="exist">Source existante</choice>
+        <choice value="new">Nouvelle source</choice>
         <change>
           <condition match="$pattern_type$=&quot;exist&quot;">
             <set token="pattern_exist">1</set>
@@ -807,12 +831,12 @@ padding:10px;
 .splunk-multidropdown{
 min-height: 32px;
 max-height: 300px;
-overflow-y: auto; /* Permet le scroll si dépasse 300px */
+overflow-y: auto; /* Permet le scroll si dÃ©passe 300px */
 border: 1px solid rgb(129, 141, 153);
 padding: 5px;
 vertical-align: middle;
 width: 800px !important;
-height: auto !important; /* Changé : hauteur automatique */
+height: auto !important; /* ChangÃ© : hauteur automatique */
 background: #e1e6eb !important;
 line-height: 30px !important;
 display: inline-flex;
@@ -822,12 +846,12 @@ background:#fff;
 .splunk-multidropdown [class^="BoxStyles__Styled-"]{
 min-height: 32px;
 max-height: 300px;
-overflow-y: auto; /* Permet le scroll si dépasse 300px */
+overflow-y: auto; /* Permet le scroll si dÃ©passe 300px */
 border: 1px solid rgb(129, 141, 153);
 padding: 5px;
 vertical-align: middle;
 width: 788px !important;
-height: auto !important; /* Changé : hauteur automatique */
+height: auto !important; /* ChangÃ© : hauteur automatique */
 background: #fff !important;
 line-height: 30px !important;
 display: inline-flex;
@@ -844,7 +868,7 @@ background: #fff !important;
 
 .add.square.icon:before{
 left:40px;
-content:"➕";
+content:"âž•";
 }
 .add.square.icon{
 width:40px;
