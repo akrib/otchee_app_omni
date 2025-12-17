@@ -1,5 +1,5 @@
 var scriptName = 'Omni_Downtime';
-var scriptVersion = '0.8.8'; // Version corrigée
+var scriptVersion = '0.8.9'; // Version corrigée
 console.log('%c %s', 'background: #222; color: #bada55', scriptName + ' Version: ' + scriptVersion);
 
 var app_path = 'otchee_app_omni';
@@ -1334,10 +1334,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     var downtimeJsonString = JSON.stringify(downtimeJsonArray);
                     Utils.log(downtimeJsonString, 'JSON string avant échappement');
                     
-                    // downtimeJsonString = downtimeJsonString
-                    //     .replace(/\\/g, '\\\\')
-                    //     .replace(/"/g, '\\"');
-                    
+                    downtimeJsonString = Utils.escapeSPLString(downtimeJsonString);
                     Utils.log(downtimeJsonString, 'JSON string après échappement');
                     
                     var baseQuery = `| stats count as service
