@@ -1091,7 +1091,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                                 additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Filter: <em>${period.dt_filter}</em></span>`;
                             }
                             if (period.dt_policy && period.dt_policy !== '') {
-                                additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Pattern: <em>${period.dt_pattern}</em></span>`;
+                                additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Policy: <em>${period.dt_policy}</em></span>`;
                             }
                             if (period.id && period.id !== '') {
                                 additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #999;">ID: <code>${period.id}</code></span>`;
@@ -1260,7 +1260,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 }
                 
                 if (Utils.isNotNull(dt_policyToken) && dt_policyToken !== '') {
-                    selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_policyToken)}</td></tr>`;
+                    selectionDescHtml += `<tr><td><strong>Policy(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_policyToken)}</td></tr>`;
                 }
                 
                 var periodsHtml = UIManager.buildPeriodsDescriptionFromSource();
@@ -1413,18 +1413,18 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 
                 if (dashboardType == "update") {
                     if (Utils.isNotNull(dt_policy) && dt_policy !== '') {
-                        TokenManager.set('pattern_type', 'exist', true);
-                        TokenManager.set('pattern_exist', '1');
+                        TokenManager.set('policy_type', 'exist', true);
+                        TokenManager.set('policy_exist', '1');
                         TokenManager.set('dt_policy_select', dt_policy, true);
                         TokenManager.set('dt_policy_selected', dt_policy);
                         
-                        Utils.log('Pattern initialisé en mode "exist": ' + dt_policy, 'fillDashboard - Pattern');
+                        Utils.log('policy initialisé en mode "exist": ' + dt_policy, 'fillDashboard - policy');
                     } else {
-                        TokenManager.set('pattern_type', 'new', true);
-                        TokenManager.set('pattern_new', '1');
+                        TokenManager.set('policy_type', 'new', true);
+                        TokenManager.set('policy_new', '1');
                         TokenManager.set('dt_policy_selected', '');
                         
-                        Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
+                        Utils.log('policy initialisé en mode "new" (vide)', 'fillDashboard - policy');
                     }
                     
                     DataManager.updatePeriods(downtime, commentary);
@@ -1445,20 +1445,20 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         TokenManager.set("downtime_selected", downtime);
                         // TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
                         
-                        // FIX : Initialisation du pattern (copié depuis le mode update)
+                        // FIX : Initialisation du policy (copié depuis le mode update)
                         if (Utils.isNotNull(dt_policy) && dt_policy !== '') {
-                            TokenManager.set('pattern_type', 'exist', true);
-                            TokenManager.set('pattern_exist', '1');
+                            TokenManager.set('policy_type', 'exist', true);
+                            TokenManager.set('policy_exist', '1');
                             TokenManager.set('dt_policy_select', dt_policy, true);
                             TokenManager.set('dt_policy_selected', dt_policy);
                             
-                            Utils.log('Pattern initialisé en mode "exist": ' + dt_policy, 'fillDashboard - Pattern');
+                            Utils.log('policy initialisé en mode "exist": ' + dt_policy, 'fillDashboard - policy');
                         } else {
-                            TokenManager.set('pattern_type', 'new', true);
-                            TokenManager.set('pattern_new', '1');
+                            TokenManager.set('policy_type', 'new', true);
+                            TokenManager.set('policy_new', '1');
                             TokenManager.set('dt_policy_selected', '');
                             
-                            Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
+                            Utils.log('policy initialisé en mode "new" (vide)', 'fillDashboard - policy');
                         }
                         
                         var parsedFilter = CustomFilterParser.parse(dt_filter);
