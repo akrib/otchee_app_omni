@@ -413,7 +413,7 @@ class OmniKVUpdate(StreamingCommand):
         ]
         
         # Champs optionnels (peuvent être vides mais doivent exister)
-        optional_fields = ['dt_']
+        optional_fields = ['dt_policy']
         
         # Validation des champs obligatoires
         for field in required_fields:
