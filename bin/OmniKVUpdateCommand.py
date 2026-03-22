@@ -366,6 +366,23 @@ class OmniKVUpdate(StreamingCommand):
             record["result"] = str(result)
             yield record
 
+    def _prepare_record_for_kvstore(self, record):
+        """
+        Désérialise les champs JSON-string en objets natifs avant écriture dans le KVStore.
+        Sans ça, les champs multivalués sont stockés comme string et non comme array.
+        """
+        prepared = record.copy()
+        json_fields = ['downtime']  # Ajouter ici d'autres champs si nécessaire
+    
+        for field in json_fields:
+            if field in prepared and isinstance(prepared[field], str):
+                try:
+                    prepared[field] = json.loads(prepared[field])
+                except (json.JSONDecodeError, ValueError):
+                    pass  # Laisser tel quel si ce n'est pas du JSON valide
+    
+        return prepared
+    
     def _validate_add_fields(self, record):
         """
         Valide les champs requis pour l'ajout
@@ -489,15 +506,16 @@ class OmniKVUpdate(StreamingCommand):
             str: Message de confirmation
         """
         try:
+            prepared = self._prepare_record_for_kvstore(record)
             # Ajouter dans la collection principale
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
-            new_key = kv.add(record)
+            new_key = kv.add(prepared)
             
             # Ajouter dans le log de traçabilité
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
             record["action"] = "add"
             record["trace_timestamp"] = datetime.datetime.now().isoformat()
-            trace_log.add(record)
+            trace_log.add(prepared)
             
             self.logger.info(f"Record added successfully with key: {new_key}")
             return f"Ajout OK (key: {new_key})"
@@ -519,16 +537,16 @@ class OmniKVUpdate(StreamingCommand):
         """
         try:
             key = record["key"]
-            
+            prepared = self._prepare_record_for_kvstore(record)
             # Mise à jour dans la collection principale
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
-            kv.update(key, record)
+            kv.update(key, prepared)
             
             # Traçabilité - Enregistrement de la mise à jour
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
             
             # Log de l'action update
-            trace_record = record.copy()
+            trace_record = prepared.copy()
             trace_record["action"] = "update"
             trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
             trace_log.add(trace_record)
