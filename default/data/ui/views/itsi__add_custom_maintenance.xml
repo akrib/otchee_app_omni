@@ -47,7 +47,7 @@
       <html>
        <div id="step_control_wizard_holder"/>
            <p id="swc_step_0" data-label="Champs Custom" data-value="" data-showPreviousButton="0" data-validateToken="dt_filter_selected"/> 
-           <p id="swc_step_1" data-label="Pattern" data-validateToken="dt_pattern_selected" data-showNextButton="false"/>   
+           <p id="swc_step_1" data-label="policy" data-validateToken="dt_policy_selected" data-showNextButton="false"/>   
            <p id="swc_step_2" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>     
            <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
         <div id="step-control-wizard"/>
@@ -223,51 +223,51 @@
   </row>
   <row depends="$step_1$">
     <panel>
-      <input type="dropdown" token="pattern_type">
-        <label>pattern type</label>
-        <choice value="exist">pattern existant</choice>
-        <choice value="new">Nouveau pattern</choice>
+      <input type="dropdown" token="policy_type">
+        <label>policy type</label>
+        <choice value="exist">policy existant</choice>
+        <choice value="new">Nouveau policy</choice>
         <change>
-          <condition match="$pattern_type$=&quot;exist&quot;">
-            <set token="pattern_exist">1</set>
-            <unset token="pattern_new"></unset>
-            <unset token="dt_pattern_selected"></unset>
+          <condition match="$policy_type$=&quot;exist&quot;">
+            <set token="policy_exist">1</set>
+            <unset token="policy_new"></unset>
+            <unset token="dt_policy_selected"></unset>
             <unset token="dt_patern_select"></unset>
-            <unset token="dt_pattern_text"></unset>
+            <unset token="dt_policy_text"></unset>
           </condition>
-          <condition match="$pattern_type$=&quot;new&quot;">
-            <set token="pattern_new">1</set>
-            <unset token="pattern_exist"></unset>
-            <unset token="dt_pattern"></unset>
+          <condition match="$policy_type$=&quot;new&quot;">
+            <set token="policy_new">1</set>
+            <unset token="policy_exist"></unset>
+            <unset token="dt_policy"></unset>
             <unset token="dt_patern_select"></unset>
-            <unset token="dt_pattern_text"></unset>
+            <unset token="dt_policy_text"></unset>
           </condition>
         </change>
       </input>
-      <input type="dropdown" token="dt_patern_select" depends="$pattern_exist$">
-        <label>Downtime Pattern</label>
+      <input type="dropdown" token="dt_patern_select" depends="$policy_exist$">
+        <label>Downtime policy</label>
         <change>
-          <set token="dt_pattern_selected">$dt_patern_select$</set>
+          <set token="dt_policy_selected">$dt_patern_select$</set>
         </change>
-        <fieldForLabel>dt_pattern</fieldForLabel>
-        <fieldForValue>dt_pattern</fieldForValue>
+        <fieldForLabel>dt_policy</fieldForLabel>
+        <fieldForValue>dt_policy</fieldForValue>
         <search>
           <query>
 | inputlookup omni_kv_def 
-| stats count as _c by dt_pattern
+| stats count as _c by dt_policy
 | appendpipe
 [| stats count 
  | where count=0
- | eval dt_pattern="-"
- |table dt_pattern]
+ | eval dt_policy="-"
+ |table dt_policy]
           </query>
         </search>
       </input>
-      <input type="text" token="dt_pattern_text" depends="$pattern_new$">
-        <label>downtime pattern</label>
+      <input type="text" token="dt_policy_text" depends="$policy_new$">
+        <label>downtime policy</label>
         <default></default>
         <change>
-          <set token="dt_pattern_selected">$dt_pattern_text$</set>
+          <set token="dt_policy_selected">$dt_policy_text$</set>
         </change>
       </input>
     </panel>
