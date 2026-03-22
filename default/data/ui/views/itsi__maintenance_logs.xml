@@ -62,7 +62,7 @@
                 "Du " + 'begin_date{}' + " " + 'begin_time{}' + " " + 
                 "Au " + 'end_date{}' + " " + 'end_time{}' + 
                 if('dt_filter{}'!="", " | Filter: " + 'dt_filter{}', "") + 
-                if('dt_pattern{}'!="", " | Pattern: " + 'dt_pattern{}', "") + 
+                if('dt_policy{}'!="", " | policy: " + 'dt_policy{}', "") + 
                 "###", periods_summary)]
         | eval periods_summary=if(periods_summary="", "Aucune période définie", periods_summary)
       ]]>
@@ -214,8 +214,8 @@
           <query>
             | sort -dt_update
             | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
-            | table ID,last_update,action,creator,service,kpi,entity,commentary,downtime,periods_summary,period_count,dt_filter,dt_pattern
-            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE,action as ACTION,last_update as "DATE",creator as AUTEUR,downtime as DOWNTIME,periods_summary as PERIODS,period_count as NB_PERIODS,dt_filter as DT_FILTER,dt_pattern as DT_PATTERN
+            | table ID,last_update,action,creator,service,kpi,entity,commentary,downtime,periods_summary,period_count,dt_filter,dt_policy
+            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE,action as ACTION,last_update as "DATE",creator as AUTEUR,downtime as DOWNTIME,periods_summary as PERIODS,period_count as NB_PERIODS,dt_filter as DT_FILTER,dt_policy as DT_policy
           </query>
         </search>
         <option name="count">100</option>
