@@ -411,7 +411,7 @@ def parse_downtime_data(downtime_str):
         
     Returns:
         dict: Dictionnaire avec les clés dt_type, begin_date, end_date, 
-              begin_time, end_time, dt_filter, dt_pattern, id
+              begin_time, end_time, dt_filter, dt_policy, id
     """
     try:
         downtime_json = json.loads(downtime_str)
@@ -440,7 +440,7 @@ def parse_downtime_data(downtime_str):
             'begin_time': downtime_json.get('begin_time', ''),
             'end_time': downtime_json.get('end_time', ''),
             'dt_filter': downtime_json.get('dt_filter', ''),
-            'dt_pattern': downtime_json.get('dt_pattern', ''),
+            'dt_policy': downtime_json.get('dt_policy', ''),
             'format': 'json',
             'original_json': downtime_json,
             'original_str': downtime_str
@@ -462,7 +462,7 @@ def parse_downtime_data(downtime_str):
             'begin_time': data_downtime[3],
             'end_time': data_downtime[4],
             'dt_filter': '',
-            'dt_pattern': '',
+            'dt_policy': '',
             'format': 'legacy',
             'original_str': downtime_str
         }
@@ -790,7 +790,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                 begin_dt_hours = parsed_dt['begin_time']
                 end_dt_hours = parsed_dt['end_time']
                 dt_filter = parsed_dt['dt_filter']
-                dt_pattern = parsed_dt['dt_pattern']
+                dt_policy = parsed_dt['dt_policy']
                 dt_id = parsed_dt['id']
                 
                 current_downtime_result = 0
@@ -898,8 +898,8 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         record[outputfield] = 1
                         if dt_filter:
                             record['dt_filter'] = dt_filter
-                        if dt_pattern:
-                            record['dt_pattern'] = dt_pattern
+                        if dt_policy:
+                            record['dt_policy'] = dt_policy
                         if dt_id:
                             record['dt_id'] = dt_id
                         self.logger.debug("DowntimeCalculationCommand => MATCH FOUND! in_dt=1 AND in_filter=1")
