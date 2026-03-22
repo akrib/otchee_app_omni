@@ -207,9 +207,9 @@ require([
                 output += '<br/><span class="period-filter"><strong>Filtre:</strong> ' + period.dt_filter + '</span>';
             }
 
-            // Pattern
-            if (isNotNull(period.dt_pattern) && period.dt_pattern !== '') {
-                output += '<br/><span class="period-pattern"><strong>Pattern:</strong> ' + period.dt_pattern + '</span>';
+            // policy
+            if (isNotNull(period.dt_policy) && period.dt_policy !== '') {
+                output += '<br/><span class="period-policy"><strong>Policy:</strong> ' + period.dt_policy + '</span>';
             }
 
             output += '</div>';
@@ -253,7 +253,7 @@ require([
         canRender: function (cell) {
             return _(['O', 'ID', 'DATE', 'ACTION', 'SERVICE', 'KPI', 'ENTITY', 'COMMENTAIRE', 
                      'VERSION', 'FOREIGN_UPDATE', 'DOWNTIME', 'PERIODS', 'NB_PERIODS', 
-                     'DT_FILTER', 'DT_PATTERN']).contains(cell.field);
+                     'DT_FILTER', 'DT_POLICY']).contains(cell.field);
         },
 
         render: function ($td, cell) {
@@ -299,7 +299,7 @@ require([
             if (cell.field === 'COMMENTAIRE' || cell.field === 'SERVICE' || 
                 cell.field === 'KPI' || cell.field === 'ENTITY' || 
                 cell.field === 'DOWNTIME' || cell.field === 'PERIODS' ||  cell.field === 'NB_PERIODS' ||
-                cell.field === 'DT_FILTER' || cell.field === 'DT_PATTERN') {
+                cell.field === 'DT_FILTER' || cell.field === 'DT_POLICY') {
                 $td.addClass('range-cell').addClass('hide');
             }
             
@@ -358,8 +358,8 @@ require([
                 return cell.field === 'DT_FILTER';
             });
             
-            var dtPattern = _(rowData.cells).find(function (cell) {
-                return cell.field === 'DT_PATTERN';
+            var dtPolicy = _(rowData.cells).find(function (cell) {
+                return cell.field === 'DT_POLICY';
             });
 
             // Construction du HTML
@@ -371,13 +371,13 @@ require([
             html += "<tr><td><b class='search-bold'>KPI</b>: </td><td>" + itemize(kpi.value) + "</td></tr>";
             html += "<tr><td><b class='search-bold'>Entity</b>: </td><td>" + itemize(entity.value) + "</td></tr>";
             
-            // Filtres et patterns
+            // Filtres et policy
             if (isNotNull(dtFilter) && dtFilter.value !== '') {
                 html += "<tr><td><b class='search-bold'>Filtre personnalisé</b>: </td><td>" + dtFilter.value + "</td></tr>";
             }
             
-            if (isNotNull(dtPattern) && dtPattern.value !== '') {
-                html += "<tr><td><b class='search-bold'>Pattern</b>: </td><td>" + dtPattern.value + "</td></tr>";
+            if (isNotNull(dtPolicy) && dtPolicy.value !== '') {
+                html += "<tr><td><b class='search-bold'>Policy</b>: </td><td>" + dtPolicy.value + "</td></tr>";
             }
             
             html += "<tr><td><b class='search-bold'>Commentaire(s)</b>: </td><td>" + commentary.value + "</td></tr>";
