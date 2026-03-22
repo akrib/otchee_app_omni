@@ -367,22 +367,23 @@ class OmniKVUpdate(StreamingCommand):
             yield record
 
     def _prepare_record_for_kvstore(self, record):
-        """
-        Désérialise les champs JSON-string en objets natifs avant écriture dans le KVStore.
-        Sans ça, les champs multivalués sont stockés comme string et non comme array.
-        """
         prepared = record.copy()
-        json_fields = ['downtime']  # Ajouter ici d'autres champs si nécessaire
+        json_array_fields = ['downtime']
     
-        for field in json_fields:
+        for field in json_array_fields:
             if field in prepared and isinstance(prepared[field], str):
                 try:
-                    prepared[field] = json.loads(prepared[field])
+                    parsed = json.loads(prepared[field])
+                    if isinstance(parsed, list):
+                        # Chaque élément devient une string JSON, pas un objet natif
+                        prepared[field] = [json.dumps(item) for item in parsed]
+                    else:
+                        prepared[field] = [json.dumps(parsed)]
                 except (json.JSONDecodeError, ValueError):
-                    pass  # Laisser tel quel si ce n'est pas du JSON valide
+                    pass
     
         return prepared
-    
+        
     def _validate_add_fields(self, record):
         """
         Valide les champs requis pour l'ajout
