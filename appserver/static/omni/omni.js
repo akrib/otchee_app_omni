@@ -52,7 +52,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 ENTITY_TYPE: 6,
                 ENTITY: 7,
                 DT_FILTER: 8,
-                DT_PATTERN: 9,
+                DT_POLICY: 9,
                 COMMENTARY: 10,
                 VERSION: 11
                 
@@ -1090,7 +1090,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             if (period.dt_filter && period.dt_filter !== '') {
                                 additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Filter: <em>${period.dt_filter}</em></span>`;
                             }
-                            if (period.dt_pattern && period.dt_pattern !== '') {
+                            if (period.dt_policy && period.dt_policy !== '') {
                                 additionalInfo += `<br/><span style="padding-left: 40px; font-size: 0.9em; color: #666;">Pattern: <em>${period.dt_pattern}</em></span>`;
                             }
                             if (period.id && period.id !== '') {
@@ -1240,7 +1240,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var kpi_selected = TokenManager.get('kpi_selected');
                 var entity_selected = TokenManager.get('entity_selected');
                 var dt_filterToken = TokenManager.get('dt_filter_selected') || '';
-                var dt_patternToken = TokenManager.get('dt_pattern_selected') || '';
+                var dt_policyToken = TokenManager.get('dt_policy_selected') || '';
                 var dt_id = TokenManager.get('DT_ID') || '';
                 var dashboardType = $('#dashboardType').html();
                 
@@ -1259,8 +1259,8 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     selectionDescHtml += `<tr><td><strong>Custom filter(s)</strong></td><td></td><td><code style="background: #f5f5f5; padding: 2px 5px;">${dt_filterToken}</code></td></tr>`;
                 }
                 
-                if (Utils.isNotNull(dt_patternToken) && dt_patternToken !== '') {
-                    selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_patternToken)}</td></tr>`;
+                if (Utils.isNotNull(dt_policyToken) && dt_policyToken !== '') {
+                    selectionDescHtml += `<tr><td><strong>Pattern(s)</strong></td><td></td><td>${TextTransformer.toVisualTags(dt_policyToken)}</td></tr>`;
                 }
                 
                 var periodsHtml = UIManager.buildPeriodsDescriptionFromSource();
@@ -1290,7 +1290,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         service=mvjoin(service,";"),
                         kpi=mvjoin(kpi,";"),
                         entity=mvjoin(entity,";")
-                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_pattern,commentary,version`;
+                    | table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_policy,commentary,version`;
             },
 
             createAdd(arr) {
@@ -1325,7 +1325,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                             begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
                             end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
                             dt_filter: arr['dt_filter'] || '',
-                            dt_pattern: arr['dt_pattern'] || ''
+                            dt_policy: arr['dt_policy'] || ''
                         };
                     });
                     
@@ -1342,7 +1342,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 kpi=split("${Utils.escapeSPLString(arr['kpi'])}",";"),
                 entity=split("${Utils.escapeSPLString(arr['entity'])}",";"),
                 dt_filter="${Utils.escapeSPLString(arr['dt_filter'])}",
-                dt_pattern="${Utils.escapeSPLString(arr['dt_pattern'] || '')}",
+                dt_policy="${Utils.escapeSPLString(arr['dt_policy'] || '')}",
                 downtime="${downtimeJsonString}",
                 creator="${Utils.escapeSPLString(arr['username'])}",
                 commentary="${Utils.escapeSPLString(arr['commentary'])}",
@@ -1359,7 +1359,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 kpi=split("${Utils.escapeSPLString(arr['kpi'])}",";"),
                 entity=split("${Utils.escapeSPLString(arr['entity'])}",";"),
                 dt_filter="${Utils.escapeSPLString(arr['dt_filter'])}",
-                dt_pattern="${Utils.escapeSPLString(arr['dt_pattern'] || '')}",
+                dt_policy="${Utils.escapeSPLString(arr['dt_policy'] || '')}",
                 downtime="${downtimeJsonString}",
                 creator="${Utils.escapeSPLString(arr['username'])}",
                 commentary="${Utils.escapeSPLString(arr['commentary'])}",
@@ -1394,7 +1394,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 var kpi = row[CONFIG.DOWNTIME_FIELDS.KPI];
                 var entity = row[CONFIG.DOWNTIME_FIELDS.ENTITY];
                 var dt_filter = row[CONFIG.DOWNTIME_FIELDS.DT_FILTER];
-                var dt_pattern = row[CONFIG.DOWNTIME_FIELDS.DT_PATTERN] || '';
+                var dt_policy = row[CONFIG.DOWNTIME_FIELDS.DT_POLICY] || '';
                 var service_type = row[CONFIG.DOWNTIME_FIELDS.SERVICE_TYPE];
                 var kpi_type = row[CONFIG.DOWNTIME_FIELDS.KPI_TYPE];
                 var entity_type = row[CONFIG.DOWNTIME_FIELDS.ENTITY_TYPE];
@@ -1409,20 +1409,20 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 DataManager.setTypeTokens('entity', entity, entity_type, dashboardType);
                 TokenManager.set('dt_filter', dt_filter);
                 TokenManager.set('dt_filter_selected', dt_filter);
-                TokenManager.set('dt_pattern', dt_pattern);
+                TokenManager.set('dt_policy', dt_policy);
                 
                 if (dashboardType == "update") {
-                    if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
+                    if (Utils.isNotNull(dt_policy) && dt_policy !== '') {
                         TokenManager.set('pattern_type', 'exist', true);
                         TokenManager.set('pattern_exist', '1');
-                        TokenManager.set('dt_pattern_select', dt_pattern, true);
-                        TokenManager.set('dt_pattern_selected', dt_pattern);
+                        TokenManager.set('dt_policy_select', dt_policy, true);
+                        TokenManager.set('dt_policy_selected', dt_policy);
                         
-                        Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
+                        Utils.log('Pattern initialisé en mode "exist": ' + dt_policy, 'fillDashboard - Pattern');
                     } else {
                         TokenManager.set('pattern_type', 'new', true);
                         TokenManager.set('pattern_new', '1');
-                        TokenManager.set('dt_pattern_selected', '');
+                        TokenManager.set('dt_policy_selected', '');
                         
                         Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
                     }
@@ -1446,17 +1446,17 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         // TokenManager.set('step_opt_for_delete', service_type.toString() + kpi_type.toString() + entity_type.toString());
                         
                         // FIX : Initialisation du pattern (copié depuis le mode update)
-                        if (Utils.isNotNull(dt_pattern) && dt_pattern !== '') {
+                        if (Utils.isNotNull(dt_policy) && dt_policy !== '') {
                             TokenManager.set('pattern_type', 'exist', true);
                             TokenManager.set('pattern_exist', '1');
-                            TokenManager.set('dt_pattern_select', dt_pattern, true);
-                            TokenManager.set('dt_pattern_selected', dt_pattern);
+                            TokenManager.set('dt_policy_select', dt_policy, true);
+                            TokenManager.set('dt_policy_selected', dt_policy);
                             
-                            Utils.log('Pattern initialisé en mode "exist": ' + dt_pattern, 'fillDashboard - Pattern');
+                            Utils.log('Pattern initialisé en mode "exist": ' + dt_policy, 'fillDashboard - Pattern');
                         } else {
                             TokenManager.set('pattern_type', 'new', true);
                             TokenManager.set('pattern_new', '1');
-                            TokenManager.set('dt_pattern_selected', '');
+                            TokenManager.set('dt_policy_selected', '');
                             
                             Utils.log('Pattern initialisé en mode "new" (vide)', 'fillDashboard - Pattern');
                         }
@@ -1638,7 +1638,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
                 selected['downtimeFields'] = [];
                 
                 Utils.log(selected, 'Données de base collectées');
@@ -1691,7 +1691,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
-                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 selected['version'] = TokenManager.get('selected_version') || 99999;
                 
@@ -1721,7 +1721,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['kpi'] = TextTransformer.forKV(TokenManager.get('kpi_selected'));
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
-                selected['dt_pattern'] = TokenManager.get('dt_pattern_selected') || '';
+                selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
                 selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
                 selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
                 
