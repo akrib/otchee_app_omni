@@ -764,24 +764,24 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
             self.logger.debug("DowntimeCalculationCommand => downtime_field: %s", 
                             downtime_field)
             
-            modified_downtimes = []
+            modified_downtimes = list(downtime_field)
             found_match = False
             
-            for downtime in downtime_field:
+            for i, downtime in enumerate(downtime_field):
                 if (
                     not downtime
                     or downtime is None
                     or downtime == 0
                     or downtime == "0"
                 ):
-                    modified_downtimes.append(downtime)
+                    # modified_downtimes[i] déjà = valeur originale
                     continue
-                
+
                 parsed_dt = parse_downtime_data(downtime)
-                
+
                 if parsed_dt.get('format') == 'error':
                     record["DT_ERROR"] = parsed_dt.get('error')
-                    modified_downtimes.append(downtime)
+                    # modified_downtimes[i] déjà = valeur originale
                     continue
                 
                 downtime_type = parsed_dt['dt_type']
@@ -891,7 +891,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                     downtime_with_result = parsed_dt['original_json'].copy()
                     downtime_with_result[outputfield] = current_downtime_result
                     downtime_with_result['in_filter'] = in_filter
-                    modified_downtimes.append(json.dumps(downtime_with_result))
+                    modified_downtimes[i] = json.dumps(downtime_with_result)
                     
                     if current_downtime_result == 1 and in_filter == 1 and not found_match:
                         found_match = True
@@ -908,7 +908,7 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                         self.logger.debug("DowntimeCalculationCommand => No complete match (in_dt=%d, in_filter=%d), continuing...", 
                                         current_downtime_result, in_filter)
                 else:
-                    modified_downtimes.append(downtime)
+                    modified_downtimes[i] = downtime
                     if current_downtime_result > 0 and not found_match:
                         found_match = True
                         record[outputfield] = 1
