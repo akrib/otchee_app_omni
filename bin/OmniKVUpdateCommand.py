@@ -303,7 +303,7 @@ class OmniKVUpdate(StreamingCommand):
         - dt_filter: Filtre de downtime
     
     Champs optionnels:
-        - dt_pattern: Pattern de downtime (peut être vide)
+        - dt_policy: policy de downtime
     """
     
     action = Option(
@@ -413,7 +413,7 @@ class OmniKVUpdate(StreamingCommand):
         ]
         
         # Champs optionnels (peuvent être vides mais doivent exister)
-        optional_fields = ['dt_pattern']
+        optional_fields = ['dt_']
         
         # Validation des champs obligatoires
         for field in required_fields:
@@ -460,7 +460,7 @@ class OmniKVUpdate(StreamingCommand):
         ]
         
         # Champs optionnels
-        optional_fields = ['dt_pattern']
+        optional_fields = ['dt_policy']
         
         # Validation des champs obligatoires
         for field in required_fields:
