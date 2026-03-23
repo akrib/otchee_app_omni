@@ -69,7 +69,7 @@
         <h2 style="font-size:16px !important;">
           <a href="./accueil">
             <img src="/static/app/otchee_app_omni/media/left-chevron-blue.png" width="32px"/>
-            <strong>Revenir Ã  l'Ã©cran "Menu des Maintenances"</strong>
+            <strong>Revenir Ã  l'écran "Menu des Maintenances"</strong>
           </a>
         </h2>
       </html>
@@ -100,7 +100,7 @@
            <p id="swc_step_2" data-label="Entity" data-validateToken="entity_selected"/>
            <p id="swc_step_3" data-label="Source" data-validateToken="dt_policy_selected" data-showNextButton="false"/>  
            <p id="swc_step_4" data-label="Periode" data-validateToken="periode_selected" data-showNextButton="false"/>    
-           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="TerminÃ©"/>-->
+           <!--<p id="swc_step_4" data-label="Validation" data-showNextButton="false" data-showDoneButton="true" data-doneLabel="Terminé"/>-->
         <div id="step-control-wizard"/>
         </html>
     </panel>
@@ -115,7 +115,7 @@
   <row depends="$step_0$">
     <panel>
       <input type="dropdown" token="service_select_input_type">
-        <label>Type de sÃ©lection</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -125,7 +125,7 @@
             <unset token="service_selected"></unset>
             <unset token="service_select_dual"></unset>
             <unset token="service_select_rex"></unset>
-            <!-- Pour "All", on dÃ©finit directement calculated -->
+            <!-- Pour "All", on définit directement calculated -->
             <set token="service_calculated">%</set>
           </condition>
           <condition value="2">
@@ -228,7 +228,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non dÃ©fini"
+         true(), "Non défini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -263,7 +263,7 @@
   <row depends="$step_1$">
     <panel>
       <input type="dropdown" token="kpi_select_input_type">
-        <label>Type de sÃ©lection</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -273,7 +273,7 @@
             <unset token="kpi_selected"></unset>
             <unset token="kpi_select_dual"></unset>
             <unset token="kpi_select_rex"></unset>
-            <!-- Pour "All", on dÃ©finit directement calculated -->
+            <!-- Pour "All", on définit directement calculated -->
             <set token="kpi_calculated">%</set>
           </condition>
           <condition value="2">
@@ -376,7 +376,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non dÃ©fini"
+         true(), "Non défini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -433,7 +433,7 @@
     <panel>
       
       <input type="dropdown" token="entity_select_input_type">
-        <label>Type de sÃ©lection</label>
+        <label>Type de sélection</label>
         <choice value="1">All</choice>
         <choice value="2">List</choice>
         <choice value="3">Wildcard</choice>
@@ -443,7 +443,7 @@
             <unset token="entity_selected"></unset>
             <unset token="entity_select_dual"></unset>
             <unset token="entity_select_rex"></unset>
-            <!-- Pour "All", on dÃ©finit directement calculated -->
+            <!-- Pour "All", on définit directement calculated -->
             <set token="entity_calculated">%</set>
           </condition>
           <condition value="2">
@@ -546,7 +546,7 @@
          type=="1", "All",
          type=="2", "List",
          type=="3", "Wildcard",
-         true(), "Non dÃ©fini"
+         true(), "Non défini"
        ),
        is_valid=if(isnotnull(calculated) AND calculated!="", 1, 0)
 | where is_valid=1
@@ -831,12 +831,12 @@ padding:10px;
 .splunk-multidropdown{
 min-height: 32px;
 max-height: 300px;
-overflow-y: auto; /* Permet le scroll si dÃ©passe 300px */
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
 border: 1px solid rgb(129, 141, 153);
 padding: 5px;
 vertical-align: middle;
 width: 800px !important;
-height: auto !important; /* ChangÃ© : hauteur automatique */
+height: auto !important; /* Changé : hauteur automatique */
 background: #e1e6eb !important;
 line-height: 30px !important;
 display: inline-flex;
@@ -846,12 +846,12 @@ background:#fff;
 .splunk-multidropdown [class^="BoxStyles__Styled-"]{
 min-height: 32px;
 max-height: 300px;
-overflow-y: auto; /* Permet le scroll si dÃ©passe 300px */
+overflow-y: auto; /* Permet le scroll si dépasse 300px */
 border: 1px solid rgb(129, 141, 153);
 padding: 5px;
 vertical-align: middle;
 width: 788px !important;
-height: auto !important; /* ChangÃ© : hauteur automatique */
+height: auto !important; /* Changé : hauteur automatique */
 background: #fff !important;
 line-height: 30px !important;
 display: inline-flex;
