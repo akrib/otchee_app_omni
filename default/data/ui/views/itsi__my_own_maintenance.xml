@@ -65,6 +65,7 @@ downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
   <search base="mydt">
     <query>
      <![CDATA[
+| dedup ID sortby - VERSION
 | stats count(eval(NOT state like "%DELETE%")) as Active count(eval(state like "%DELETE%")) as Delete count as Total
 ]]>
     </query>
