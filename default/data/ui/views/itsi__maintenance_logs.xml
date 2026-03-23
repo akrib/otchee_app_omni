@@ -52,8 +52,9 @@
             entity=if(entity="*","TOUS",entity),
             entity=mvjoin(entity,";")
         ``` Parser le JSON downtime pour extraire les périodes ```
-        | eval downtime_json=if(isnotnull(downtime) AND downtime!="", downtime, "[]")
-        | spath input=downtime_json
+        | eval downtime="[" + mvjoin(downtime,",") + "]"
+        | eval period_count=json_array_length(downtime)
+         ```| spath input=downtime_json
         | eval period_count=mvcount('id{}')
         | eval periods_summary=""
         | foreach id{} dt_type{} begin_date{} end_date{} begin_time{} end_time{} 
@@ -64,7 +65,7 @@
                 if('dt_filter{}'!="", " | Filter: " + 'dt_filter{}', "") + 
                 if('dt_policy{}'!="", " | policy: " + 'dt_policy{}', "") + 
                 "###", periods_summary)]
-        | eval periods_summary=if(periods_summary="", "Aucune période définie", periods_summary)
+        | eval periods_summary=if(periods_summary="", "Aucune période définie", periods_summary) ```
       ]]>
     </query>
     <earliest></earliest>
