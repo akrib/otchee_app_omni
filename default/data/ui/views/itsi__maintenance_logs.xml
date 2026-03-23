@@ -52,8 +52,9 @@
             entity=if(entity="*","TOUS",entity),
             entity=mvjoin(entity,";")
         ``` Parser le JSON downtime pour extraire les périodes ```
-        | eval downtime="[" + mvjoin(downtime,",") + "]"
-        | eval period_count=json_array_length(downtime)
+        | eval downtime=mvjoin(downtime,",")
+        | eval period_count=mvcount(downtime)
+        | eval downtime="[" + downtime  + "]"
          ```| spath input=downtime_json
         | eval period_count=mvcount('id{}')
         | eval periods_summary=""
