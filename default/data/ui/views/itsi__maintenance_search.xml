@@ -39,25 +39,26 @@
 | eval orig_time=$queldate.latest_epoch$
 | eval downtime_json = "[" + mvjoin(downtime, ",") + "]"
 | spath input=downtime_json
-| rename {}.id as dt_id, {}.dt_type as dt_type, {}.begin_date as begin_date, {}.end_date as end_date, {}.begin_time as begin_time, {}.end_time as end_time, {}.dt_filter as period_dt_filter, {}.dt_policy as period_dt_policy
-| eval nbperiode=mvcount(dt_id), omni_skip_filter=1
+| rename {}.id as dt_ids, {}.dt_type as dt_type, {}.begin_date as begin_date, {}.end_date as end_date, {}.begin_time as begin_time, {}.end_time as end_time, {}.dt_filter as period_dt_filter, {}.dt_policy as period_dt_policy
+| eval nbperiode=mvcount(dt_ids), omni_skip_filter=1
 | omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=omni_skip_filter
 | eval entity=mvjoin(entity, ";"),
        kpi=mvjoin(kpi,";"),
        service=mvjoin(service, ";"),
        dt_policy= coalesce(dt_policy,"-")
 | eval _raw=downtime.";".commentary.";".creator.";".dt_update.";".entity.";".kpi.";".service.";".version.";".ID.";".dt_filter.";".dt_policy
-| eval downtimes="", i=1, dt_type=mvappend("None",dt_type)
+| eval downtimes="", i=0, dt_type=mvappend("None",dt_type)
+
 | foreach dt_type mode=multivalue
     [eval downtimes=if(mvindex(dt_type,i)="None",downtimes,downtimes
-          ."<tr class='dt_period'><td><b>".mvindex(dt_id,i-1)."</b></td><td colspan='9'><hr/></td></tr>"
+          ."<tr class='dt_period'><td><b>".mvindex(dt_ids,i-1)."</b></td><td colspan='9'><hr/></td></tr>"
           ."<tr class='dt_period'>"
           ."<td><b>Type:</b></td><td><span class=tag_dt>".mvindex(dt_type,i)."</span></td>"
           ."<td><b>Date de début:</b></td><td><span class=tag_dt>".mvindex(begin_date,i-1)."</span></td>"
           ."<td><b>Heure de début:</b></td><td><span class=tag_dt>".mvindex(begin_time,i-1)."</span></td>"
           ."<td><b>Date de fin:</b></td><td><span class=tag_dt>".mvindex(end_date,i-1)."</span></td>"
           ."<td><b>Heure de fin:</b></td><td><span class=tag_dt>".mvindex(end_time,i-1)."</span></td>"
-          ."</tr>" ),
+          ."</tr>"),
           i=i+1]
 | eval downtimes="<br><table width='100%'>".downtimes."</table>"
 | eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S")
