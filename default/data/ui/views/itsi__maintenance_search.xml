@@ -49,13 +49,16 @@
 | eval _raw=downtime.";".commentary.";".creator.";".dt_update.";".entity.";".kpi.";".service.";".version.";".ID.";".dt_filter.";".dt_policy
 | eval downtimes="", i=1, dt_type=mvappend("None",dt_type)
 | foreach dt_type mode=multivalue
-       [eval downtimes=if(mvindex(dt_type,i)="None",downtimes,downtimes."<tr class='dt_period'><td><b>Type:</b></td><td><span class=tag_dt>"
-             .mvindex(dt_type,i)."</span></td><td><b>Date de début:</b></td><td><span class=tag_dt>"
-             .mvindex(begin_date,i-1)."</span></td><td><b>Heure de début:</b></td><td><span class=tag_dt>"
-             .mvindex(begin_time,i-1)."</span></td><td><b>Date de fin:</b></td><td><span class=tag_dt>"
-             .mvindex(end_date,i-1)."</span></td><td><b>Heure de fin:</b></td><td><span class=tag_dt>"
-             .mvindex(end_time,i-1)."</span></td></tr>"),
-             i=i+1]
+    [eval downtimes=if(mvindex(dt_type,i)="None",downtimes,downtimes
+          ."<tr class='dt_period'><td><b>".mvindex(dt_id,i-1)."</b></td><td colspan='8'><hr/></td></tr>"
+          ."<tr class='dt_period'>"
+          ."<td><b>Type:</b></td><td><span class=tag_dt>".mvindex(dt_type,i)."</span></td>"
+          ."<td><b>Date de début:</b></td><td><span class=tag_dt>".mvindex(begin_date,i-1)."</span></td>"
+          ."<td><b>Heure de début:</b></td><td><span class=tag_dt>".mvindex(begin_time,i-1)."</span></td>"
+          ."<td><b>Date de fin:</b></td><td><span class=tag_dt>".mvindex(end_date,i-1)."</span></td>"
+          ."<td><b>Heure de fin:</b></td><td><span class=tag_dt>".mvindex(end_time,i-1)."</span></td>"
+          ."</tr>" ),
+          i=i+1]
 | eval downtimes="<br><table width='100%'>".downtimes."</table>"
 | eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S")
 | eval entity=if(entity=="*", "Tous", entity),
