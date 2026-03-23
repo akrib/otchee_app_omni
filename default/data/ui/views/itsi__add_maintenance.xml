@@ -582,22 +582,22 @@
             <set token="policy_exist">1</set>
             <unset token="policy_new"></unset>
             <unset token="dt_policy_selected"></unset>
-            <unset token="dt_patern_select"></unset>
+            <unset token="dt_policy_select"></unset>
             <unset token="dt_policy_text"></unset>
           </condition>
           <condition match="$policy_type$=&quot;new&quot;">
             <set token="policy_new">1</set>
             <unset token="policy_exist"></unset>
             <unset token="dt_policy"></unset>
-            <unset token="dt_patern_select"></unset>
+            <unset token="dt_policy_select"></unset>
             <unset token="dt_policy_text"></unset>
           </condition>
         </change>
       </input>
-      <input type="dropdown" token="dt_patern_select" depends="$policy_exist$">
+      <input type="dropdown" token="dt_policy_select" depends="$policy_exist$">
         <label>Downtime policy</label>
         <change>
-          <set token="dt_policy_selected">$dt_patern_select$</set>
+          <set token="dt_policy_selected">$dt_policy_select$</set>
         </change>
         <fieldForLabel>dt_policy</fieldForLabel>
         <fieldForValue>dt_policy</fieldForValue>
