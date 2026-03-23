@@ -252,7 +252,7 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             return _(['O', 'ID', 'DATE', 'ACTION', 'SERVICE', 'KPI', 'ENTITY', 'COMMENTAIRE', 
-                     'VERSION', 'FOREIGN_UPDATE', 'DOWNTIME', 'PERIODS', 'NB_PERIODS', 
+                     'VERSION', 'FOREIGN_UPDATE', 'DOWNTIME', 'DOWNTIME_JSON', 'PERIODS', 'NB_PERIODS', 
                      'DT_FILTER', 'DT_POLICY']).contains(cell.field);
         },
 
@@ -298,7 +298,8 @@ require([
             // Masquer certaines colonnes
             if (cell.field === 'COMMENTAIRE' || cell.field === 'SERVICE' || 
                 cell.field === 'KPI' || cell.field === 'ENTITY' || 
-                cell.field === 'DOWNTIME' || cell.field === 'PERIODS' ||  cell.field === 'NB_PERIODS' ||
+                cell.field === 'DOWNTIME' || cell.field === 'DOWNTIME_JSON' || 
+                cell.field === 'PERIODS' || cell.field === 'NB_PERIODS' ||
                 cell.field === 'DT_FILTER' || cell.field === 'DT_POLICY') {
                 $td.addClass('range-cell').addClass('hide');
             }
@@ -351,7 +352,7 @@ require([
             });
             
             var downtime = _(rowData.cells).find(function (cell) {
-                return cell.field === 'DOWNTIME';
+                return cell.field === 'DOWNTIME_JSON' || cell.field === 'DOWNTIME';
             });
             
             var dtFilter = _(rowData.cells).find(function (cell) {
@@ -362,6 +363,8 @@ require([
                 return cell.field === 'DT_POLICY';
             });
 
+            var downtimeValue = (downtime && downtime.value) ? downtime.value : '[]';
+            
             // Construction du HTML
             var html = "<div><span><table width='100%'>";
             html += "<tr><td class='dataexpansion'><h2 class='title-search'>Informations de la Maintenance</h2></td><td></td></tr>";
@@ -385,7 +388,7 @@ require([
             
             // Périodes de maintenance
             html += "<tr><td colspan='2'><br/><h3 class='title-search'>Périodes de Maintenance</h3></td></tr>";
-            html += "<tr><td colspan='2'>" + formatAllPeriods(downtime.value) + "</td></tr>";
+            html += "<tr><td colspan='2'>" + formatAllPeriods(downtimeValue) + "</td></tr>";
             
             html += "</table></span></div>";
             
