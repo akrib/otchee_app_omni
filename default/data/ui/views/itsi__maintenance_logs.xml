@@ -96,8 +96,9 @@
                   <img src="/static/app/otchee_app_omni/media/logo_omni.png" alt="Omni Logo" style="width: 200px; height: auto;"/>
                 </span>
                 <span class="omni-title-second-part"> Maintenance Logs</span>
-              </h1>
-              <p style="display: inline-block;" class="gradient-spoc">Suivez les modifications de vos maintenances en quelques clics.</p>
+             
+              <p style="display: inline-block; padding-left:50px;" class="gradient-spoc">Suivez les modifications de vos maintenances en quelques clics.</p>
+             </h1>
             </div>
           </div>
         </section>
