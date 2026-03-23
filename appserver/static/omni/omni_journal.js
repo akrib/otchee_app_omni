@@ -372,15 +372,16 @@ require([
             html += "<tr><td><b class='search-bold'>Entity</b>: </td><td>" + itemize(entity.value) + "</td></tr>";
             
             // Filtres et policy
-            if (isNotNull(dtFilter) && dtFilter.value !== '') {
+            if (isNotNull(dtFilter) && isNotNull(dtFilter.value)) {
                 html += "<tr><td><b class='search-bold'>Filtre personnalisé</b>: </td><td>" + dtFilter.value + "</td></tr>";
             }
             
-            if (isNotNull(dtPolicy) && dtPolicy.value !== '') {
+            if (isNotNull(dtPolicy) && isNotNull(dtPolicy.value)) {
                 html += "<tr><td><b class='search-bold'>Policy</b>: </td><td>" + dtPolicy.value + "</td></tr>";
             }
             
-            html += "<tr><td><b class='search-bold'>Commentaire(s)</b>: </td><td>" + commentary.value + "</td></tr>";
+            // Idem pour commentary
+            html += "<tr><td><b class='search-bold'>Commentaire(s)</b>: </td><td>" + (isNotNull(commentary.value) ? commentary.value : '') + "</td></tr>";
             
             // Périodes de maintenance
             html += "<tr><td colspan='2'><br/><h3 class='title-search'>Périodes de Maintenance</h3></td></tr>";
