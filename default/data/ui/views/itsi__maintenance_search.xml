@@ -50,7 +50,7 @@
 | eval downtimes="", i=1, dt_type=mvappend("None",dt_type)
 | foreach dt_type mode=multivalue
     [eval downtimes=if(mvindex(dt_type,i)="None",downtimes,downtimes
-          ."<tr class='dt_period'><td><b>".mvindex(dt_id,i-1)."</b></td><td colspan='8'><hr/></td></tr>"
+          ."<tr class='dt_period'><td><b>".mvindex(dt_id,i-1)."</b></td><td colspan='9'><hr/></td></tr>"
           ."<tr class='dt_period'>"
           ."<td><b>Type:</b></td><td><span class=tag_dt>".mvindex(dt_type,i)."</span></td>"
           ."<td><b>Date de début:</b></td><td><span class=tag_dt>".mvindex(begin_date,i-1)."</span></td>"
