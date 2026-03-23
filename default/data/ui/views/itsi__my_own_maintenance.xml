@@ -1,12 +1,18 @@
 <form script="omni/omni_journal.js,common\assets\js\sidebar\sidebar.js, common\assets\js\custom_button\custom_button.js" hideEdit="true" version="1.1">
   <label>ITSI : My Own Maintenance</label>
-  <init>
-      <set token="login"> $env:user$</set>
-      <set token="realname">$env:user_realname$</set>
-      <set token="input_daycount">0</set>
-      <set token="input_earliest">@d</set>
-      <set token="input_latest">+1d@d</set>
-  </init>
+<search id="get_user_info">
+  <query>
+    | rest /services/authentication/current-context
+    | table username, realname
+  </query>
+  <done>
+    <set token="login">$result.username$</set>
+    <set token="realname">$result.realname$</set>
+    <set token="input_daycount">0</set>
+    <set token="input_earliest">@d</set>
+    <set token="input_latest">+1d@d</set>
+  </done>
+  </search>
   <search id="mydt">
     <query>
      <![CDATA[
