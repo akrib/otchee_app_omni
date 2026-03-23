@@ -1286,7 +1286,7 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 return `| inputlookup omni_kv_def where ID="${downtimeID}"
                     | rename _key as key
                     | rex field=step_opt "(?<service_type>.)(?<kpi_type>.)(?<entity_type>.)"
-                    | eval downtime=mvjoin(downtime,"£"),
+                    | eval downtime="[" + mvjoin(downtime,",") + "]",
                         service=mvjoin(service,";"),
                         kpi=mvjoin(kpi,";"),
                         entity=mvjoin(entity,";")
@@ -1316,16 +1316,15 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                     Utils.log(arr['downtimeFields'], 'downtimeFields avant transformation');
                     
                     var downtimeJsonArray = arr['downtimeFields'].map((field, index) => {
-                        var parts = field.split('#');
                         return {
-                            id: arr['ID'] + '_' + (index + 1),
-                            dt_type: parts[CONFIG.PERIOD_FIELDS.TYPE] || '',
-                            begin_date: parts[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || '',
-                            end_date: parts[CONFIG.PERIOD_FIELDS.END_DAY] || '',
-                            begin_time: parts[CONFIG.PERIOD_FIELDS.BEGIN_HOUR] || '',
-                            end_time: parts[CONFIG.PERIOD_FIELDS.END_HOUR] || '',
-                            dt_filter: arr['dt_filter'] || '',
-                            dt_policy: arr['dt_policy'] || ''
+                            id:         arr['ID'] + '_' + (index + 1),
+                            dt_type:    field.dt_type    || '',
+                            begin_date: field.begin_date || '',
+                            end_date:   field.end_date   || '',
+                            begin_time: field.begin_time || '',
+                            end_time:   field.end_time   || '',
+                            dt_filter:  arr['dt_filter'] || '',
+                            dt_policy:  arr['dt_policy'] || ''
                         };
                     });
                     
@@ -1875,7 +1874,13 @@ downtimeFields.push(downtimeField);
         },
 
         transformDowntimeField(downtimeType, begin_day, end_day, begin_hour, end_hour) {
-            return `${downtimeType}#${begin_day}#${end_day}#${begin_hour}#${end_hour}`;
+            return {
+                dt_type:    downtimeType,
+                begin_date: begin_day,
+                end_date:   end_day,
+                begin_time: begin_hour,
+                end_time:   end_hour
+            };
         },
 
         getStepOpt() {
