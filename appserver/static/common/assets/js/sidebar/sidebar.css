@@ -25,9 +25,9 @@ Bouton "Afficher les filtres"
     }
     
     #sidebar .dashboard-body,#sidebar .footer,#sidebar .header,#sidebar .dashboard-panel,#sidebar .dashboard-cell,#sidebar .panel-body, #sidebar .dashboard-panel {
-    background: #7386D5 !important; 
+    background: #212830 !important; 
     }
-    
+
     
     
     #back_button{
@@ -45,7 +45,7 @@ Bouton "Afficher les filtres"
     left: -350px;
     height: 100vh;
     z-index: 999;
-    background: #7386D5; 
+    background: #212830; 
     color: #fff;
     transition: all 0.3s;
     /* overflow-y: scroll; */
@@ -61,7 +61,7 @@ Bouton "Afficher les filtres"
     height: 35px;
     line-height: 35px;
     text-align: center;
-    background: #7386D5; 
+    background: #212830; 
     position: absolute;
     top: 150px;
     right: 10px;
@@ -77,7 +77,7 @@ Bouton "Afficher les filtres"
     height: 35px;
     line-height: 35px;
     text-align: center;
-    background: #7386D5; 
+    background: #212830; 
     position: absolute;
     top: 150px;
     right: -35px;
@@ -91,12 +91,12 @@ Bouton "Afficher les filtres"
 
     #dismiss:hover {
     background: #fff; 
-    color: #7386D5 ; 
+    color: #212830 ; 
     }
 
     #sidebarCollapse:hover {
     background: #fff; 
-    color: #7386D5 ; 
+    color: #212830 ; 
     }
     
     #sidebarCollapse.active {
