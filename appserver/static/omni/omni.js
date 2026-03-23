@@ -1691,7 +1691,14 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_filter'] = TokenManager.get('dt_filter_selected') || '';
                 selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
-                selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+                var downtimeRaw = TokenManager.get('downtime_selected');
+                try {
+                    var parsedDt = JSON.parse(downtimeRaw);
+                    selected['downtimeFields'] = Array.isArray(parsedDt) ? parsedDt : [parsedDt];
+                } catch(e) {
+                    Utils.log(e, 'Erreur parsing downtime_selected dans getDeleteData', 2);
+                    selected['downtimeFields'] = [];
+                }
                 selected['version'] = TokenManager.get('selected_version') || 99999;
                 
                 var errors = 0;
@@ -1721,7 +1728,16 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['entity'] = TextTransformer.forKV(TokenManager.get('entity_selected'));
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
-                selected['downtimeFields'] = TokenManager.get('downtime_selected').split("£");
+
+                var downtimeRaw = TokenManager.get('downtime_selected');
+                try {
+                    var parsedDt = JSON.parse(downtimeRaw);
+                    selected['downtimeFields'] = Array.isArray(parsedDt) ? parsedDt : [parsedDt];
+                } catch(e) {
+                    Utils.log(e, 'Erreur parsing downtime_selected dans getUpdateCustomData', 2);
+                    selected['downtimeFields'] = [];
+                }
+                
                 selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
                 
                 //  Récupérer le dt_filter depuis les tokens
