@@ -216,7 +216,7 @@
             | sort -dt_update
             | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
             | table ID,last_update,action,creator,service,kpi,entity,commentary,downtime,periods_summary,period_count,dt_filter,dt_policy
-            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE,action as ACTION,last_update as "DATE",creator as AUTEUR,downtime as DOWNTIME,periods_summary as PERIODS,period_count as NB_PERIODS,dt_filter as DT_FILTER,dt_policy as DT_policy
+            | rename service as SERVICE,kpi as KPI,entity as ENTITY,commentary as COMMENTAIRE,action as ACTION,last_update as "DATE",creator as AUTEUR,downtime as DOWNTIME,periods_summary as PERIODS,period_count as NB_PERIODS,dt_filter as DT_FILTER,dt_policy as DT_POLICY
           </query>
         </search>
         <option name="count">100</option>
