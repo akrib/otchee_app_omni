@@ -368,6 +368,13 @@ class OmniKVUpdate(StreamingCommand):
 
     def _prepare_record_for_kvstore(self, record):
         prepared = record.copy()
+
+        scalar_fields = ['step_opt', 'dt_filter', 'dt_policy', 'commentary',
+                         'creator', 'version', 'ID', 'dt_update']
+        for field in scalar_fields:
+            if field in prepared and isinstance(prepared[field], list):
+                prepared[field] = prepared[field][0] if prepared[field] else ''
+        
         json_array_fields = ['downtime']
     
         for field in json_array_fields:
