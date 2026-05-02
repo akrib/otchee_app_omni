@@ -1572,10 +1572,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                         periodValue[CONFIG.PERIOD_FIELDS.END_HOUR] || periodValue[4]
                     );
                     
-                    var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
                     if (periodType == 'between_date') {
                         var beginDay = periodValue[CONFIG.PERIOD_FIELDS.BEGIN_DAY] || periodValue[1];
-                        DatePickerManager.apply(beginDay);
+                        var divContext = '#content-tab-Periode' + periodNumber + ' ';
+                        DatePickerManager.apply(beginDay, divContext);
                     }
                 }
                 
@@ -1729,15 +1729,19 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 selected['step_opt'] = DataManager.getStepOpt();
                 selected['dt_policy'] = TokenManager.get('dt_policy_selected') || '';
 
-                var downtimeRaw = TokenManager.get('downtime_selected');
-                try {
-                    var parsedDt = JSON.parse(downtimeRaw);
-                    selected['downtimeFields'] = Array.isArray(parsedDt) ? parsedDt : [parsedDt];
-                } catch(e) {
-                    Utils.log(e, 'Erreur parsing downtime_selected dans getUpdateCustomData', 2);
-                    selected['downtimeFields'] = [];
-                }
+            //    var downtimeRaw = TokenManager.get('downtime_selected');
+            //    try {
+            //        var parsedDt = JSON.parse(downtimeRaw);
+            //        selected['downtimeFields'] = Array.isArray(parsedDt) ? parsedDt : [parsedDt];
+            //    } catch(e) {
+            //        Utils.log(e, 'Erreur parsing downtime_selected dans getUpdateCustomData', 2);
+            //        selected['downtimeFields'] = [];
+            //    }
                 
+                var periodData             = DataManager.collectPeriods();
+                selected['downtimeFields'] = periodData.downtimeFields;
+                var errors                 = periodData.errors;
+                var errorOutput            = periodData.errorOutput;              
                 selected['version'] = parseInt(TokenManager.get('selected_version') || 50) + 2;
                 
                 //  Récupérer le dt_filter depuis les tokens
@@ -2234,7 +2238,12 @@ downtimeFields.push(downtimeField);
         var cur = $(this).attr('id').replace('form-', '');
         var selected_value = $('input[name="basis-' + cur + '"]:checked').val();
         Utils.log({cur: cur, selected_value: selected_value}, 'Radiobasis change');
-        $('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value));
+
+        var currentBeginHour = $('#content-' + cur).find('.inputPeriodBegin').val() || '00:00';
+        var currentEndHour   = $('#content-' + cur).find('.inputPeriodEnd').val()   || '24:00';
+        $('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value, '', currentBeginHour, '', currentEndHour));
+        
+        //$('#table-' + cur).html(UIManager.createPeriodContent(cur, selected_value));
         $('[id^=selectable]').selectable();
         DatePickerManager.apply();
     });
