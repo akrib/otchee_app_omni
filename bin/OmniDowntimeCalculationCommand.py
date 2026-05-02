@@ -548,6 +548,29 @@ def evaluate_filter(record, filter_expression, logger):
         # Pattern pour isnull et isnotnull
         isnull_pattern = r'isnull\((\w+)\)'
         isnotnull_pattern = r'isnotnull\((\w+)\)'
+
+
+        def apply_priority(results, operators):
+            # Passe 1 : résoudre tous les AND
+            combined_results = list(results)
+            combined_operators = list(operators)
+            
+            i = 0
+            while i < len(combined_operators):
+                if combined_operators[i] == 'AND':
+                    combined_results[i] = combined_results[i] and combined_results[i + 1]
+                    combined_results.pop(i + 1)
+                    combined_operators.pop(i)
+                else:
+                    i += 1
+            
+            # Passe 2 : résoudre tous les OR restants
+            final = combined_results[0]
+            for i, op in enumerate(combined_operators):
+                if op == 'OR':
+                    final = final or combined_results[i + 1]
+            
+            return final
         
         def evaluate_single_expression(expr):
             """Évalue une expression unique (sans AND/OR)"""
@@ -661,15 +684,8 @@ def evaluate_filter(record, filter_expression, logger):
         
         # Évaluer avec les opérateurs logiques
         # Priorité: AND avant OR
-        final_result = results[0]
-        
-        for i, op in enumerate(operators):
-            if op == 'AND':
-                final_result = final_result and results[i + 1]
-            elif op == 'OR':
-                final_result = final_result or results[i + 1]
-        
-        return not final_result if negate else final_result
+    final_result = apply_priority(results, operators)
+    return not final_result if negate else final_result
         
     except Exception as e:
         logger.error(f"Erreur lors de l'évaluation du filtre '{filter_expression}': {str(e)}")
@@ -889,7 +905,8 @@ class DLTDowntimeCalculationCommand(StreamingCommand):
                 
                 if parsed_dt.get('format') == 'json':
                     downtime_with_result = parsed_dt['original_json'].copy()
-                    downtime_with_result[outputfield] = current_downtime_result
+                    downtime_with_result[outputfield] = 1 if (current_downtime_result == 1 and in_filter == 1) else 0
+                    downtime_with_result['is_time_match'] = current_downtime_result  # conserver le résultat temporel seul
                     downtime_with_result['in_filter'] = in_filter
                     modified_downtimes[i] = json.dumps(downtime_with_result)
                     
