@@ -684,8 +684,8 @@ def evaluate_filter(record, filter_expression, logger):
         
         # Évaluer avec les opérateurs logiques
         # Priorité: AND avant OR
-    final_result = apply_priority(results, operators)
-    return not final_result if negate else final_result
+        final_result = apply_priority(results, operators)
+        return not final_result if negate else final_result
         
     except Exception as e:
         logger.error(f"Erreur lors de l'évaluation du filtre '{filter_expression}': {str(e)}")
