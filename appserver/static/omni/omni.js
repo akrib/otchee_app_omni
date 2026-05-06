@@ -1559,8 +1559,10 @@ require(['splunkjs/mvc/utils'], function (SplunkUtil) {
                 for (var i = 0; i < allPeriods.length; i++) {
                     var periodValue = allPeriods[i];
                     var periodNumber = (i + 1).toString();
+                    var periodType = periodValue[CONFIG.PERIOD_FIELDS.TYPE] || periodValue[0];
                     
                     Utils.log(periodValue, 'Création période ' + periodNumber);
+
                     
                     UIManager.appendPeriodTab(
                         'tabs',
