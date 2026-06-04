@@ -1,0 +1,37 @@
+<form version="1.1" theme="light" hideEdit="true"
+      script="omni/maintenance_app.js">
+  <label>ITSI : Maintenance</label>
+
+  <!--
+    Vue unique pilotee par l'URL :
+      ?mode=add            -> ajout standard (Service/KPI/Entity/Source/Periode)
+      ?mode=add_custom     -> ajout filtre custom
+      ?mode=update&dt_id=X -> modification standard
+      ?mode=update_custom&dt_id=X
+      ?mode=delete&dt_id=X
+    Fallbacks : token "mode" / "DT_ID", sinon data-mode du div de config.
+  -->
+  <fieldset submitButton="false" autoRun="false"></fieldset>
+
+  <row>
+    <panel>
+      <html>
+        <!-- Unique point de montage : l'appli JS construit tout ici -->
+        <div id="omni_maintenance_app"></div>
+
+        <!-- Config par defaut (surchargee par l'URL si presente) -->
+        <div id="omni_config" data-mode="add" data-debug="0" style="display:none"></div>
+
+        <!-- Conserve pour compat modal_popup.js si tu le gardes (optionnel) -->
+        <a href="#modalpopup" rel="modal_popup:open" id="modal_link" style="display:none"></a>
+        <div id="modalpopup" class="modal_popup" style="display:none">
+          <table>
+            <tr><div id="modal_header"></div></tr>
+            <tr><div id="modal_content"></div></tr>
+            <tr><div id="modal_footer"></div></tr>
+          </table>
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>
