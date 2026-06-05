@@ -16,47 +16,24 @@
   <search id="mydt">
     <query>
      <![CDATA[
-| inputlookup  omni_kv_trace_log_def
-| eval downtime_raw=downtime
-| eval downtime_parsed=""
-| foreach downtime_raw mode=multivalue 
-    [| eval dt_json='<<FIELD>>',
-           dt_type=spath(dt_json, "dt_type"),
-           begin_date=spath(dt_json, "begin_date"),
-           end_date=spath(dt_json, "end_date"),
-           begin_time=spath(dt_json, "begin_time"),
-           end_time=spath(dt_json, "end_time"),
-           period_str=dt_type."#".begin_date."#".end_date."#".begin_time."#".end_time,
-           downtime_parsed=if(len(downtime_parsed)>0, downtime_parsed."£".period_str, period_str)]
-| eval downtime=coalesce(downtime_parsed, ""),
-_raw=downtime.";".commentary.";".creator.";".action.";".dt_update.";".ID.";".mvjoin(service,",").";".mvjoin(kpi,",").";".mvjoin(entity,",").";".version
+| inputlookup omni_kv_trace_log_def
+``` Reconstruit le tableau JSON downtime a partir du multivalue du KV store
+    (chaque valeur = un objet JSON), exactement comme dans omni.js et le dashboard Maintenance Logs.
+    NE PAS retraduire les jours / types ici : cela casserait le JSON. L'affichage
+    en francais est gere par omni_journal.js (formatPeriod). ```
+| eval DOWNTIME="[" + mvjoin(downtime,",") + "]"
+| eval period_count=mvcount(downtime)
+``` _raw reconstruit a partir du JSON (etait base sur l'ancien format £/#).
+    Si un script en aval consomme l'ancien format, signale-le. ```
+| eval _raw=DOWNTIME.";".commentary.";".creator.";".action.";".dt_update.";".ID.";".mvjoin(service,",").";".mvjoin(kpi,",").";".mvjoin(entity,",").";".version
 | eval state=case(action=="add", "ACTIVE", action=="update", "ACTIVE", action=="delete", "DELETE")
-| sort - dt_update
 | eval last_update=strftime(round((dt_update/1000),0), "%Y-%m-%d %H:%M:%S")
-| eval
-downtime=replace(downtime,"Monday","Lundi"),
-downtime=replace(downtime,"Tuesday","Mardi"),
-downtime=replace(downtime,"Wednesday","Mercredi"),
-downtime=replace(downtime,"Thursday","Jeudi"),
-downtime=replace(downtime,"Friday","Vendredi"),
-downtime=replace(downtime,"Saturday","Samedi"),
-downtime=replace(downtime,"Sunday","Dimanche"),
-downtime=replace(downtime,"weekly","Hebdomadaire"),
-downtime=replace(downtime,"monthly","Mensuel"),
-downtime=replace(downtime,"between_date","Date à date"),
-downtime=replace(downtime,"special_date_first_in_month","Premier du mois"),
-downtime=replace(downtime,"special_date_second_in_month","Deuxieme du mois"),
-downtime=replace(downtime,"special_date_third_in_month","Troisieme du mois"),
-downtime=replace(downtime,"special_date_fourth_in_month","Quatrieme du mois"),
-downtime=replace(downtime,"special_date_last_in_month","Dernier du mois")
-| eval downtime=split(downtime,"£")
-| eval orig_creator=if(action=="add", creator,""), timestamp=tonumber(dt_update)
-| eval Action=case(action=="add", "Created", action="delete", "Deleted", action="update", "Updated")
-| sort - ID,timestamp
-| rename creator as AUTEUR, Action as ACTION, service as SERVICE, kpi as KPI, entity as ENTITY, commentary as COMMENTAIRE, version as VERSION
-| eval FOREIGN_UPDATE=if(AUTEUR!="$login$", 1, 0),O=if("$login$"=orig_creator,1,0), DATE=strftime(timestamp/1000,"%F %T"), SERVICE=mvjoin(SERVICE,";"), KPI=mvjoin(KPI,";"),ENTITY=mvjoin(ENTITY,";")
+| eval orig_creator=if(action=="add", creator, ""), timestamp=tonumber(dt_update)
+| eval Action=case(action=="add", "Created", action=="delete", "Deleted", action=="update", "Updated")
+| sort - ID, timestamp
+| rename creator as AUTEUR, Action as ACTION, service as SERVICE, kpi as KPI, entity as ENTITY, commentary as COMMENTAIRE, version as VERSION, dt_filter as DT_FILTER, dt_policy as DT_POLICY
+| eval FOREIGN_UPDATE=if(AUTEUR!="$login$", 1, 0), O=if("$login$"==orig_creator, 1, 0), DATE=strftime(timestamp/1000,"%F %T"), SERVICE=mvjoin(SERVICE,";"), KPI=mvjoin(KPI,";"), ENTITY=mvjoin(ENTITY,";")
 | where AUTEUR="$login$" and action!="obsolete"
-
 ]]>
     </query>
     <earliest></earliest>
@@ -311,7 +288,7 @@ text-align: left !important;
       <table id="highlight">
         <search base="mydt">
           <query>
-          | table O, ID, DATE, ACTION, SERVICE, KPI, ENTITY, COMMENTAIRE, VERSION</query>
+          | table O, ID, DATE, ACTION, SERVICE, KPI, ENTITY, COMMENTAIRE, VERSION, DOWNTIME, DT_FILTER, DT_POLICY</query>
         </search>
         <option name="count">10</option>
         <option name="drilldown">none</option>

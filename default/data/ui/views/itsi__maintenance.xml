@@ -3,14 +3,29 @@
   <label>ITSI : Maintenance</label>
 
   <!--
-    Vue unique pilotee par l'URL :
-      ?mode=add            -> ajout standard (Service/KPI/Entity/Source/Periode)
-      ?mode=add_custom     -> ajout filtre custom
-      ?mode=update&dt_id=X -> modification standard
-      ?mode=update_custom&dt_id=X
-      ?mode=delete&dt_id=X
-    Fallbacks : token "mode" / "DT_ID", sinon data-mode du div de config.
+    ============================================================
+    VUE UNIQUE  -  remplace les 5 anciens dashboards :
+        itsi__add_maintenance.xml
+        itsi__add_custom_maintenance.xml
+        itsi__modify_maintenance.xml
+        itsi__modify_custom_maintenance.xml
+        itsi__delete_maintenance.xml
+
+    Le mode est pilote par l'URL :
+        ?mode=add
+        ?mode=add_custom
+        ?mode=update&dt_id=XXXX
+        ?mode=update_custom&dt_id=XXXX
+        ?mode=delete&dt_id=XXXX
+
+    Fallbacks (dans l'ordre) :
+        token "mode" / token "DT_ID"  ->  attributs data-* du div #omni_config
+
+    Toute l'UI (stepper, etapes, periodes, loader, modal) est
+    construite par maintenance_app.js dans #omni_maintenance_app.
+    ============================================================
   -->
+
   <fieldset submitButton="false" autoRun="false"></fieldset>
 
   <row>
@@ -21,16 +36,6 @@
 
         <!-- Config par defaut (surchargee par l'URL si presente) -->
         <div id="omni_config" data-mode="add" data-debug="0" style="display:none"></div>
-
-        <!-- Conserve pour compat modal_popup.js si tu le gardes (optionnel) -->
-        <a href="#modalpopup" rel="modal_popup:open" id="modal_link" style="display:none"></a>
-        <div id="modalpopup" class="modal_popup" style="display:none">
-          <table>
-            <tr><div id="modal_header"></div></tr>
-            <tr><div id="modal_content"></div></tr>
-            <tr><div id="modal_footer"></div></tr>
-          </table>
-        </div>
       </html>
     </panel>
   </row>
