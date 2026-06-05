@@ -36,6 +36,9 @@ COLLECTION = "omni_kv"
 LOOKUP = "omni_kv"
 KVLOG = "omni_kv_trace_log"
 
+# Valeurs autorisées pour le champ dt_category au niveau de l'enregistrement KV
+DT_CATEGORY_VALUES = ("itsi", "custom")
+
 
 class KVStoreClient:
     """
@@ -275,6 +278,22 @@ def is_null_optional(value):
     return False
 
 
+def _scalarize(value):
+    """
+    Normalise une valeur potentiellement multivaluée (liste) en scalaire.
+    Splunk renvoie souvent les champs sous forme de liste à un élément.
+
+    Args:
+        value: Valeur brute issue de l'enregistrement
+
+    Returns:
+        La première valeur si c'est une liste, sinon la valeur telle quelle
+    """
+    if isinstance(value, list):
+        return value[0] if value else ''
+    return value
+
+
 @Configuration()
 class OmniKVUpdate(StreamingCommand):
     """
@@ -285,7 +304,7 @@ class OmniKVUpdate(StreamingCommand):
     
     Exemple:
         | makeresults 
-        | eval service="web", kpi="availability", entity="server01"
+        | eval service="web", kpi="availability", entity="server01", dt_category="itsi"
         | omnikvupdate action="add"
     
     Champs requis:
@@ -301,6 +320,7 @@ class OmniKVUpdate(StreamingCommand):
         - version: Version du downtime
         - step_opt: Options d'étape
         - dt_filter: Filtre de downtime
+        - dt_category: Type de maintenance au niveau de l'enregistrement ("itsi" ou "custom")
     
     Champs optionnels:
         - dt_policy: policy de downtime
@@ -369,7 +389,7 @@ class OmniKVUpdate(StreamingCommand):
     def _prepare_record_for_kvstore(self, record):
         prepared = record.copy()
 
-        scalar_fields = ['step_opt', 'dt_filter', 'dt_policy', 'commentary',
+        scalar_fields = ['step_opt', 'dt_filter', 'dt_policy', 'dt_category', 'commentary',
                          'creator', 'version', 'ID', 'dt_update']
         for field in scalar_fields:
             if field in prepared and isinstance(prepared[field], list):
@@ -390,7 +410,30 @@ class OmniKVUpdate(StreamingCommand):
                     pass
     
         return prepared
+
+    def _validate_dt_category(self, record):
+        """
+        Valide la valeur du champ dt_category (doit être "itsi" ou "custom")
         
+        Args:
+            record: Enregistrement à valider
+            
+        Returns:
+            tuple: (nombre d'erreurs, message d'erreur)
+        """
+        error = 0
+        error_output = ""
+        
+        dt_category_value = _scalarize(record.get('dt_category'))
+        if dt_category_value is None or str(dt_category_value).strip() not in DT_CATEGORY_VALUES:
+            error += 1
+            error_output += (
+                "dt_category field must be one of "
+                f"{', '.join(DT_CATEGORY_VALUES)}; "
+            )
+        
+        return error, error_output
+
     def _validate_add_fields(self, record):
         """
         Valide les champs requis pour l'ajout
@@ -416,7 +459,8 @@ class OmniKVUpdate(StreamingCommand):
             'ID',
             'version',
             'step_opt',
-            'dt_filter'
+            'dt_filter',
+            'dt_category'
         ]
         
         # Champs optionnels (peuvent être vides mais doivent exister)
@@ -427,6 +471,11 @@ class OmniKVUpdate(StreamingCommand):
             if field not in record or is_null(record[field]):
                 error += 1
                 error_output += f"{field} field is Null or missing; "
+        
+        # Validation de la valeur de dt_category (itsi | custom)
+        dt_error, dt_error_output = self._validate_dt_category(record)
+        error += dt_error
+        error_output += dt_error_output
         
         # Ajout des champs optionnels s'ils n'existent pas
         for field in optional_fields:
@@ -463,7 +512,8 @@ class OmniKVUpdate(StreamingCommand):
             'ID',
             'version',
             'step_opt',
-            'dt_filter'
+            'dt_filter',
+            'dt_category'
         ]
         
         # Champs optionnels
@@ -474,6 +524,11 @@ class OmniKVUpdate(StreamingCommand):
             if field not in record or is_null(record[field]):
                 error += 1
                 error_output += f"{field} field is Null or missing; "
+        
+        # Validation de la valeur de dt_category (itsi | custom)
+        dt_error, dt_error_output = self._validate_dt_category(record)
+        error += dt_error
+        error_output += dt_error_output
         
         # Ajout des champs optionnels s'ils n'existent pas
         for field in optional_fields:
@@ -519,11 +574,13 @@ class OmniKVUpdate(StreamingCommand):
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
             new_key = kv.add(prepared)
             
-            # Ajouter dans le log de traçabilité
+            # --- CORRECTION : Créer une copie pour la trace ---
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
-            record["action"] = "add"
-            record["trace_timestamp"] = datetime.datetime.now().isoformat()
-            trace_log.add(prepared)
+            trace_record = prepared.copy()
+            trace_record["action"] = "add"
+            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+            trace_log.add(trace_record)
+            # --------------------------------------------------
             
             self.logger.info(f"Record added successfully with key: {new_key}")
             return f"Ajout OK (key: {new_key})"
