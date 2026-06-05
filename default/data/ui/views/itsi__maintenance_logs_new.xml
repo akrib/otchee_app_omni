@@ -1,0 +1,35 @@
+<form version="1.1" theme="light" hideEdit="true"
+      script="omni/maintenance_logs_app.js">
+  <label>ITSI : Maintenance Logs</label>
+
+  <!--
+    Vue unique pilotee par le JS (cf. maintenance_logs_app.js).
+    Tout est construit dans #omni_maintenance_logs_app.
+
+    Le parse JSON du downtime est fait EN JS (plus de cell renderer TableView,
+    plus de bloc spath/foreach commente cote SPL).
+
+    Config (surchargeable par l'URL : ?debug=1&rows=50) :
+      data-debug   : 0/1 -> logs console + bouton Debug
+      data-rows    : nb de cartes par page (defaut 30)
+
+    Lien depuis la recherche : ./itsi__maintenance_logs?form.input_ID=XXX
+    pre-remplit la barre de recherche avec l'ID.
+  -->
+  <fieldset submitButton="false" autoRun="false"></fieldset>
+
+  <row>
+    <panel>
+      <html>
+        <!-- Point de montage unique : l'appli JS construit tout ici -->
+        <div id="omni_maintenance_logs_app"></div>
+
+        <!-- Config par defaut (surchargee par l'URL si presente) -->
+        <div id="omni_logs_config"
+             data-debug="0"
+             data-rows="30"
+             style="display:none"></div>
+      </html>
+    </panel>
+  </row>
+</form>
