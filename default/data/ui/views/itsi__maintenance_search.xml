@@ -1,27 +1,11 @@
 <form version="1.1" theme="light" hideEdit="true"
       script="omni/maintenance_views_app.js">
-  <label>ITSI : Maintenance Search</label>
-
-  <!--
-    Vue unique pilotee par le JS (cf. maintenance_search_app.js).
-    Tout est construit dans #omni_maintenance_search_app.
-
-    Config (surchargeable par l'URL : ?debug=1) :
-      data-debug         : 0/1   -> logs console
-      data-client-scope  : 0/1   -> filtrage RBAC par client (base_filtre).
-                                    0 par defaut = comportement identique a l'existant.
-                                    Passez a 1 pour scoper les resultats par client/role.
-      data-rows          : nb de cartes par page (defaut 30)
-  -->
+  <label>Maintenance Search</label>
   <fieldset submitButton="false" autoRun="false"></fieldset>
-
   <row>
     <panel>
       <html>
-        <!-- Unique point de montage : l'appli JS construit tout ici -->
         <div id="omni_maintenance_search_app"></div>
-
-        <!-- Config par defaut (surchargee par l'URL si presente) -->
         <div id="omni_search_config"
              data-debug="0"
              data-client-scope="0"

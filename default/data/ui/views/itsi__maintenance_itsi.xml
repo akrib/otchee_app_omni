@@ -1,0 +1,13 @@
+<form version="1.1" theme="light" hideEdit="true"
+      script="omni/maintenance_app.js">
+  <label>Add Maintenance : ITSI</label>
+  <fieldset submitButton="false" autoRun="false"></fieldset>
+  <row>
+    <panel>
+      <html>
+        <div id="omni_maintenance_app"></div>
+        <div id="omni_config" data-mode="add" data-debug="0" style="display:none"></div>
+      </html>
+    </panel>
+  </row>
+</form>

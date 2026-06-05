@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '2.5.2';
+var APP_VERSION = '2.5.3';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance App v' + APP_VERSION + ' charge');
@@ -170,6 +170,10 @@ var Config = (function () {
         latest_time: opts.latest || 'now'
       }, opts.searchOpts || {}));
 
+      if (Config.debug) {
+        try { console.log('%c SPL [' + id + ']', 'color:#0bf;font-weight:bold', '\n' + spl); } catch (e) {}
+      }
+
       var sid = sm.id;
       SearchHub._active[sid] = 0.01;
       SearchHub._render(opts.message);
@@ -184,11 +188,32 @@ var Config = (function () {
       sm.on('search:done', function (p) {
         SearchHub._active[sid] = 1;
         SearchHub._render(opts.message);
-        if (opts.onResults && p.content.resultCount >= 0) {
-          var rs = sm.data('results', { count: opts.count || 0, output_mode: 'json' });
+
+        // ------------------------------------------------------------------
+        // CORRECTION : lecture des resultats en 'json_rows'.
+        // En 'json' SplunkJS expose .results (tableau d'objets) et PAS .rows,
+        // ce qui faisait que onResults recevait toujours [] (=> aucun
+        // prechargement en update/delete et listes vides).
+        // On utilise donc 'json_rows' avec un filet de securite sur .results.
+        // ------------------------------------------------------------------
+        var rc = (p && p.content) ? p.content.resultCount : -1;
+        if (opts.onResults && rc >= 0) {
+          var rs = sm.data('results', { count: opts.count || 0, output_mode: 'json_rows' });
           rs.on('data', function () {
-            opts.onResults(rs.data().rows || [], rs.data().fields || []);
+            var d = rs.data() || {};
+            var fields = (d.fields || []).map(function (f) {
+              return (typeof f === 'string') ? f : ((f && f.name) || f);
+            });
+            var rows = d.rows;
+            if ((!rows || !rows.length) && d.results && d.results.length) {
+              rows = d.results.map(function (o) {
+                return fields.map(function (n) { return o[n]; });
+              });
+            }
+            rows = rows || [];
+            opts.onResults(rows, fields);
           });
+          rs.on('error', function () { if (opts.onError) opts.onError(); });
         }
         if (opts.onDone) opts.onDone(p);
         delete SearchHub._active[sid];
@@ -603,7 +628,7 @@ var Config = (function () {
           // 1. On décode le tableau principal
           var j = JSON.parse(preload);
           var rawList = Array.isArray(j) ? j : [j];
-          
+
           // 2. CORRECTION : On décode chaque élément s'il est encore sous forme de chaîne textuelle
           list = rawList.map(function (item) {
             if (typeof item === 'string') {
@@ -622,12 +647,12 @@ var Config = (function () {
           list = (preload || '').split('£').map(function (s) {
             var a = s.split('#');
             if (a.length < 5) return null;
-            return { 
-              dt_type: a[0], 
-              begin_date: a[1], 
-              end_date: a[2], 
-              begin_time: a[3], 
-              end_time: a[4] 
+            return {
+              dt_type: a[0],
+              begin_date: a[1],
+              end_date: a[2],
+              begin_time: a[3],
+              end_time: a[4]
             };
           }).filter(Boolean);
         }
@@ -909,6 +934,29 @@ var dtJson = (sel.downtimeFields || [])
       });
       $body.find('#cf-logic').on('change', function () { self._recompute($body); });
 
+      // ------------------------------------------------------------------
+      // CORRECTION (update_custom) : reconstruction de l'UI a partir du
+      // filtre dt_filter deja enregistre. Sans ca, _recompute() ecrasait
+      // le token avec une valeur vide et le filtre existant etait perdu.
+      // ------------------------------------------------------------------
+      var pre = Tokens.get('dt_filter_selected');
+      if (pre && String(pre).trim() && pre !== 'omni_skip_filter=1') {
+        var parsed = self._parse(pre);
+        if (parsed) {
+          self._applyField($body.find('#cf-1'), parsed.fields[0]);
+          if (parsed.fields[1]) {
+            $body.find('#cf-sup').prop('checked', true);
+            $body.find('#cf-op, #cf-2').show();
+            $body.find('#cf-logic').val(parsed.logic);
+            self._applyField($body.find('#cf-2'), parsed.fields[1]);
+          }
+        } else {
+          // filtre non decomposable -> mode brut editable (aucune perte)
+          self._renderRaw($body, pre);
+          return;
+        }
+      }
+
       this._recompute($body);
     },
 
@@ -974,10 +1022,129 @@ var dtJson = (sel.downtimeFields || [])
       else Tokens.unset('dt_filter_selected');
     },
 
-    // prechargement en update_custom : parse simple du filtre existant
+    /* ----------------------------------------------------------
+     * PARSING DU FILTRE EXISTANT (nouveau)
+     * Reconstruit, a partir de la chaine SPL stockee, jusqu'a deux
+     * descripteurs { not, name, type, op, val } + un operateur logique.
+     * Renvoie null si la chaine n'est pas decomposable -> mode brut.
+     * ---------------------------------------------------------- */
+
+    // coupe la chaine sur le 1er AND/OR de 1er niveau (hors guillemets)
+    _splitLogic: function (str) {
+      var inQ = false;
+      for (var i = 0; i < str.length; i++) {
+        var ch = str.charAt(i);
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (inQ) continue;
+        if (str.substr(i, 5).toUpperCase() === ' AND ') {
+          return { logic: 'AND', a: str.slice(0, i), b: str.slice(i + 5) };
+        }
+        if (str.substr(i, 4).toUpperCase() === ' OR ') {
+          return { logic: 'OR', a: str.slice(0, i), b: str.slice(i + 4) };
+        }
+      }
+      return null;
+    },
+
+    // parse UNE expression simple -> descripteur ou null
+    _parseExpr: function (str) {
+      str = (str || '').trim();
+      if (!str) return null;
+
+      var not = false;
+      if (/^NOT\s+/i.test(str)) { not = true; str = str.replace(/^NOT\s+/i, '').trim(); }
+
+      var m;
+
+      // isnull(name) / isnotnull(name)
+      m = /^isnotnull\(\s*([^)]+?)\s*\)$/i.exec(str);
+      if (m) return { not: not, name: m[1].trim(), type: 'string', op: 'isnotnull()', val: '' };
+      m = /^isnull\(\s*([^)]+?)\s*\)$/i.exec(str);
+      if (m) return { not: not, name: m[1].trim(), type: 'string', op: 'isnull()', val: '' };
+
+      // name LIKE "..."  ou name LIKE ...
+      m = /^(.+?)\s+LIKE\s+(.+)$/i.exec(str);
+      if (m) {
+        var lname = m[1].trim();
+        var rhs = m[2].trim();
+        var isStr = /^".*"$/.test(rhs);
+        var inner = isStr ? rhs.slice(1, -1) : rhs;
+        var starts = inner.charAt(0) === '%';
+        var ends = inner.charAt(inner.length - 1) === '%';
+        var op = 'LIKE', val = inner;
+        if (starts && ends) { op = 'LIKE'; val = inner.replace(/^%/, '').replace(/%$/, ''); }
+        else if (ends) { op = 'LIKEC'; val = inner.replace(/%$/, ''); }   // val%  -> commence par
+        else if (starts) { op = 'LIKEF'; val = inner.replace(/^%/, ''); } // %val  -> finit par
+        else { op = 'LIKE'; val = inner; }
+        return { not: not, name: lname, type: isStr ? 'string' : 'number', op: op, val: val };
+      }
+
+      // name <op> value  (op : <= >= != < > =)
+      m = /^(.+?)\s*(<=|>=|!=|<|>|=)\s*(.*)$/.exec(str);
+      if (m) {
+        var nm = m[1].trim();
+        var operator = m[2];
+        var rest = m[3].trim();
+        var isS = /^".*"$/.test(rest);
+        var value = isS ? rest.slice(1, -1) : rest;
+        return { not: not, name: nm, type: isS ? 'string' : 'number', op: operator, val: value };
+      }
+
+      return null;
+    },
+
+    // parse le filtre complet -> { logic, fields:[...] } ou null
+    _parse: function (filter) {
+      filter = (filter || '').trim();
+      if (!filter || filter === 'omni_skip_filter=1') return null;
+
+      var split = this._splitLogic(filter);
+      if (split) {
+        var e1 = this._parseExpr(split.a);
+        var e2 = this._parseExpr(split.b);
+        if (e1 && e2) return { logic: split.logic, fields: [e1, e2] };
+      }
+      var single = this._parseExpr(filter);
+      if (single) return { logic: 'AND', fields: [single] };
+      return null;
+    },
+
+    // pose les valeurs d'un descripteur dans un bloc de champ
+    _applyField: function ($c, f) {
+      if (!f) return;
+      $c.find('.cf-not-chk').prop('checked', !!f.not);
+      $c.find('.cf-not').toggleClass('is-active', !!f.not);
+      $c.find('.cf-name').val(f.name || '');
+      // on positionne le type PUIS on declenche le rebuild de la liste d'operateurs
+      $c.find('.cf-type').val(f.type === 'number' ? 'number' : 'string').trigger('change');
+      $c.find('.cf-op').val(f.op || '=');
+      $c.find('.cf-val').val(f.val || '');
+    },
+
+    // repli : filtre non decomposable -> edition brute (on ne perd rien)
+    _renderRaw: function ($body, filter) {
+      $body.html(''
+        + '<h2>Filtre personnalise</h2>'
+        + '<p class="omni-hint">Le filtre existant n\'a pas pu etre decompose en champs. '
+        + 'Vous pouvez le consulter et le modifier directement ci-dessous.</p>'
+        + '<div class="omni-field"><label>Filtre (SPL brut)</label>'
+        + '<textarea id="cf-raw" rows="3"></textarea></div>'
+        + '<div class="omni-field"><label>Apercu du filtre</label>'
+        + '<input type="text" id="cf-preview" readonly></div>');
+      var $raw = $body.find('#cf-raw').val(filter);
+      $body.find('#cf-preview').val(filter);
+      Tokens.set('dt_filter_selected', filter);
+      $raw.on('input', function () {
+        var v = ($(this).val() || '').trim();
+        $body.find('#cf-preview').val(v);
+        if (v) Tokens.set('dt_filter_selected', v); else Tokens.unset('dt_filter_selected');
+      });
+    },
+
+    // prechargement en update_custom : stocke le filtre existant (lu par render)
     preload: function (filter) {
       if (!filter) return;
-      // on garde le filtre tel quel ; il sera reaffiche dans l'apercu si l'utilisateur ne touche rien
+      // on garde le filtre tel quel ; render() le reconstruira dans l'UI
       Tokens.set('dt_filter_selected', filter);
     },
 
@@ -1127,7 +1294,7 @@ var dtJson = (sel.downtimeFields || [])
       this.steps = buildSteps();
       this._renderStepper();
       this.go(0);
-      $('#omni-prev').on('click', function () {  
+      $('#omni-prev').on('click', function () {
 
 console.log("[OmniApp] État des tokens à l'étape précedente :", {
         mode: Config.mode,
@@ -1139,7 +1306,7 @@ console.log("[OmniApp] État des tokens à l'étape précedente :", {
     });
 Wizard.go(Wizard.index - 1);
       });
-      $('#omni-next').on('click', function () { 
+      $('#omni-next').on('click', function () {
 console.log("[OmniApp] État des tokens à l'étape suivante :", {
         mode: Config.mode,
         service: Tokens.get('service_selected'),
@@ -1321,7 +1488,7 @@ console.log("[OmniApp] État des tokens à la derniere étape :", {
               var idx = fields.indexOf('result');
               if (idx > -1 && rows.length > 0) {
                   var backendResult = rows[0][idx];
-                  
+
                   console.log("%c[OmniApp] Résultat du KVStore (Backend Python) : " + backendResult, "background: #222; color: #bada55; font-weight: bold; padding: 2px;");
 
                   // Interception des erreurs de Python

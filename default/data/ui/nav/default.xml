@@ -1,10 +1,9 @@
 <nav search_view="search" color="#74b9ff00">
   <view name="accueil" default="true" />
   <collection label="Maintenance">
+    <view name="itsi__maintenance_itsi"/>
+    <view name="itsi__maintenance_custom"/>
     <view name="itsi__maintenance_search" />
-    <view name="itsi__maintenance?mode=add" label="Add itsi maintenance"/>
-    <view name="itsi__maintenance?mode=add_custom" label="Add custom maintenance"/>
-    <view name="itsi__maintenance_target" />
   </collection>
   <collection label="Profil">
     <view name="itsi__my_own_maintenance" />

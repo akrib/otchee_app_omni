@@ -1,32 +1,5 @@
-/*
- *  Omni Maintenance Views App  -  appli mono-page (full JS) UNIFIEE
- *  ============================================================
- *  Fusionne en UN SEUL fichier les 3 anciennes applis identiques dans leur
- *  fonctionnement :
- *      - maintenance_search_app.js   (ITSI : Maintenance Search)
- *      - maintenance_mine_app.js     (ITSI : Mes Maintenances)
- *      - maintenance_logs_app.js     (ITSI : Maintenance Logs)
- *
- *  Le MODE est detecte automatiquement selon le <div data-config> present
- *  dans la vue XML :
- *      #omni_search_config  -> mode 'search'  (montage #omni_maintenance_search_app)
- *      #omni_mine_config    -> mode 'mine'    (montage #omni_maintenance_mine_app)
- *      #omni_logs_config    -> mode 'logs'    (montage #omni_maintenance_logs_app)
- *
- *  >>> Cote vues XML : il suffit de pointer le meme script pour les 3 :
- *          script="omni/maintenance_views_app.js"
- *      Les ids de montage / config restent inchanges.
- *
- *  Ce qui differe d'un mode a l'autre (tout le reste est mutualise) :
- *      - la source de donnees / requete SPL
- *      - le flux de chargement : RBAC (search) / utilisateur courant (mine) / direct (logs)
- *      - quelques champs de toolbar (date, "en cours", chips action, bouton Rechercher)
- *      - le rendu de la carte (LED actif/inactif vs badge d'action)
- *      - les options de tri et les libelles
- */
-
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '3.0.0';
+var APP_VERSION = '3.0.1';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Views App v' + APP_VERSION + ' charge');
@@ -405,21 +378,22 @@ require([
         '.omni-toolbar{padding:18px 24px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;border-bottom:1px solid var(--omni-line);background:#fafbfc;}',
         '.omni-tb-field{display:flex;flex-direction:column;gap:6px;}',
         '.omni-tb-field label{font-size:12px;font-weight:600;color:var(--omni-muted);}',
-        '.omni-search-wrap{position:relative;flex:1;min-width:260px;}',
+        '.omni-search-wrap{position:relative;flex:1;min-width:90%;}',
+        '#omni-date{margin:0}',
         '.omni-search-wrap input{width:100%;border:1px solid var(--omni-line);border-radius:10px;padding:11px 38px 11px 38px;font-size:14px;font-family:inherit;}',
         '.omni-search-wrap input:focus{outline:none;border-color:var(--omni-primary);box-shadow:0 0 0 3px rgba(35,87,157,.12);}',
         '.omni-search-wrap .omni-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--omni-muted);font-size:15px;}',
         '.omni-search-wrap .omni-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--omni-muted);cursor:pointer;font-size:18px;line-height:1;display:none;}',
-        '.omni-input,.omni-select{border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;background:#fff;}',
+        '.omni-input,.omni-select{border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;height:42px;font-family:inherit;background:#fff;margin: 0;}',
         '.omni-input:focus,.omni-select:focus{outline:none;border-color:var(--omni-primary);box-shadow:0 0 0 3px rgba(35,87,157,.12);}',
         '.omni-chips{display:flex;gap:6px;flex-wrap:wrap;}',
         '.omni-chip{border:1px solid var(--omni-line);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:13px;background:#fff;transition:.15s;}',
         '.omni-chip.is-active{border-color:var(--omni-primary);background:rgba(35,87,157,.08);color:var(--omni-primary);font-weight:600;}',
-        '.omni-toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--omni-ink);cursor:pointer;user-select:none;}',
+        '.omni-toggle{display:inline-flex;font-size:14px;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--omni-ink);cursor:pointer;user-select:none;}',
         '.omni-btn{appearance:none;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;}',
         '.omni-btn--ghost{background:#fff;color:var(--omni-muted);border-color:var(--omni-line);}',
         '.omni-btn--ghost:hover{border-color:var(--omni-primary);color:var(--omni-primary);}',
-        '.omni-btn--primary{background:var(--omni-primary);color:#fff;display:inline-flex;align-items:center;gap:6px;}',
+        '.omni-btn--primary{background:var(--omni-primary);color:#fff;display:none;align-items:center;gap:6px;}',
         '.omni-btn--primary:hover{background:var(--omni-primary-2);}',
         '.omni-dbg{background:#0f2238;color:#cfe6ff;border-radius:8px;padding:12px 14px;font-family:Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:38vh;}',
         '.omni-dbg-h{font-weight:600;color:var(--omni-primary);margin:14px 0 6px;font-size:13px;}',
@@ -444,7 +418,7 @@ require([
         '.tag{font-family:Roboto,sans-serif;font-size:12px;background:var(--omni-primary);border-radius:4px;color:#fff;display:inline-block;margin:3px 3px 3px 0!important;padding:3px 8px!important;}',
         '.tag_dt{font-family:Roboto,sans-serif;font-size:12px;background:#74b9ff;border-radius:4px;color:#fff;display:inline-block;margin:3px!important;padding:3px 8px!important;}',
         '.tag_comment{font-family:Roboto,sans-serif;font-size:12.5px;display:inline-block;padding:3px 4px!important;color:#222;}',
-        '.comment-block{color:#000!important;border-left:3px solid var(--omni-accent);padding-left:10px;margin:8px 0 0;}',
+        '.comment-block{background:#d1d1d1;background-color:#d1d1d1;color:#000!important;border-left:3px solid var(--omni-accent);padding-left:10px;margin:8px 0 0;}',
         '.omni-mark{background:#ffe9a8;color:inherit;border-radius:3px;padding:0 1px;}',
         '.img-option{transition:.15s;}.img-option:hover{transform:scale(1.08);}',
         '.search-option a{display:inline-block;margin-bottom:6px;}',
