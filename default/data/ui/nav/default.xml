@@ -2,8 +2,8 @@
   <view name="accueil" default="true" />
   <collection label="Maintenance">
     <view name="itsi__maintenance_search" />
-    <view name="itsi__add_maintenance" />
-    <view name="itsi__add_custom_maintenance" />
+    <view name="itsi__maintenance?mode=add" label="Add itsi maintenance"/>
+    <view name="itsi__maintenance?mode=add_custom" label="Add custom maintenance"/>
     <view name="itsi__maintenance_target" />
   </collection>
   <collection label="Profil">
