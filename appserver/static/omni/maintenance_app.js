@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '2.2.0';
+var APP_VERSION = '2.5.2';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance App v' + APP_VERSION + ' charge');
@@ -27,7 +27,7 @@ require([
   'use strict';
 
   /* ============================================================
-   *  CONFIG
+   * CONFIG
    * ============================================================ */
 var Config = (function () {
   function urlParam(name) {
@@ -63,7 +63,7 @@ var Config = (function () {
 })();
 
   /* ============================================================
-   *  LOG
+   * LOG
    * ============================================================ */
   function log(obj, titre, level) {
     if (!Config.debug) return;
@@ -74,7 +74,7 @@ var Config = (function () {
   }
 
   /* ============================================================
-   *  UTILS (helpers communs, portes depuis omni.js)
+   * UTILS (helpers communs, portes depuis omni.js)
    * ============================================================ */
   var Utils = {
     isNull: function (v) {
@@ -139,7 +139,7 @@ var Config = (function () {
   };
 
   /* ============================================================
-   *  TOKENS
+   * TOKENS
    * ============================================================ */
   var Tokens = {
     _def: function () { return mvc.Components.get('default', { create: true }); },
@@ -153,7 +153,7 @@ var Config = (function () {
   };
 
   /* ============================================================
-   *  SEARCH HUB  -  loader global a pourcentage
+   * SEARCH HUB  -  loader global a pourcentage
    * ============================================================ */
   var SearchHub = {
     _active: {},
@@ -226,7 +226,7 @@ var Config = (function () {
   };
 
   /* ============================================================
-   *  UI  -  shell + composants
+   * UI  -  shell + composants
    * ============================================================ */
   var UI = {
     css: function () {
@@ -356,7 +356,7 @@ var Config = (function () {
   };
 
   /* ============================================================
-   *  REQUETES SPL
+   * REQUETES SPL
    * ============================================================ */
   var SPL = {
     service: ''
@@ -405,14 +405,14 @@ var Config = (function () {
         + '| rex field=step_opt "(?<service_type>.)(?<kpi_type>.)(?<entity_type>.)" '
         + '| eval downtime="[" + mvjoin(downtime,",") + "]", service=mvjoin(service,";"), '
         + '  kpi=mvjoin(kpi,";"), entity=mvjoin(entity,";") '
-        + '| table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_policy,commentary,version';
+        + '| table key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_policy,commentary,version,dt_category';
     }
   };
 
   /* ============================================================
-   *  PERIODS  -  gestion complete des periodes (porte d'omni.js)
-   *  Construit des onglets dans un conteneur, gere les 4 types :
-   *    between_date / weekly / monthly / special_date_*
+   * PERIODS  -  gestion complete des periodes (porte d'omni.js)
+   * Construit des onglets dans un conteneur, gere les 4 types :
+   * between_date / weekly / monthly / special_date_*
    * ============================================================ */
   var Periods = (function () {
     var WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -698,7 +698,7 @@ var Config = (function () {
   })();
 
   /* ============================================================
-   *  QUERY BUILDER  -  genere le SPL final (porte d'omni.js)
+   * QUERY BUILDER  -  genere le SPL final (porte d'omni.js)
    * ============================================================ */
   var QueryBuilder = {
     create: function (sel, action) {
@@ -725,13 +725,15 @@ var dtJson = (sel.downtimeFields || [])
 
       var keyLine = (action !== 'add') ? 'key="' + sel.key + '",\n        ' : '';
 
-      var base = '| stats count as service\n'
+      // CORRECTION : Utilisation de makeresults pour éviter les timeouts
+      var base = '| makeresults\n'
         + '| eval ' + keyLine
         + 'service=split("' + Utils.escapeSPL(sel.service) + '",";"),\n'
         + '    kpi=split("' + Utils.escapeSPL(sel.kpi) + '",";"),\n'
         + '    entity=split("' + Utils.escapeSPL(sel.entity) + '",";"),\n'
         + '    dt_filter="' + Utils.escapeSPL(sel.dt_filter) + '",\n'
         + '    dt_policy="' + Utils.escapeSPL(sel.dt_policy || '') + '",\n'
+        + '    dt_category="' + Utils.escapeSPL(sel.dt_category || '') + '",\n'
         + '    downtime="' + dtStr + '",\n'
         + '    creator="' + Utils.escapeSPL(sel.username) + '",\n'
         + '    commentary="' + Utils.escapeSPL(sel.commentary) + '",\n'
@@ -746,7 +748,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  FACTORY  -  etape de "portee" (Service / KPI / Entity)
+   * FACTORY  -  etape de "portee" (Service / KPI / Entity)
    * ============================================================ */
   function makeScopeStep(opts) {
     return {
@@ -871,7 +873,7 @@ var dtJson = (sel.downtimeFields || [])
   }
 
   /* ============================================================
-   *  ETAPE FILTRE CUSTOM
+   * ETAPE FILTRE CUSTOM
    * ============================================================ */
   var StepCustomFilter = {
     id: 'filter', label: 'Filtre custom',
@@ -986,7 +988,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  ETAPE SOURCE / POLICY
+   * ETAPE SOURCE / POLICY
    * ============================================================ */
   var StepPolicy = {
     id: 'policy', label: 'Source',
@@ -1032,7 +1034,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  ETAPE PERIODE
+   * ETAPE PERIODE
    * ============================================================ */
   var StepPeriod = {
     id: 'period', label: 'Periode',
@@ -1051,7 +1053,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  ETAPE VALIDATION
+   * ETAPE VALIDATION
    * ============================================================ */
   var StepReview = {
     id: 'review', label: 'Validation',
@@ -1095,7 +1097,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  PARCOURS PAR MODE
+   * PARCOURS PAR MODE
    * ============================================================ */
   function buildSteps() {
     var service = makeScopeStep({ id: 'service', label: 'Service', title: 'Selection des services',
@@ -1116,7 +1118,7 @@ var dtJson = (sel.downtimeFields || [])
   }
 
   /* ============================================================
-   *  WIZARD
+   * WIZARD
    * ============================================================ */
   var Wizard = {
     steps: [], index: 0,
@@ -1125,9 +1127,38 @@ var dtJson = (sel.downtimeFields || [])
       this.steps = buildSteps();
       this._renderStepper();
       this.go(0);
-      $('#omni-prev').on('click', function () { Wizard.go(Wizard.index - 1); });
-      $('#omni-next').on('click', function () { Wizard._next(); });
-      $('#omni-finish').on('click', function () { Wizard._finish(); });
+      $('#omni-prev').on('click', function () {  
+
+console.log("[OmniApp] État des tokens à l'étape précedente :", {
+        mode: Config.mode,
+        service: Tokens.get('service_selected'),
+        kpi: Tokens.get('kpi_selected'),
+        entity: Tokens.get('entity_selected'),
+        category: Tokens.get('dt_category_selected')
+
+    });
+Wizard.go(Wizard.index - 1);
+      });
+      $('#omni-next').on('click', function () { 
+console.log("[OmniApp] État des tokens à l'étape suivante :", {
+        mode: Config.mode,
+        service: Tokens.get('service_selected'),
+        kpi: Tokens.get('kpi_selected'),
+        entity: Tokens.get('entity_selected'),
+        category: Tokens.get('dt_category_selected')
+    });
+Wizard._next();
+       });
+      $('#omni-finish').on('click', function () {
+console.log("[OmniApp] État des tokens à la derniere étape :", {
+        mode: Config.mode,
+        service: Tokens.get('service_selected'),
+        kpi: Tokens.get('kpi_selected'),
+        entity: Tokens.get('entity_selected'),
+        category: Tokens.get('dt_category_selected')
+    });
+ Wizard._finish();
+       });
     },
 
     _renderStepper: function () {
@@ -1169,7 +1200,7 @@ var dtJson = (sel.downtimeFields || [])
   };
 
   /* ============================================================
-   *  SUBMIT
+   * SUBMIT
    * ============================================================ */
   var Submit = {
     _stepOpt: function () {
@@ -1182,6 +1213,13 @@ var dtJson = (sel.downtimeFields || [])
         return s.toString() + k.toString() + e.toString();
       }
       return '000';
+    },
+
+    // nouveau : type de maintenance au niveau de l'enregistrement KV (itsi | custom)
+    _dtCategory: function () {
+      var pre = Tokens.get('dt_category_selected');
+      if (Utils.isNotNull(pre) && (pre === 'itsi' || pre === 'custom')) return pre;
+      return Config.isCustom ? 'custom' : 'itsi';
     },
 
     _email: function (sel, action) {
@@ -1201,8 +1239,17 @@ var dtJson = (sel.downtimeFields || [])
 
       var action = Config.isDelete ? 'delete' : (Config.isUpdate ? 'update' : 'add');
 
+      // CORRECTION : SÉCURITÉ - Validation de la clé avant d'appeler le Python
+      var currentKey = Tokens.get('key') || '';
+      if ((action === 'update' || action === 'delete') && !currentKey) {
+          console.error("[OmniApp] Erreur : Clé '_key' absente pour une action de modification/suppression.");
+          UI.modal('Erreur critique', "Impossible de valider car l'identifiant unique (key) du KVStore n'a pas été chargé. Vérifiez la définition du lookup.", 'err');
+          $('#omni-finish, #omni-prev').prop('disabled', false);
+          return;
+      }
+
       // periodes
-    var downtimeFields = [];
+      var downtimeFields = [];
       if (Config.isDelete) {
         var rawTok = Tokens.get('downtime_selected');
         try {
@@ -1223,7 +1270,7 @@ var dtJson = (sel.downtimeFields || [])
 
       var sel = {
         mode: Config.mode,
-        key: Tokens.get('key') || '',
+        key: currentKey, // on utilise la clé sécurisée ici
         ID: Config.dtId || Tokens.get('DT_ID') || Utils.createID(),
         username: (window.Splunk && Splunk.util) ? Splunk.util.getConfigValue('USERNAME') : 'unknown',
         commentary: Utils.removeAccents(Tokens.get('commentary_selected') || ''),
@@ -1232,6 +1279,7 @@ var dtJson = (sel.downtimeFields || [])
         entity: Utils.forKV(Tokens.get('entity_selected') || '%'),
         dt_filter: Tokens.get('dt_filter_selected') || (Config.isCustom ? '' : 'omni_skip_filter=1'),
         dt_policy: Tokens.get('dt_policy_selected') || '',
+        dt_category: this._dtCategory(),
         step_opt: this._stepOpt(),
         version: version,
         downtimeFields: downtimeFields
@@ -1243,25 +1291,69 @@ var dtJson = (sel.downtimeFields || [])
       var query = QueryBuilder.create(sel, action);
       log(query, '=== QUERY FINALE ===');
 
-      SearchHub.run('save', query, {
-        message: 'Enregistrement en cours…',
-        tokenSafe: false,
-        onDone: function () {
-          var msg = action === 'delete'
-            ? 'Suppression effectuee avec succes.'
-            : (Config.isCustom ? 'Filtre personnalise enregistre avec succes.' : 'Maintenance enregistree avec succes.');
-          UI.modal('Operation reussie', msg + ' <br><a href="./accueil">Retour au menu</a>', 'ok');
-        },
-        onError: function () {
-          UI.modal('Echec', 'L\'enregistrement a echoue. Verifiez les logs Splunk.', 'err');
-          $('#omni-finish, #omni-prev').prop('disabled', false);
-        }
+      console.log("[OmniApp] Envoi de la requête SPL d'enregistrement :", query);
+      UI.modal('Enregistrement', 'Enregistrement en cours…', 'info');
+
+      // CORRECTION : Remplacement de SearchHub par SearchManager natif pour capturer l'asynchrone
+      var oldSaveSearch = mvc.Components.get('omni_save_search');
+      if (oldSaveSearch) {
+          oldSaveSearch.destroy();
+      }
+
+      var saveSearch = new SearchManager({
+          id: 'omni_save_search',
+          search: query,
+          autostart: true,
+          cache: false
       });
+
+      var resultsModel = saveSearch.data("results", { count: 100 });
+
+      resultsModel.on("data", function () {
+          if (resultsModel.hasData()) {
+              var data = resultsModel.data();
+              var fields = data.fields;
+              var rows = data.rows;
+
+              console.log("[OmniApp] Champs retournés par le job Splunk :", fields);
+              console.log("[OmniApp] Lignes de données reçues (brutes) :", rows);
+
+              var idx = fields.indexOf('result');
+              if (idx > -1 && rows.length > 0) {
+                  var backendResult = rows[0][idx];
+                  
+                  console.log("%c[OmniApp] Résultat du KVStore (Backend Python) : " + backendResult, "background: #222; color: #bada55; font-weight: bold; padding: 2px;");
+
+                  // Interception des erreurs de Python
+                  if (backendResult.indexOf('ERREUR') === 0 || backendResult.indexOf('Error') === 0 || backendResult.indexOf('Exception') === 0) {
+                      console.error("[OmniApp] L'enregistrement a échoué dans le KVStore :", backendResult);
+                      UI.modal('Echec (Backend)', 'Le script Python a renvoyé une erreur : <br><br><code style="color: #d9534f; font-weight: bold;">' + backendResult + '</code>', 'err');
+                      $('#omni-finish, #omni-prev').prop('disabled', false);
+                  } else {
+                      // Succès
+                      console.log("[OmniApp] Succès : Processus validé et confirmé par le backend.");
+                      var msg = action === 'delete'
+                        ? 'Suppression effectuée avec succès.'
+                        : (Config.isCustom ? 'Filtre personnalisé enregistré avec succès.' : 'Maintenance enregistrée avec succès.');
+                      UI.modal('Opération réussie', msg + ' <br><a href="./accueil">Retour au menu</a>', 'ok');
+                  }
+              } else {
+                  console.warn("[OmniApp] Attention : Le champ 'result' est introuvable dans les colonnes retournées.");
+              }
+          }
+      });
+
+      saveSearch.on('search:error', function (err) {
+          console.error("[OmniApp] Erreur critique d'exécution Splunk (crash de la recherche) :", err);
+          UI.modal('Echec', 'L\'exécution de la commande Splunk a échoué. Vérifiez les droits ou les logs.', 'err');
+          $('#omni-finish, #omni-prev').prop('disabled', false);
+      });
+
     }
   };
 
   /* ============================================================
-   *  PRECHARGEMENT (update / update_custom / delete)
+   * PRECHARGEMENT (update / update_custom / delete)
    * ============================================================ */
   function preloadThenStart() {
     if ((Config.isUpdate || Config.isDelete) && Config.dtId) {
@@ -1272,7 +1364,7 @@ var dtJson = (sel.downtimeFields || [])
           if (rows.length) {
             var r = rows[0];
             // index alignes sur le table de SPL.byId :
-            // key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_policy,commentary,version
+            // key,downtime,service_type,service,kpi_type,kpi,entity_type,entity,dt_filter,dt_policy,commentary,version,dt_category
             Tokens.set('key', r[0]);
             Tokens.set('downtime_selected', r[1]);
             Tokens.set('service_select_input_type', r[2]);
@@ -1285,6 +1377,7 @@ var dtJson = (sel.downtimeFields || [])
             Tokens.set('dt_policy_selected', r[9]);
             Tokens.set('commentary_selected', r[10]);
             Tokens.set('selected_version', r[11]);
+            Tokens.set('dt_category_selected', r[12]);
             Tokens.set('step_opt_for_delete', '' + r[2] + r[4] + r[6]);
             if (Config.mode === 'update_custom') StepCustomFilter.preload(r[8]);
           }
@@ -1298,7 +1391,7 @@ var dtJson = (sel.downtimeFields || [])
   }
 
   /* ============================================================
-   *  BOOT
+   * BOOT
    * ============================================================ */
   $(document).ready(function () {
     log(Config, 'Config detectee');
