@@ -42,32 +42,38 @@ require([
   /* ============================================================
    *  CONFIG
    * ============================================================ */
-  var Config = (function () {
-    function urlParam(name) {
-      var m = new RegExp('[?&]' + name + '=([^&#]*)').exec(window.location.search);
-      return m ? decodeURIComponent(m[1]) : null;
-    }
-    var $cfg = $('#omni_config');
-    var mode = urlParam('mode')
-            || (mvc.Components.get('default') && mvc.Components.get('default').get('mode'))
-            || $cfg.attr('data-mode')
-            || 'add';
-    var dtId = urlParam('dt_id')
-            || (mvc.Components.get('default') && mvc.Components.get('default').get('DT_ID'))
-            || null;
-    var debug = (urlParam('debug') || $cfg.attr('data-debug') || '0') === '1';
+var Config = (function () {
+  function urlParam(name) {
+    var m = new RegExp('[?&]' + name + '=([^&#]*)', 'i').exec(window.location.search);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function tok(name) {
+    var d = mvc.Components.get('default');
+    var s = mvc.Components.getInstance('submitted');
+    var v = d && (d.get(name) != null ? d.get(name) : d.get('form.' + name));
+    if (v == null && s) v = (s.get(name) != null ? s.get(name) : s.get('form.' + name));
+    return v == null ? null : v;
+  }
+  var $cfg = $('#omni_config');
 
-    return {
-      mode: mode,
-      dtId: dtId,
-      debug: debug,
-      isCustom: /custom/.test(mode),
-      isUpdate: /update/.test(mode),
-      isDelete: mode === 'delete',
-      view: utils.getPageInfo().page,
-      appPath: APP_NAME
-    };
-  })();
+  var mode = urlParam('mode') || tok('mode') || $cfg.attr('data-mode') || 'add';
+
+  var dtId = urlParam('dt_id') || urlParam('DT_ID')
+          || tok('DT_ID') || tok('dt_id')
+          || $cfg.attr('data-dt-id')
+          || null;
+
+  var debug = (urlParam('debug') || $cfg.attr('data-debug') || '0') === '1';
+
+  return {
+    mode: mode, dtId: dtId, debug: debug,
+    isCustom: /custom/.test(mode),
+    isUpdate: /update/.test(mode),
+    isDelete: mode === 'delete',
+    view: utils.getPageInfo().page,
+    appPath: APP_NAME
+  };
+})();
 
   /* ============================================================
    *  LOG
@@ -689,7 +695,9 @@ require([
         return action === 'delete' ? 'disabled' : 'enabled';
       });
 
-      var dtJson = sel.downtimeFields.map(function (f, i) {
+var dtJson = (sel.downtimeFields || [])
+  .filter(function (f) { return f; })
+  .map(function (f, i) {
         return {
           id: sel.ID + '_' + (i + 1),
           dt_type: f.dt_type || '',
@@ -1182,12 +1190,14 @@ require([
       var action = Config.isDelete ? 'delete' : (Config.isUpdate ? 'update' : 'add');
 
       // periodes
-      var downtimeFields = [];
+    var downtimeFields = [];
       if (Config.isDelete) {
+        var rawTok = Tokens.get('downtime_selected');
         try {
-          var raw = JSON.parse(Tokens.get('downtime_selected'));
+          var raw = rawTok ? JSON.parse(rawTok) : [];
           downtimeFields = Array.isArray(raw) ? raw : [raw];
         } catch (e) { downtimeFields = []; }
+        downtimeFields = downtimeFields.filter(function (f) { return f && typeof f === 'object'; });
       } else {
         var col = Tokens.get('_collected_periods');
         try { downtimeFields = col ? JSON.parse(col) : Periods.collect().downtimeFields; }
