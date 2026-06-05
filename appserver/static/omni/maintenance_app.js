@@ -1,18 +1,5 @@
-/*
- *  Omni Maintenance App  -  appli mono-page (full JS) pour ITSI Maintenance
- *  Remplace : add / add_custom / update / update_custom / delete (5 XML -> 1)
- *
- *  Version FINALISEE :
- *   - requetes SPL completes (Service / KPI / Entity / Policy / byId)
- *   - gestion des periodes embarquee (datepickers, onglets, collecte + validation)
- *     -> portee depuis omni.js, sans dependance externe (plus de window.OmniPeriods)
- *   - QueryBuilder embarque (genere le SPL + | OmniKVUpdate) -> plus de window.OmniQueryBuilder
- *   - etape filtre custom (1 ou 2 champs, NOT, operateurs string/number)
- *   - precharge update / update_custom / delete via SPL byId
- */
-
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '2.1.0';
+var APP_VERSION = '2.2.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance App v' + APP_VERSION + ' charge');
