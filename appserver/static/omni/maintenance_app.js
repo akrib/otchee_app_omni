@@ -613,18 +613,43 @@ var Config = (function () {
       var list = [];
       if (preload) {
         try {
+          // 1. On décode le tableau principal
           var j = JSON.parse(preload);
-          list = Array.isArray(j) ? j : [j];
+          var rawList = Array.isArray(j) ? j : [j];
+          
+          // 2. CORRECTION : On décode chaque élément s'il est encore sous forme de chaîne textuelle
+          list = rawList.map(function (item) {
+            if (typeof item === 'string') {
+              try {
+                return JSON.parse(item);
+              } catch (err) {
+                console.error("Impossible de parser la période individuelle :", item, err);
+                return null;
+              }
+            }
+            return item; // Si c'est déjà un objet, on le garde tel quel
+          }).filter(Boolean); // On retire les éventuels parsings en échec (null)
+
         } catch (e) {
-          // ancien format type#begin#end#bt#et separe par £
+          // Ancien format de repli type#begin#end#bt#et séparé par £
           list = (preload || '').split('£').map(function (s) {
             var a = s.split('#');
-            return { dt_type: a[0], begin_date: a[1], end_date: a[2], begin_time: a[3], end_time: a[4] };
-          });
+            if (a.length < 5) return null;
+            return { 
+              dt_type: a[0], 
+              begin_date: a[1], 
+              end_date: a[2], 
+              begin_time: a[3], 
+              end_time: a[4] 
+            };
+          }).filter(Boolean);
         }
       }
-      if (!list.length) list = [{ dt_type: 'between_date' }];
-      list.forEach(function (p) { addTab(p); });
+
+      // Ensuite, ton code va pouvoir boucler proprement sur des vrais objets :
+      list.forEach(function(periode) {
+        addTab(periode);
+      });
       // affiche la 1ere
       var $f = $bodies.find('.omni-pbody').first();
       if ($f.length) activate($f.attr('id'));
