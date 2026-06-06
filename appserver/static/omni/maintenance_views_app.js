@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '3.0.1';
+var APP_VERSION = '3.0.4';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Views App v' + APP_VERSION + ' charge');
@@ -408,8 +408,8 @@ require([
         '.omni-results{padding:8px 24px 8px;}',
         '.omni-empty{text-align:center;color:var(--omni-muted);padding:48px 12px;font-size:15px;}',
         '.row-search{box-shadow:0 5px 15px rgba(0,0,0,.10),0 6px 6px rgba(0,0,0,.08);border-radius:12px;background:#fff;margin:16px 0;overflow:hidden;display:flex;}',
-        '.col-search{flex:1;padding:16px 18px;min-width:0;}',
-        '.search-option{width:120px;background:#f7f9fc;border-left:1px solid var(--omni-line);padding:14px 8px;text-align:center;}',
+        '.col-search{flex:1;padding:16px 18px;min-width:0;background:#f7f9fc}',
+        '.search-option{width:120px;background:#ffffff;border-left:1px solid var(--omni-line);padding:14px 8px;text-align:center;}',
         '.title-search{font-size:15px;font-weight:600;color:var(--omni-primary);display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:10px;}',
         '.title-search.last-col{justify-content:center;color:var(--omni-muted);font-size:12px;letter-spacing:.5px;margin-bottom:10px;}',
         '.tag-search-li{font-size:11.5px;color:var(--omni-muted);font-weight:400;margin-left:8px;}',
@@ -437,6 +437,12 @@ require([
         '.accordion input:checked~.accordion__content--small{height:auto;padding:12px 18px;}',
         '.accordion__body{font-size:.85em;line-height:1.5em;}',
         '.dt_period td{padding:2px 4px;}',
+        '.dt-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;vertical-align:middle;margin-left:8px;}',
+        '.dt-status::before{content:"";display:block;}',
+        '.dt-status--on{background:rgba(0,206,201,.12);border:1px solid rgba(0,206,201,.45);}',
+        '.dt-status--on::before{width:8px;height:14px;margin-top:-3px;border:solid var(--omni-ok);border-width:0 3px 3px 0;transform:rotate(45deg);}',
+        '.dt-status--off{background:rgba(255,118,117,.10);border:1px solid rgba(255,118,117,.45);}',
+        '.dt-status--off::before{width:14px;height:3px;border-radius:2px;background:var(--omni-err);}',
         /* pagination */
         '.omni-pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:8px 0 26px;flex-wrap:wrap;}',
         '.omni-pagination a{color:#fff;background:var(--omni-primary);border-radius:50%;min-width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;font-size:13px;padding:0 8px;}',
@@ -642,7 +648,13 @@ require([
       if (!arr.length) return IS_LOGS ? '<i>Aucune periode definie.</i>' : '';
       var rows = arr.map(function (p) {
         var type = DT_TYPE_FR[p.dt_type] || p.dt_type || '';
-        return '<tr class="dt_period"><td><b>' + Util.esc(p.id || '') + '</b></td><td colspan="5"><hr/></td></tr>'
+        var st = String(p.status == null ? '' : p.status).toLowerCase();
+        var on = (st === 'enable' || st === 'enabled' || st === '1' || st === 'true' || st === 'on' || st === 'active');
+        var statusBadge = (st === '')
+          ? ''
+          : '<span class="dt-status dt-status--' + (on ? 'on' : 'off') + '" title="'
+            + (on ? 'Periode active' : 'Periode desactivee') + '"></span>';
+        return '<tr class="dt_period"><td><b>' + Util.esc(p.id || '') + '</b> ' + statusBadge + '</td><td colspan="5"><hr/></td></tr>'
           + '<tr class="dt_period">'
           + '<td><b>Type:</b></td><td><span class="tag_dt">' + Util.esc(type) + '</span></td>'
           + '<td><b>Debut:</b></td><td><span class="tag_dt">' + Util.esc((p.begin_date || '') + ' ' + (p.begin_time || '')) + '</span></td>'
@@ -685,7 +697,7 @@ var filterBlock = (m.dt_filter)
         : '<div class="search-option">'
           + '  <div class="title-search last-col">OPTIONS</div>'
           + '  <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
-          + '  <a href="' + activatorHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
+          + '  <a href="' + activatorHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'controls.gif" width="68px" alt="Portee"/></a>'
           + '  <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
           + '</div>';
 
@@ -762,7 +774,7 @@ var filterBlock = (m.dt_filter)
         + '    <div class="title-search last-col">OPTIONS</div>'
         + '    <a href="' + logsHref + '" target="_blank" title="Trace Logs"><img class="img-option" src="' + media + 'analytics.gif" width="68px" alt="Logs"/></a>'
         + '    <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
-        + '    <a href="' + activatorHref  + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
+        + '    <a href="' + activatorHref  + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'controls.gif" width="68px" alt="Portee"/></a>'
         + '    <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
         + '  </div>'
         + '</div>';
