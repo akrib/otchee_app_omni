@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '3.0.4';
+var APP_VERSION = '3.0.5';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Views App v' + APP_VERSION + ' charge');
@@ -354,6 +354,7 @@ require([
     clientWhere: '',                   // search (RBAC)
     user: '', userResolved: false,     // mine
     hlTerms: [],
+    latestById: {},                    // logs : {ID -> {maxVersion, action}}
     lastQueries: {}
   };
 
@@ -681,25 +682,40 @@ require([
       var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
-var filterBlock = (m.dt_filter)
+      var filterBlock = (m.dt_filter)
         ? '<span class="fieldlist">Custom filter(s) : </span>' + Render.tags(m.dt_filter, terms) + '<br>'
         : '';
       var policyBlock = '<span class="fieldlist">policy(s) : </span>' + Render.tags(m.dt_policy, terms) + '<br>';
       var panelId = 'omni-panel-' + Util.esc(m.ID) + '-' + Util.esc(m.version);
 
-      // pas de boutons d'action quand la maintenance a ete supprimee
-      var isDeleted = (action === 'delete');
-      var optionsBlock = isDeleted
-        ? '<div class="search-option">'
+      // --- decision d'affichage des options ---
+      // info derniere version de l'ID (calculee une fois dans App.computeLogsLatest)
+      var info     = Store.latestById[String(m.ID)] || {};
+      var idDeleted = (info.action === 'delete');                       // derniere version = suppression
+      var isLatest  = (parseInt(m.version, 10) === info.maxVersion);    // cette carte est la derniere version
+
+      var optionsBlock;
+      if (idDeleted) {
+        // l'ID a ete supprime dans sa derniere version : aucune option sur TOUTES ses cartes
+        optionsBlock = '<div class="search-option">'
           + '  <div class="title-search last-col">OPTIONS</div>'
           + '  <div class="tag-search-li" style="margin-top:8px;">Maintenance supprimee</div>'
-          + '</div>'
-        : '<div class="search-option">'
+          + '</div>';
+      } else if (!isLatest) {
+        // version ancienne d'un ID actif : on n'autorise pas l'edition de valeurs obsoletes
+        optionsBlock = '<div class="search-option">'
+          + '  <div class="title-search last-col">OPTIONS</div>'
+          + '  <div class="tag-search-li" style="margin-top:8px;">Version obsolete</div>'
+          + '</div>';
+      } else {
+        // derniere version d'un ID actif : options completes
+        optionsBlock = '<div class="search-option">'
           + '  <div class="title-search last-col">OPTIONS</div>'
           + '  <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
           + '  <a href="' + activatorHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'controls.gif" width="68px" alt="Portee"/></a>'
           + '  <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
           + '</div>';
+      }
 
       return ''
         + '<div class="row-search">'
@@ -805,6 +821,26 @@ var filterBlock = (m.dt_filter)
       App.loadData();
     },
 
+    // logs : pour chaque ID -> version max + action de cette version max.
+    // sert a decider l'affichage des options (suppression / version obsolete).
+    computeLogsLatest: function () {
+      var byId = {};
+      Store.all.forEach(function (m) {
+        var id  = String(m.ID);
+        var v   = parseInt(m.version, 10); if (isNaN(v)) v = -1;
+        var act = String(m.action || '').toLowerCase();
+        var cur = byId[id];
+        if (!cur || v > cur.maxVersion) {
+          byId[id] = { maxVersion: v, action: act };
+        } else if (v === cur.maxVersion && act === 'delete') {
+          // au cas (rare) ou deux entrees partagent la version max : la suppression prime
+          cur.action = 'delete';
+        }
+      });
+      Store.latestById = byId;
+      log(byId, 'etape > latestById (logs)');
+    },
+
     loadData: function () {
       var t0 = Date.now();
 
@@ -824,6 +860,7 @@ var filterBlock = (m.dt_filter)
           earliest: '0', latest: 'now',
           onResults: function (rows) {
             Store.all = rows.map(rowToObj);
+            if (IS_LOGS) App.computeLogsLatest();   // pre-calcul derniere version par ID
             Store.loadTime = ((Date.now() - t0) / 1000).toFixed(2);
             log('lignes chargees : ' + Store.all.length + ' en ' + Store.loadTime + 's', 'etape > donnees recues');
             App.applyFilters();
@@ -1042,6 +1079,10 @@ var filterBlock = (m.dt_filter)
           + '<h3>Journal des maintenances</h3>'
           + '<p>Chaque carte represente une <b>action</b> (ajout, modification, suppression) effectuee sur une maintenance, '
           + 'avec la version concernee et l\'auteur. Les actions <i>obsolete</i> sont masquees.</p>'
+          + '<h3>Options des cartes</h3>'
+          + '<p>Les boutons d\'action ne sont disponibles que sur la <b>derniere version</b> d\'un ID, afin d\'eviter '
+          + 'de modifier une maintenance a partir de valeurs obsoletes. Si la derniere version d\'un ID est une '
+          + '<b>suppression</b>, aucune option n\'est proposee sur ses cartes.</p>'
           + '<h3>Recherche</h3>'
           + '<p>Chaque mot saisi est cherche dans tous les champs (ID, auteur, service, kpi, entity, commentaire, action…). '
           + 'Plusieurs mots = <b>ET</b>. Jokers <code>*</code> et <code>?</code> acceptes.</p>'
@@ -1089,6 +1130,7 @@ var filterBlock = (m.dt_filter)
         etat = {
           mode: MODE, view: Config.view, rowsPerPage: Config.rowsPerPage,
           chargees: Store.all.length, affichees: Store.filtered.length,
+          ids_traces: Object.keys(Store.latestById).length,
           terme: Store.term, action: Store.action, type: Store.category, tri: Store.sort,
           page: Store.page, loadTime: Store.loadTime + 's'
         };
