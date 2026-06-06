@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '2.6.0';
+var APP_VERSION = '2.5.3';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance App v' + APP_VERSION + ' charge');
@@ -295,11 +295,6 @@ var Config = (function () {
         '.omni-choices{display:flex;gap:8px;flex-wrap:wrap;}',
         '.omni-choice{border:1px solid var(--omni-line);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:14px;background:#fff;transition:.15s;}',
         '.omni-choice.is-active{border-color:var(--omni-primary);background:rgba(25,119,204,.06);color:var(--omni-primary);font-weight:600;}',
-        /* interrupteur status periode */
-        '.omni-p-status-lbl{display:inline-flex;align-items:center;gap:8px;}',
-        '.omni-p-status-lbl::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--omni-err);display:inline-block;transition:.15s;}',
-        '.omni-p-status-lbl.is-active{border-color:var(--omni-ok);background:rgba(92,192,92,.08);color:#2f7a2f;}',
-        '.omni-p-status-lbl.is-active::before{background:var(--omni-ok);}',
         '.omni-tag{display:inline-block;background:#23579d;color:#fff;border-radius:6px;padding:3px 9px;margin:3px;font-size:13px;}',
         '.omni-pick{height:380px;border:1px solid var(--omni-line);border-radius:10px;width:100%;padding:4px;font-size:14px;}',
         '.omni-pick option{padding:6px 10px;line-height:1.5;border-radius:6px;white-space:normal;}',
@@ -443,7 +438,6 @@ var Config = (function () {
    * PERIODS  -  gestion complete des periodes (porte d'omni.js)
    * Construit des onglets dans un conteneur, gere les 4 types :
    * between_date / weekly / monthly / special_date_*
-   * Chaque periode porte desormais son propre status (enabled/disabled).
    * ============================================================ */
   var Periods = (function () {
     var WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -560,34 +554,12 @@ var Config = (function () {
       });
     }
 
-    // interrupteur enabled/disabled propre a chaque periode
-    function bindStatus($body) {
-      $body.find('.omni-p-status').off('change').on('change', function () {
-        var on = this.checked;
-        $(this).closest('.omni-p-status-lbl').toggleClass('is-active', on);
-        $body.find('.omni-p-status-txt').text(on
-          ? 'Periode active (enabled)'
-          : 'Periode inactive (disabled)');
-      });
-    }
-
     function addTab(p) {
       p = p || { dt_type: 'between_date' };
       var n = ++seq;
       var pid = 'omni-period-' + n;
       var type = p.dt_type || 'between_date';
       var baseType = (type.indexOf('special_date_') === 0) ? 'special' : type;
-
-      // status de la periode (enabled par defaut)
-      var statusOn = !(p && p.status === 'disabled');
-      var statusBox = ''
-        + '<div class="omni-field omni-p-statuswrap" style="margin:0 0 12px">'
-        + '  <label class="omni-choice omni-p-status-lbl' + (statusOn ? ' is-active' : '') + '" style="padding:8px 14px">'
-        + '    <input type="checkbox" class="omni-p-status" hidden' + (statusOn ? ' checked' : '') + '>'
-        + '    <span class="omni-p-status-txt">' + (statusOn ? 'Periode active (enabled)' : 'Periode inactive (disabled)') + '</span>'
-        + '  </label>'
-        + '  <p class="omni-hint" style="margin:6px 0 0">Definit le status (enabled/disabled) enregistre dans le json de cette periode.</p>'
-        + '</div>';
 
       var radios = ''
         + '<div class="omni-choices" style="margin-bottom:14px">'
@@ -598,7 +570,7 @@ var Config = (function () {
         + '</div>';
 
       $bodies.append('<div class="omni-pbody" id="' + pid + '" data-n="' + n + '">'
-        + statusBox + radios + '<div class="omni-p-zone"></div></div>');
+        + radios + '<div class="omni-p-zone"></div></div>');
 
       $tabs.find('.omni-padd').before('<div class="omni-ptab" data-target="' + pid + '">'
         + 'Periode ' + n + ' <span class="omni-ptab__close" title="Supprimer">&times;</span></div>');
@@ -609,12 +581,9 @@ var Config = (function () {
       if (baseType === 'between_date') applyDatepickers('#' + pid);
       if (baseType === 'weekly' || baseType === 'monthly') bindDays($body);
 
-      // interrupteur status
-      bindStatus($body);
-
       // changement de type
       $body.find('input[name="t-' + pid + '"]').on('change', function () {
-        $body.find('.omni-choices .omni-choice').removeClass('is-active');
+        $body.find('.omni-choice').removeClass('is-active');
         $(this).closest('.omni-choice').addClass('is-active');
         var v = $(this).val();
         $body.find('.omni-p-zone').html(zoneHtml(pid, (v === 'special' ? 'special_date_first_in_month' : v), {}));
@@ -674,7 +643,7 @@ var Config = (function () {
           }).filter(Boolean); // On retire les éventuels parsings en échec (null)
 
         } catch (e) {
-          // Ancien format de repli type#begin#end#bt#et[#status] séparé par £
+          // Ancien format de repli type#begin#end#bt#et séparé par £
           list = (preload || '').split('£').map(function (s) {
             var a = s.split('#');
             if (a.length < 5) return null;
@@ -683,8 +652,7 @@ var Config = (function () {
               begin_date: a[1],
               end_date: a[2],
               begin_time: a[3],
-              end_time: a[4],
-              status: a[5] || 'enabled'
+              end_time: a[4]
             };
           }).filter(Boolean);
         }
@@ -738,13 +706,8 @@ var Config = (function () {
         if (!Utils.timeFormatOK(et)) { errors++; out += '- <b>Periode ' + num + '</b> : heure de fin invalide (HH:MM)<br/>'; }
         if (bt === et && beginDate === endDate) { errors++; out += '- <b>Periode ' + num + '</b> : heures debut/fin identiques<br/>'; }
 
-        // status de la periode (enabled par defaut si l'interrupteur est absent)
-        var $st = $b.find('.omni-p-status');
-        var periodStatus = ($st.length ? $st.is(':checked') : true) ? 'enabled' : 'disabled';
-
         fields.push({
           dt_type: dtType,
-          status: periodStatus,
           begin_date: Utils.forKV(Utils.daysToEnglish(beginDate || '')),
           end_date: Utils.forKV(Utils.daysToEnglish(endDate || '')),
           begin_time: (bt || '00:00') + ':00',
@@ -765,27 +728,13 @@ var Config = (function () {
   var QueryBuilder = {
     create: function (sel, action) {
       var dtUpdate = new Date().getTime();
-
-      // periodes valides
-      var dtField = (sel.downtimeFields || []).filter(function (f) { return f; });
-
-      // status PAR periode : force a "disabled" en suppression, sinon on
-      // respecte la valeur portee par la periode (enabled/disabled), avec
-      // repli sur "enabled".
-      var perStatus = dtField.map(function (f) {
-        if (action === 'delete') return 'disabled';
-        return (f.status === 'enabled' || f.status === 'disabled') ? f.status : 'enabled';
+      var status = sel.downtimeFields.map(function () {
+        return action === 'delete' ? 'disabled' : 'enabled';
       });
 
-      // status GLOBAL de la maintenance (champ hors json / colonne KV) :
-      // "disabled" en suppression, sinon "enabled" des qu'au moins une
-      // periode est active, "disabled" si toutes les periodes sont inactives.
-      var globalStatus = (action === 'delete')
-        ? 'disabled'
-        : (perStatus.indexOf('enabled') !== -1 ? 'enabled' : 'disabled');
-
-      // chaque periode embarque desormais son propre status dans le json
-      var dtJson = dtField.map(function (f, i) {
+var dtJson = (sel.downtimeFields || [])
+  .filter(function (f) { return f; })
+  .map(function (f, i) {
         return {
           id: sel.ID + '_' + (i + 1),
           dt_type: f.dt_type || '',
@@ -793,7 +742,6 @@ var Config = (function () {
           end_date: f.end_date || '',
           begin_time: f.begin_time || '',
           end_time: f.end_time || '',
-          status: perStatus[i],
           dt_filter: sel.dt_filter || '',
           dt_policy: sel.dt_policy || ''
         };
@@ -818,7 +766,7 @@ var Config = (function () {
         + '    ID="' + sel.ID + '",\n'
         + '    dt_update=' + dtUpdate + ',\n'
         + '    step_opt="' + sel.step_opt + '",\n'
-        + '    status="' + globalStatus + '"';
+        + '    status=split("' + status.join(',') + '",",")';
 
       return base + ' | OmniKVUpdate action="' + action + '" ' + (sel.sendEmail || '');
     }
@@ -1259,7 +1207,7 @@ var Config = (function () {
     id: 'period', label: 'Periode',
     render: function ($body) {
       $body.html('<h2>Periodes de maintenance</h2>'
-        + '<p class="omni-hint">Definissez une ou plusieurs periodes. Chaque periode possede son propre status (enabled/disabled).</p>'
+        + '<p class="omni-hint">Definissez une ou plusieurs periodes.</p>'
         + '<div id="downtime"></div>');
       Periods.init($('#downtime'), Tokens.get('downtime_selected'));
     },
@@ -1470,19 +1418,10 @@ console.log("[OmniApp] État des tokens à la derniere étape :", {
       // periodes
       var downtimeFields = [];
       if (Config.isDelete) {
-        // On lit les periodes existantes (avec leur status individuel) depuis le
-        // token. Robustesse : on gere les elements eventuellement re-stringifies,
-        // comme dans Periods.init.
         var rawTok = Tokens.get('downtime_selected');
         try {
           var raw = rawTok ? JSON.parse(rawTok) : [];
-          var rawArr = Array.isArray(raw) ? raw : [raw];
-          downtimeFields = rawArr.map(function (item) {
-            if (typeof item === 'string') {
-              try { return JSON.parse(item); } catch (e) { return null; }
-            }
-            return item;
-          });
+          downtimeFields = Array.isArray(raw) ? raw : [raw];
         } catch (e) { downtimeFields = []; }
         downtimeFields = downtimeFields.filter(function (f) { return f && typeof f === 'object'; });
       } else {
