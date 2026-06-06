@@ -669,11 +669,25 @@ require([
       var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
-      var filterBlock = (m.dt_filter)
+var filterBlock = (m.dt_filter)
         ? '<span class="fieldlist">Custom filter(s) : </span>' + Render.tags(m.dt_filter, terms) + '<br>'
         : '';
       var policyBlock = '<span class="fieldlist">policy(s) : </span>' + Render.tags(m.dt_policy, terms) + '<br>';
       var panelId = 'omni-panel-' + Util.esc(m.ID) + '-' + Util.esc(m.version);
+
+      // pas de boutons d'action quand la maintenance a ete supprimee
+      var isDeleted = (action === 'delete');
+      var optionsBlock = isDeleted
+        ? '<div class="search-option">'
+          + '  <div class="title-search last-col">OPTIONS</div>'
+          + '  <div class="tag-search-li" style="margin-top:8px;">Maintenance supprimee</div>'
+          + '</div>'
+        : '<div class="search-option">'
+          + '  <div class="title-search last-col">OPTIONS</div>'
+          + '  <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
+          + '  <a href="' + activatorHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
+          + '  <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
+          + '</div>';
 
       return ''
         + '<div class="row-search">'
@@ -697,12 +711,7 @@ require([
         + '      </div>'
         + '    </div>'
         + '  </div>'
-        + '  <div class="search-option">'
-        + '    <div class="title-search last-col">OPTIONS</div>'
-        + '    <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
-        + '    <a href="' + activatorHref  + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
-        + '    <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
-        + '  </div>'
+        + optionsBlock
         + '</div>';
     },
 
