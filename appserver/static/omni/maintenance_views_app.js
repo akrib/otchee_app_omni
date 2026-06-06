@@ -665,7 +665,7 @@ require([
         ? './itsi__maintenance?mode=update_custom&dt_id=' + Util.enc(m.ID)
         : './itsi__maintenance?mode=update&dt_id=' + Util.enc(m.ID))
         + '&selected_version=' + Util.enc(m.version);
-      var targetHref = './itsi__maintenance_target?form.DT_ID=' + Util.enc(m.ID);
+      var activatorHref = './itsi__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
       var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
@@ -700,7 +700,7 @@ require([
         + '  <div class="search-option">'
         + '    <div class="title-search last-col">OPTIONS</div>'
         + '    <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
-        + '    <a href="' + targetHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
+        + '    <a href="' + activatorHref  + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
         + '    <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
         + '  </div>'
         + '</div>';
@@ -720,7 +720,7 @@ require([
         + '&selected_version=' + Util.enc(m.version);
       var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
       var logsHref = './itsi__maintenance_logs?form.input_ID=' + Util.enc(m.ID);
-      var targetHref = './itsi__maintenance_target?form.DT_ID=' + Util.enc(m.ID);
+      var activatorHref = './itsi__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
       var filterBlock = (m.dt_filter && m.step_opt === '000')
@@ -753,7 +753,7 @@ require([
         + '    <div class="title-search last-col">OPTIONS</div>'
         + '    <a href="' + logsHref + '" target="_blank" title="Trace Logs"><img class="img-option" src="' + media + 'analytics.gif" width="68px" alt="Logs"/></a>'
         + '    <a href="' + modifyHref + '" target="_blank" title="Modifier"><img class="img-option" src="' + media + 'browser.gif" width="68px" alt="Modifier"/></a>'
-        + '    <a href="' + targetHref + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
+        + '    <a href="' + activatorHref  + '" target="_blank" title="Portee"><img class="img-option" src="' + media + 'reading-mode.gif" width="68px" alt="Portee"/></a>'
         + '    <a href="' + deleteHref + '" target="_blank" title="Supprimer"><img class="img-option" src="' + media + 'poubelle.gif" width="58px" alt="Supprimer"/></a>'
         + '  </div>'
         + '</div>';
