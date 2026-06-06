@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '3.0.5';
+var APP_VERSION = '3.1.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Views App v' + APP_VERSION + ' charge');
@@ -88,6 +88,12 @@ require([
     enc: function (s) { return encodeURIComponent(s == null ? '' : s); },
     // pour injecter une valeur dans une chaine SPL entre guillemets
     splQuote: function (s) { return String(s == null ? '' : s).replace(/"/g, '\\"'); },
+    // interpretation tolerante d'un status -> true (actif/enabled) / false
+    statusOn: function (v) {
+      var s = String(v == null ? '' : v).toLowerCase().trim();
+      return (s === 'enable' || s === 'enabled' || s === '1'
+        || s === 'true' || s === 'on' || s === 'active' || s === 'actif');
+    },
     // transforme la saisie en matchers (supporte * et ?). "*" seul = tout.
     parseQuery: function (str) {
       var raw = String(str || '').toLowerCase().split(/\s+/).filter(Boolean);
@@ -234,6 +240,9 @@ require([
 
   /* ============================================================
    *  REQUETES SPL  (tous modes)
+   *  NB : le champ "status" (status GLOBAL de la maintenance, hors json)
+   *  est desormais remonte dans le | table de chaque requete. Le status
+   *  PAR periode reste porte par chaque objet du json downtime (p.status).
    * ============================================================ */
   var SPL = {
     // ---- search : RBAC (filtre client en fonction des roles) ----
@@ -261,14 +270,14 @@ require([
         + '| eval nbperiode=mvcount(dt_ids), omni_skip_filter=1 '
         + '| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=omni_skip_filter '
         + '| eval entity=mvjoin(entity, ";"), kpi=mvjoin(kpi,";"), service=mvjoin(service, ";"), '
-        + '       dt_policy=coalesce(dt_policy,"-") '
+        + '       dt_policy=coalesce(dt_policy,"-"), status=coalesce(status,"") '
         + '| eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S") '
         + '| eval category=if(step_opt=="000","CUSTOM","ITSI") '
         + '| eval search_blob=lower(coalesce(ID,"")." ".coalesce(creator,"")." ".coalesce(entity,"")." "'
         + '       .coalesce(kpi,"")." ".coalesce(service,"")." ".coalesce(dt_filter,"")." ".coalesce(dt_policy,"")." "'
         + '       .coalesce(commentary,"")." ".coalesce(client,"")." ".coalesce(site,"")." ".coalesce(target,"")." "'
         + '       .coalesce(orig_host,"")." ".coalesce(servicename,"")) '
-        + '| table ID, creator, last_update, flag_dt, version, step_opt, category, entity, kpi, service, '
+        + '| table ID, creator, last_update, flag_dt, status, version, step_opt, category, entity, kpi, service, '
         + '        dt_filter, dt_policy, commentary, downtime_json, nbperiode, search_blob';
     },
 
@@ -290,14 +299,14 @@ require([
         + '| eval nbperiode=mvcount(dt_ids), omni_skip_filter=1 '
         + '| omnidowntimecalculation epoctime="orig_time" dtfield="downtime" outputfield="flag_dt" skip_filter=omni_skip_filter '
         + '| eval entity=mvjoin(entity, ";"), kpi=mvjoin(kpi,";"), service=mvjoin(service, ";"), '
-        + '       dt_policy=coalesce(dt_policy,"-") '
+        + '       dt_policy=coalesce(dt_policy,"-"), status=coalesce(status,"") '
         + '| eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S") '
         + '| eval category=if(step_opt=="000","CUSTOM","ITSI") '
         + '| eval search_blob=lower(coalesce(ID,"")." ".coalesce(creator,"")." ".coalesce(entity,"")." "'
         + '       .coalesce(kpi,"")." ".coalesce(service,"")." ".coalesce(dt_filter,"")." ".coalesce(dt_policy,"")." "'
         + '       .coalesce(commentary,"")." ".coalesce(client,"")." ".coalesce(site,"")." ".coalesce(target,"")." "'
         + '       .coalesce(orig_host,"")." ".coalesce(servicename,"")) '
-        + '| table ID, creator, last_update, flag_dt, version, step_opt, category, entity, kpi, service, '
+        + '| table ID, creator, last_update, flag_dt, status, version, step_opt, category, entity, kpi, service, '
         + '        dt_filter, dt_policy, commentary, downtime_json, nbperiode, search_blob';
     },
 
@@ -310,24 +319,25 @@ require([
         + '| eval downtime_json = "[" + mvjoin(downtime, ",") + "]" '
         + '| eval nbperiode = mvcount(downtime) '
         + '| eval entity=mvjoin(entity, ";"), kpi=mvjoin(kpi,";"), service=mvjoin(service, ";"), '
-        + '       dt_policy=coalesce(dt_policy,"-") '
+        + '       dt_policy=coalesce(dt_policy,"-"), status=coalesce(status,"") '
         + '| eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S") '
         + '| eval category=if(coalesce(step_opt,"")=="000","CUSTOM","ITSI") '
         + '| eval search_blob=lower(coalesce(ID,"")." ".coalesce(creator,"")." ".coalesce(entity,"")." "'
         + '       .coalesce(kpi,"")." ".coalesce(service,"")." ".coalesce(dt_filter,"")." ".coalesce(dt_policy,"")." "'
         + '       .coalesce(commentary,"")." ".coalesce(action,"")) '
         + '| sort 0 - dt_update '
-        + '| table ID, creator, last_update, dt_update, action, version, category, entity, kpi, service, '
+        + '| table ID, creator, last_update, dt_update, action, status, version, category, entity, kpi, service, '
         + '        dt_filter, dt_policy, commentary, downtime_json, nbperiode, search_blob';
     }
   };
 
   // ordre des colonnes du | table -> mapping ligne -> objet (depend du mode)
+  // IMPORTANT : doit rester strictement aligne sur le | table correspondant.
   var COLS = IS_LOGS
-    ? ['ID', 'creator', 'last_update', 'dt_update', 'action', 'version', 'category',
+    ? ['ID', 'creator', 'last_update', 'dt_update', 'action', 'status', 'version', 'category',
        'entity', 'kpi', 'service', 'dt_filter', 'dt_policy', 'commentary',
        'downtime_json', 'nbperiode', 'search_blob']
-    : ['ID', 'creator', 'last_update', 'flag_dt', 'version', 'step_opt', 'category',
+    : ['ID', 'creator', 'last_update', 'flag_dt', 'status', 'version', 'step_opt', 'category',
        'entity', 'kpi', 'service', 'dt_filter', 'dt_policy', 'commentary',
        'downtime_json', 'nbperiode', 'search_blob'];
 
@@ -348,6 +358,7 @@ require([
     page: 0, term: '', category: 'all',
     activeOnly: false,                 // search / mine
     action: 'all',                     // logs
+    statusFilter: 'all',               // tous : all | enabled | disabled
     sort: IS_LOGS ? 'date' : 'update',
     epoch: Util.epochFromInput(null),  // search / mine
     loadTime: 0,
@@ -371,7 +382,7 @@ require([
         M + ' *{box-sizing:border-box;}',
         '.omni-card{background:#fff;border:1px solid var(--omni-line);border-radius:14px;box-shadow:0 6px 24px rgba(20,40,70,.06);overflow:hidden;}',
         '.omni-header{display:flex;align-items:center;gap:16px;padding:18px 24px;background:linear-gradient(90deg,var(--omni-primary),var(--omni-primary-2));color:#fff;}',
-        '.omni-header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.3px;}',
+        '.omni-header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.3px;color:#fff;}',
         '.omni-header .omni-badge{margin-left:auto;font-size:12px;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px;}',
         '.omni-back{display:inline-flex;align-items:center;gap:6px;color:var(--omni-primary);text-decoration:none;font-weight:600;margin:10px 4px;font-size:14px;}',
         '.omni-back:hover{text-decoration:underline;}',
@@ -427,6 +438,13 @@ require([
         '.dt-type-badge{font-family:Roboto,sans-serif;font-size:11px;font-weight:700;border-radius:3px;color:#fff;display:inline-block;padding:4px 8px!important;text-transform:uppercase;letter-spacing:.5px;}',
         '.dt-type-itsi{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);box-shadow:0 2px 4px rgba(102,126,234,.3);}',
         '.dt-type-custom{background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);box-shadow:0 2px 4px rgba(245,87,108,.3);}',
+        /* badge status GLOBAL (hors json) sur la carte */
+        '.dt-gstatus{display:inline-flex;align-items:center;gap:6px;font-family:Roboto,sans-serif;font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px;text-transform:uppercase;letter-spacing:.4px;}',
+        '.dt-gstatus::before{content:"";width:8px;height:8px;border-radius:50%;display:inline-block;}',
+        '.dt-gstatus--on{background:rgba(0,206,201,.12);color:#0a8f8b;border:1px solid rgba(0,206,201,.45);}',
+        '.dt-gstatus--on::before{background:var(--omni-ok);}',
+        '.dt-gstatus--off{background:rgba(255,118,117,.12);color:#c0392b;border:1px solid rgba(255,118,117,.45);}',
+        '.dt-gstatus--off::before{background:var(--omni-err);}',
         /* accordion */
         '.accordion{position:relative;width:100%;margin-top:10px;border-radius:8px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.18);}',
         '.accordion label{position:relative;display:block;padding:.55em .7em;background:#fff;margin:0;font-size:.95em;color:#666;cursor:pointer;transition:all .4s cubic-bezier(.865,.14,.095,.87);}',
@@ -563,6 +581,14 @@ require([
           + '        <div class="omni-chip" data-v="custom">Custom</div>'
           + '      </div></div>';
 
+      // chips Statut (enabled / disabled / les deux) : tous
+      tb += '    <div class="omni-tb-field"><label>Statut</label>'
+          + '      <div class="omni-chips" id="omni-status">'
+          + '        <div class="omni-chip is-active" data-v="all">Tous</div>'
+          + '        <div class="omni-chip" data-v="enabled">Activees</div>'
+          + '        <div class="omni-chip" data-v="disabled">Desactivees</div>'
+          + '      </div></div>';
+
       // tri
       tb += '    <div class="omni-tb-field"><label>Tri</label>'
           + '      <select class="omni-select" id="omni-sort">' + sortByMode[MODE] + '</select></div>';
@@ -588,8 +614,8 @@ require([
         ? '<span><span class="dot add"></span>Ajout</span>'
           + '<span><span class="dot update"></span>Modification</span>'
           + '<span><span class="dot delete"></span>Suppression</span>'
-        : '<span><span class="dot up"></span>Active a la date</span>'
-          + '<span><span class="dot down"></span>Inactive a la date</span>';
+        : '<span><span class="dot up"></span>En période de maintenance</span>'
+          + '<span><span class="dot down"></span>Hors période de maintenance</span>';
 
       var html = ''
         + '<a class="omni-back" href="./accueil">&#8592; Menu des Maintenances</a>'
@@ -643,14 +669,25 @@ require([
       }).join('');
     },
 
+    // marqueur du status GLOBAL (champ "status" hors json) -> pastille sur la carte
+    gstatus: function (val) {
+      var raw = String(val == null ? '' : val).toLowerCase().trim();
+      if (raw === '') return '';   // pas de status -> pas de marqueur (anciens enregistrements)
+      var on = Util.statusOn(val);
+      return '<span class="dt-gstatus dt-gstatus--' + (on ? 'on' : 'off') + '" title="'
+        + (on ? 'Maintenance activee' : 'Maintenance desactivee') + '">'
+        + (on ? 'Activee' : 'Desactivee') + '</span>';
+    },
+
     periods: function (json) {
       var arr = [];
       try { arr = JSON.parse(json) || []; } catch (e) { arr = []; }
       if (!arr.length) return IS_LOGS ? '<i>Aucune periode definie.</i>' : '';
       var rows = arr.map(function (p) {
         var type = DT_TYPE_FR[p.dt_type] || p.dt_type || '';
-        var st = String(p.status == null ? '' : p.status).toLowerCase();
-        var on = (st === 'enable' || st === 'enabled' || st === '1' || st === 'true' || st === 'on' || st === 'active');
+        var st = String(p.status == null ? '' : p.status).toLowerCase().trim();
+        var on = Util.statusOn(p.status);
+        // marqueur d'etat de la periode (vide si aucun status porte par l'objet)
         var statusBadge = (st === '')
           ? ''
           : '<span class="dt-status dt-status--' + (on ? 'on' : 'off') + '" title="'
@@ -673,13 +710,14 @@ require([
       var catBadge = m.category === 'CUSTOM'
         ? '<span class="dt-type-badge dt-type-custom">CUSTOM</span>'
         : '<span class="dt-type-badge dt-type-itsi">ITSI</span>';
+      var gBadge = Render.gstatus(m.status);   // marqueur status GLOBAL
 
       var modifyHref = (m.category === 'CUSTOM'
-        ? './itsi__maintenance?mode=update_custom&dt_id=' + Util.enc(m.ID)
-        : './itsi__maintenance?mode=update&dt_id=' + Util.enc(m.ID))
+        ? './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID)
+        : './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID))
         + '&selected_version=' + Util.enc(m.version);
-      var activatorHref = './itsi__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
-      var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
+      var activatorHref = './omni__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
+      var deleteHref = './omni__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
       var filterBlock = (m.dt_filter)
@@ -720,7 +758,7 @@ require([
       return ''
         + '<div class="row-search">'
         + '  <div class="col-search">'
-        + '    <div class="title-search">' + actBadge + ' ' + catBadge + ' ID [ ' + Util.hl(Util.esc(m.ID), terms) + ' ]'
+        + '    <div class="title-search">' + actBadge + ' ' + catBadge + ' ' + gBadge + ' ID [ ' + Util.hl(Util.esc(m.ID), terms) + ' ]'
         + '      <span class="tag-search-li"><b class="search-bold">Version:</b> ' + Util.esc(m.version) + '</span>'
         + '      <span class="tag-search-li"><b class="search-bold">Auteur:</b> ' + Util.hl(Util.esc(m.creator), terms) + '</span>'
         + '      <span class="tag-search-li"><b class="search-bold">Date:</b> ' + Util.esc(m.last_update) + '</span>'
@@ -743,21 +781,22 @@ require([
         + '</div>';
     },
 
-    // carte mode search / mine (LED actif/inactif, 4 options)
+    // carte mode search / mine (LED actif/inactif a la date, badge status global, 4 options)
     cardLive: function (m, terms) {
       var active = String(m.flag_dt) === '1';
       var led = '<span class="led" type="' + (active ? 'up' : 'down') + '"></span>';
       var badge = m.category === 'ITSI'
         ? '<span class="dt-type-badge dt-type-itsi">ITSI</span>'
         : '<span class="dt-type-badge dt-type-custom">CUSTOM</span>';
+      var gBadge = Render.gstatus(m.status);   // marqueur status GLOBAL (enabled/disabled)
 
       var modifyHref = (m.category === 'ITSI'
-        ? './itsi__maintenance?mode=update&dt_id=' + Util.enc(m.ID)
-        : './itsi__maintenance?mode=update_custom&dt_id=' + Util.enc(m.ID))
+        ? './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID)
+        : './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID))
         + '&selected_version=' + Util.enc(m.version);
-      var deleteHref = './itsi__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
-      var logsHref = './itsi__maintenance_logs?form.input_ID=' + Util.enc(m.ID);
-      var activatorHref = './itsi__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
+      var deleteHref = './omni__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
+      var logsHref = './omni__maintenance_logs?form.input_ID=' + Util.enc(m.ID);
+      var activatorHref = './omni__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';
 
       var filterBlock = (m.dt_filter && m.step_opt === '000')
@@ -768,7 +807,7 @@ require([
       return ''
         + '<div class="row-search">'
         + '  <div class="col-search">'
-        + '    <div class="title-search">' + badge + ' ID [ ' + Util.hl(Util.esc(m.ID), terms) + ' ] ' + led
+        + '    <div class="title-search">' + badge + ' ' + gBadge + ' ID [ ' + Util.hl(Util.esc(m.ID), terms) + ' ] ' + led
         + '      <span class="tag-search-li"><b class="search-bold">Auteur:</b> ' + Util.hl(Util.esc(m.creator), terms) + '</span>'
         + '      <span class="tag-search-li"><b class="search-bold">Derniere MAJ:</b> ' + Util.esc(m.last_update) + '</span>'
         + '    </div>'
@@ -918,6 +957,14 @@ require([
           if (Store.activeOnly && String(m.flag_dt) !== '1') return false;
         }
         if (Store.category !== 'all' && String(m.category).toLowerCase() !== Store.category) return false;
+
+        // filtre status GLOBAL (enabled / disabled). "all" = les deux.
+        if (Store.statusFilter !== 'all') {
+          var on = Util.statusOn(m.status);
+          if (Store.statusFilter === 'enabled' && !on) return false;
+          if (Store.statusFilter === 'disabled' && on) return false;
+        }
+
         var blob = String(m.search_blob || '');
         for (var i = 0; i < parsed.matchers.length; i++) {
           if (!parsed.matchers[i](blob)) return false;
@@ -939,7 +986,7 @@ require([
       });
 
       Store.page = 0;
-      log({ terme: Store.term, type: Store.category,
+      log({ terme: Store.term, type: Store.category, statut: Store.statusFilter,
         action: Store.action, enCours: Store.activeOnly, tri: Store.sort,
         resultats: Store.filtered.length + '/' + Store.all.length }, 'etape > applyFilters');
       App.render();
@@ -1045,6 +1092,13 @@ require([
         App.applyFilters();
       });
 
+      // chips Statut global enabled/disabled (tous)
+      $('#omni-status .omni-chip').on('click', function () {
+        $('#omni-status .omni-chip').removeClass('is-active'); $(this).addClass('is-active');
+        Store.statusFilter = $(this).attr('data-v');
+        App.applyFilters();
+      });
+
       // tri
       $('#omni-sort').on('change', function () {
         Store.sort = this.value;
@@ -1083,23 +1137,33 @@ require([
           + '<p>Les boutons d\'action ne sont disponibles que sur la <b>derniere version</b> d\'un ID, afin d\'eviter '
           + 'de modifier une maintenance a partir de valeurs obsoletes. Si la derniere version d\'un ID est une '
           + '<b>suppression</b>, aucune option n\'est proposee sur ses cartes.</p>'
+          + '<h3>Statut</h3>'
+          + '<p>La pastille <b>Activee / Desactivee</b> a cote de l\'ID reflete le status <b>global</b> de la maintenance '
+          + '(champ hors json). Dans les informations complementaires, chaque periode affiche son <b>propre marqueur</b> '
+          + 'd\'etat (actif/desactive). Le filtre <b>Statut</b> permet de n\'afficher que les maintenances activees, '
+          + 'desactivees, ou les deux.</p>'
           + '<h3>Recherche</h3>'
           + '<p>Chaque mot saisi est cherche dans tous les champs (ID, auteur, service, kpi, entity, commentaire, action…). '
           + 'Plusieurs mots = <b>ET</b>. Jokers <code>*</code> et <code>?</code> acceptes.</p>'
           + '<h3>Filtres</h3>'
-          + '<p><b>Action</b>, <b>Type</b> (ITSI/Custom) et <b>Tri</b> s\'appliquent instantanement.</p>');
+          + '<p><b>Action</b>, <b>Type</b> (ITSI/Custom), <b>Statut</b> et <b>Tri</b> s\'appliquent instantanement.</p>');
         return;
       }
       if (IS_MINE) {
         UI.modal('Omni Assistant', ''
           + '<h3>Mes maintenances</h3>'
           + '<p>Cet ecran liste uniquement les maintenances dont <b>vous etes l\'auteur</b> (creator).</p>'
+          + '<h3>Statut</h3>'
+          + '<p>La LED ronde indique si la maintenance est <b>en période de maintenance</b>. La pastille '
+          + '<b>Activee / Desactivee</b> reflete le status <b>global</b> enregistre (champ hors json). '
+          + 'Chaque periode affiche en plus son propre marqueur d\'etat dans les informations complementaires. '
+          + 'Le filtre <b>Statut</b> restreint l\'affichage aux maintenances activees, desactivees, ou les deux.</p>'
           + '<h3>Recherche</h3>'
           + '<p>Chaque mot est cherche dans tous les champs (ID, service, kpi, entity, commentaire, policy, filtre…). '
           + 'Plusieurs mots = <b>ET</b>. Jokers <code>*</code> et <code>?</code> acceptes.</p>'
           + '<h3>Filtres</h3>'
-          + '<p><b>Statut a la date</b> recalcule si chaque maintenance est active a la date choisie. '
-          + '<b>En cours uniquement</b>, <b>Type</b> et <b>Tri</b> s\'appliquent instantanement.</p>');
+          + '<p><b>Statut a la date</b> recalcule si chaque maintenance est en période de maintenance a la date choisie. '
+          + '<b>En cours uniquement</b>, <b>Type</b>, <b>Statut</b> et <b>Tri</b> s\'appliquent instantanement.</p>');
         return;
       }
       UI.modal('Omni Assistant', ''
@@ -1113,9 +1177,14 @@ require([
         + '<li>Joker <code>*</code> et <code>?</code> acceptes : <code>srv*prod</code>, <code>SRV?01</code>. '
         + '<code>*</code> seul affiche tout.</li>'
         + '</ul>'
+        + '<h3>Statut</h3>'
+        + '<p>La LED ronde indique si la maintenance est <b>en période de maintenance</b>. La pastille '
+        + '<b>Activee / Desactivee</b> reflete le status <b>global</b> enregistre (champ hors json), et chaque '
+        + 'periode affiche son propre marqueur d\'etat dans les informations complementaires. '
+        + 'Le filtre <b>Statut</b> restreint l\'affichage aux maintenances activees, desactivees, ou les deux.</p>'
         + '<h3>Filtres</h3>'
-        + '<p><b>Statut a la date</b> recalcule si chaque maintenance est active a la date/heure choisie. '
-        + '<b>En cours uniquement</b>, <b>Type</b> (ITSI/Custom) et <b>Tri</b> s\'appliquent instantanement.</p>');
+        + '<p><b>Statut a la date</b> recalcule si chaque maintenance est en période de maintenance a la date/heure choisie. '
+        + '<b>En cours uniquement</b>, <b>Type</b> (ITSI/Custom), <b>Statut</b> et <b>Tri</b> s\'appliquent instantanement.</p>');
     },
 
     showDebug: function () {
@@ -1131,7 +1200,7 @@ require([
           mode: MODE, view: Config.view, rowsPerPage: Config.rowsPerPage,
           chargees: Store.all.length, affichees: Store.filtered.length,
           ids_traces: Object.keys(Store.latestById).length,
-          terme: Store.term, action: Store.action, type: Store.category, tri: Store.sort,
+          terme: Store.term, action: Store.action, type: Store.category, statut: Store.statusFilter, tri: Store.sort,
           page: Store.page, loadTime: Store.loadTime + 's'
         };
         body = section('Requete journal (donnees)', q.logs);
@@ -1140,7 +1209,7 @@ require([
           mode: MODE, view: Config.view, rowsPerPage: Config.rowsPerPage, utilisateur: Store.user,
           epoch: Store.epoch, date: new Date(Store.epoch * 1000).toLocaleString(),
           chargees: Store.all.length, affichees: Store.filtered.length,
-          terme: Store.term, type: Store.category, enCours: Store.activeOnly, tri: Store.sort,
+          terme: Store.term, type: Store.category, statut: Store.statusFilter, enCours: Store.activeOnly, tri: Store.sort,
           page: Store.page, loadTime: Store.loadTime + 's'
         };
         body = section('Requete utilisateur courant', q.me)
@@ -1151,7 +1220,7 @@ require([
           epoch: Store.epoch, date: new Date(Store.epoch * 1000).toLocaleString(),
           clientWhere: Store.clientWhere || '(aucun)',
           chargees: Store.all.length, affichees: Store.filtered.length,
-          terme: Store.term, type: Store.category, enCours: Store.activeOnly, tri: Store.sort,
+          terme: Store.term, type: Store.category, statut: Store.statusFilter, enCours: Store.activeOnly, tri: Store.sort,
           page: Store.page, loadTime: Store.loadTime + 's'
         };
         body = section('Requete principale (donnees)', q.main)

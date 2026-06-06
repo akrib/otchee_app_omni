@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.1.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Period Activator v' + APP_VERSION + ' charge');
@@ -53,8 +53,26 @@ require([
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     },
     enc: function (s) { return encodeURIComponent(s == null ? '' : s); },
+    // pour une valeur simple injectee dans une chaine SPL entre guillemets
     splQuote: function (s) { return String(s == null ? '' : s).replace(/"/g, '\\"'); },
-    arr: function (v) { return (v == null) ? [] : (_.isArray(v) ? v : [v]); }
+    // echappement complet pour embarquer une chaine (ex: du JSON) dans un
+    // litteral SPL double-quote : backslash puis guillemet.
+    splEscape: function (s) {
+      return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    },
+    arr: function (v) { return (v == null) ? [] : (_.isArray(v) ? v : [v]); },
+    // interpretation tolerante d'un status -> true (actif/enabled) / false
+    statusOn: function (v) {
+      var s = String(v == null ? '' : v).toLowerCase().trim();
+      return (s === 'enable' || s === 'enabled' || s === '1'
+        || s === 'true' || s === 'on' || s === 'active' || s === 'actif');
+    },
+    // status d'une periode (porte par l'objet json). Absent -> actif par defaut.
+    periodOn: function (p) {
+      var s = String(p && p.status != null ? p.status : '').toLowerCase().trim();
+      if (s === '') return true;
+      return Util.statusOn(s);
+    }
   };
 
   var DT_TYPE_FR = {
@@ -73,8 +91,9 @@ require([
    * ============================================================ */
   var Store = {
     rec: null,         // objet maintenance
-    periods: [],       // [{id,dt_type,begin_date,...}]
-    states: [],        // [true/false] -> true = enable
+    periods: [],       // [{id,dt_type,begin_date,...,status}]
+    states: [],        // [true/false] -> status PAR periode (true = enabled)
+    global: true,      // status GLOBAL de la regle (champ scalaire hors json)
     busy: false
   };
 
@@ -156,17 +175,33 @@ require([
       + '        dt_policy, dt_filter, commentary, entity, kpi, service, downtime, status';
   }
 
-  // ecrit UNIQUEMENT le champ status (mv), une valeur enable/disable par periode.
-  // on relit la ligne complete puis on reecrit avec append=true key_field=_key
-  // -> tous les autres champs sont preserves, seul status est remplace.
-  function buildSaveSpl(id, states) {
-    var vals = states.map(function (on) { return on ? 'enable' : 'disable'; }).join(',');
-    return ''
+  // Ecriture du statut.
+  // - status PAR periode : porte par chaque objet json du champ multivalue
+  //   "downtime" (clef "status"). On reconstruit donc le mv downtime a partir
+  //   des objets deja parses, en remplacant uniquement leur status.
+  // - status GLOBAL de la regle : champ scalaire "status" (hors json).
+  // On relit la ligne brute (tous champs + _key preserves), on reecrit
+  // downtime + status, puis outputlookup append=true key_field=_key.
+  function buildSaveSpl(id, periodsOut, globalOn) {
+    var globalStatus = globalOn ? 'enabled' : 'disabled';
+
+    var spl = ''
       + '| inputlookup ' + LOOKUP + ' '
       + '| search ID="' + Util.splQuote(id) + '" '
-      + '| head 1 '
-      + '| eval status=split("' + vals + '", ",") '
-      + '| outputlookup append=true key_field=_key ' + LOOKUP;
+      + '| head 1 ';
+
+    if (periodsOut.length) {
+      var quoted = periodsOut.map(function (p) {
+        return '"' + Util.splEscape(JSON.stringify(p)) + '"';
+      });
+      // mvappend impose >=2 args sur certaines versions -> cas a 1 periode gere a part
+      var dtExpr = (quoted.length === 1) ? quoted[0] : 'mvappend(' + quoted.join(', ') + ')';
+      spl += '| eval downtime=' + dtExpr + ' ';
+    }
+
+    spl += '| eval status="' + globalStatus + '" '
+         + '| outputlookup append=true key_field=_key ' + LOOKUP;
+    return spl;
   }
 
   /* ============================================================
@@ -195,10 +230,22 @@ require([
         '.tag{font-family:Roboto,sans-serif;font-size:12px;background:var(--omni-primary);border-radius:4px;color:#fff;display:inline-block;margin:3px 3px 3px 0!important;padding:3px 8px!important;}',
         '.tag_dt{font-family:Roboto,sans-serif;font-size:11.5px;background:#74b9ff;border-radius:4px;color:#fff;display:inline-block;margin:2px 2px 2px 0!important;padding:2px 7px!important;}',
         '.comment-block{background:#f1f4f8;border-left:3px solid var(--omni-accent);padding:8px 10px;margin:8px 0 0;font-size:12.5px;border-radius:0 6px 6px 0;}',
+        /* statut global de la regle (champ hors json) */
+        '.omni-master{padding:14px 24px;border-bottom:1px solid var(--omni-line);background:#fff;}',
+        '.omni-master:empty{display:none;padding:0;border:0;}',
+        '.omni-master__inner{display:flex;align-items:center;gap:14px;border:1px solid var(--omni-line);border-radius:12px;padding:12px 16px;background:linear-gradient(90deg,rgba(35,87,157,.05),#fff);transition:.15s;}',
+        '.omni-master__inner.is-off{background:linear-gradient(90deg,rgba(255,118,117,.08),#fff);border-color:rgba(255,118,117,.4);}',
+        '.omni-master__txt{flex:1;min-width:0;}',
+        '.omni-master__ttl{font-size:14px;font-weight:700;color:var(--omni-primary);}',
+        '.omni-master__sub{font-size:12px;color:var(--omni-muted);margin-top:3px;}',
+        '.omni-master__sub code{background:#eef2f6;padding:1px 5px;border-radius:4px;}',
+        '.omni-master__state{font-size:11px;font-weight:700;letter-spacing:.4px;border-radius:999px;padding:5px 12px;}',
+        '.omni-master__state.on{background:rgba(0,206,201,.15);color:#0a8f8b;}',
+        '.omni-master__state.off{background:rgba(255,118,117,.15);color:#c0392b;}',
         /* periodes */
         '.omni-periods{padding:16px 24px;}',
         '.omni-periods h3{margin:0 0 6px;font-size:14px;color:var(--omni-primary);}',
-        '.omni-bulk{display:flex;gap:10px;margin:6px 0 14px;}',
+        '.omni-bulk{display:flex;gap:10px;margin:6px 0 14px;flex-wrap:wrap;}',
         '.omni-bulk a{font-size:12.5px;color:var(--omni-primary);cursor:pointer;text-decoration:none;font-weight:600;}',
         '.omni-bulk a:hover{text-decoration:underline;}',
         '.omni-period{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--omni-line);border-radius:10px;margin:10px 0;background:#fff;transition:.15s;}',
@@ -254,6 +301,7 @@ require([
         + '    <span class="omni-badge">downtime</span>'
         + '  </div>'
         + '  <div id="omni-summary" class="omni-summary"></div>'
+        + '  <div id="omni-master" class="omni-master"></div>'
         + '  <div id="omni-periods" class="omni-periods"></div>'
         + '  <div id="omni-actbar" class="omni-actbar" style="display:none">'
         + '    <span class="recap" id="omni-recap"></span>'
@@ -315,6 +363,22 @@ require([
       $('#omni-summary').html(html);
     },
 
+    // interrupteur du status GLOBAL de la regle (champ hors json)
+    master: function () {
+      var on = Store.global;
+      var html = ''
+        + '<div class="omni-master__inner ' + (on ? '' : 'is-off') + '">'
+        + '  <div class="omni-master__txt">'
+        + '    <div class="omni-master__ttl">Statut global de la regle</div>'
+        + '    <div class="omni-master__sub">Champ <code>status</code> (hors json). La desactiver coupe la regle entiere, '
+        + '        independamment des periodes.</div>'
+        + '  </div>'
+        + '  <span class="omni-master__state ' + (on ? 'on' : 'off') + '">' + (on ? 'ACTIVE' : 'DESACTIVEE') + '</span>'
+        + '  <label class="omni-switch"><input type="checkbox" id="omni-master-tgl" ' + (on ? 'checked' : '') + '/><span class="slider"></span></label>'
+        + '</div>';
+      $('#omni-master').html(html);
+    },
+
     period: function (p, idx, on) {
       var type  = DT_TYPE_FR[p.dt_type] || p.dt_type || '—';
       var day   = DT_TYPE_FR[p.day] || p.day || '';
@@ -335,22 +399,28 @@ require([
 
     periods: function () {
       if (!Store.periods.length) {
-        $('#omni-periods').html('<div class="omni-empty">Aucune periode definie pour cette maintenance.</div>');
-        $('#omni-actbar').hide();
+        $('#omni-periods').html('<div class="omni-empty" style="padding:24px 12px">'
+          + 'Aucune periode definie dans le champ <code>downtime</code>.<br/>'
+          + 'Vous pouvez tout de meme activer/desactiver la regle globale ci-dessus.</div>');
+        Render.recap();
         return;
       }
       var html = '<h3>Periodes (' + Store.periods.length + ')</h3>'
-        + '<div class="omni-bulk"><a id="omni-all-on">Tout activer</a><a id="omni-all-off">Tout desactiver</a></div>';
+        + '<div class="omni-bulk">'
+        + '  <a id="omni-all-on">Tout activer (regle + periodes)</a>'
+        + '  <a id="omni-all-off">Tout desactiver (regle + periodes)</a>'
+        + '</div>';
       html += Store.periods.map(function (p, i) { return Render.period(p, i, Store.states[i]); }).join('');
       $('#omni-periods').html(html);
-      $('#omni-actbar').show();
       Render.recap();
     },
 
     recap: function () {
       var on = Store.states.filter(function (s) { return s; }).length;
       var off = Store.states.length - on;
-      $('#omni-recap').text(on + ' active(s) / ' + off + ' desactivee(s)');
+      var g = Store.global ? 'ACTIVE' : 'DESACTIVEE';
+      $('#omni-recap').html('<b>Regle :</b> ' + g
+        + (Store.periods.length ? ' &middot; ' + on + ' periode(s) active(s) / ' + off + ' desactivee(s)' : ''));
     },
 
     refreshRow: function (idx) {
@@ -384,48 +454,69 @@ require([
         onResults: function (rows, fields) {
           if (!rows.length) {
             $('#omni-summary').html('<div class="omni-empty">Maintenance introuvable : ' + Util.esc(Config.dtId) + '</div>');
+            $('#omni-master').empty();
+            $('#omni-actbar').hide();
             return;
           }
           var m = rowObj(rows[0], fields);
           Store.rec = m;
 
-          // downtime : mv de chaines JSON -> objets
+          // downtime : mv de chaines JSON -> objets (chaque objet porte son status)
           Store.periods = Util.arr(m.downtime).map(function (s) {
+            if (s && typeof s === 'object') return s;   // deja un objet (selon version)
             try { return JSON.parse(s); } catch (e) { return {}; }
           });
 
-          // status : mv enable/disable (par defaut enable si absent)
-          var st = Util.arr(m.status);
-          Store.states = Store.periods.map(function (p, i) {
-            return String(st[i] || 'enable').toLowerCase() !== 'disable';
-          });
+          // status PAR periode : lu dans chaque objet json (p.status)
+          Store.states = Store.periods.map(function (p) { return Util.periodOn(p); });
 
-          log({ periodes: Store.periods.length, states: Store.states }, 'donnees lues');
+          // status GLOBAL : champ scalaire hors json. Absent -> actif par defaut.
+          var gRaw = _.isArray(m.status) ? m.status[0] : m.status;
+          var gs = String(gRaw == null ? '' : gRaw).toLowerCase().trim();
+          Store.global = (gs === '') ? true : Util.statusOn(gs);
+
+          log({ periodes: Store.periods.length, states: Store.states, global: Store.global }, 'donnees lues');
+
           Render.summary(m);
+          Render.master();
           Render.periods();
+          $('#omni-actbar').show();
         },
         onError: function () {
           $('#omni-summary').html('<div class="omni-empty">Erreur de chargement. Verifiez les logs Splunk.</div>');
+          $('#omni-master').empty();
+          $('#omni-actbar').hide();
         }
       });
     },
 
     bind: function () {
-      // toggles (delegation)
+      // toggles periode (delegation)
       $('#omni-periods').on('change', '.omni-tgl', function () {
         var i = parseInt($(this).attr('data-i'), 10);
         Store.states[i] = this.checked;
         Render.refreshRow(i);
       });
 
-      // tout activer / desactiver
+      // bulk : agit sur la regle globale ET sur toutes les periodes
       $('#omni-periods').on('click', '#omni-all-on', function () {
         Store.states = Store.states.map(function () { return true; });
+        Store.global = true;
+        Render.master();
         Render.periods();
       });
       $('#omni-periods').on('click', '#omni-all-off', function () {
         Store.states = Store.states.map(function () { return false; });
+        Store.global = false;
+        Render.master();
         Render.periods();
+      });
+
+      // interrupteur du status global (independant des periodes)
+      $('#omni-master').on('change', '#omni-master-tgl', function () {
+        Store.global = this.checked;
+        Render.master();
+        Render.recap();
       });
 
       $('#omni-reset').on('click', function () { App.load(); });
@@ -433,11 +524,21 @@ require([
     },
 
     save: function () {
-      if (Store.busy || !Store.periods.length) return;
+      if (Store.busy || !Store.rec) return;
       Store.busy = true;
       $('#omni-save').attr('disabled', 'disabled');
 
-      runSearch(buildSaveSpl(Config.dtId, Store.states), {
+      // on clone chaque periode en y reinjectant son status courant (enabled/disabled)
+      var periodsOut = Store.periods.map(function (p, i) {
+        var clone = $.extend({}, p);
+        clone.status = Store.states[i] ? 'enabled' : 'disabled';
+        return clone;
+      });
+
+      var spl = buildSaveSpl(Config.dtId, periodsOut, Store.global);
+      log(spl, 'SPL save');
+
+      runSearch(spl, {
         id: 'save',
         message: 'Enregistrement…',
         onDone: function () {
@@ -446,8 +547,12 @@ require([
           var on = Store.states.filter(function (s) { return s; }).length;
           var off = Store.states.length - on;
           UI.modal('&#10004; Enregistre',
-            '<p>Le statut des periodes a ete mis a jour pour la maintenance <b>' + Util.esc(Config.dtId) + '</b>.</p>'
-            + '<p>' + on + ' periode(s) active(s), ' + off + ' desactivee(s).</p>', 'ok');
+            '<p>Statut mis a jour pour la maintenance <b>' + Util.esc(Config.dtId) + '</b>.</p>'
+            + '<p><b>Regle globale :</b> ' + (Store.global ? 'activee' : 'desactivee') + '.</p>'
+            + (Store.periods.length
+                ? '<p>' + on + ' periode(s) active(s), ' + off + ' desactivee(s).</p>'
+                : ''),
+            'ok');
           App.load(); // relit l etat persiste
         },
         onError: function () {
