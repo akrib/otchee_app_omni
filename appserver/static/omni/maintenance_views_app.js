@@ -713,11 +713,12 @@ require([
       var gBadge = Render.gstatus(m.status);   // marqueur status GLOBAL
 
       var modifyHref = (m.category === 'CUSTOM'
-        ? './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID)
-        : './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID))
-        + '&selected_version=' + Util.enc(m.version);
+        ? './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID) + '&selected_version=' + Util.enc(m.version)
+        : './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID)) + '&selected_version=' + Util.enc(m.version);
       var activatorHref = './omni__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
-      var deleteHref = './omni__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
+      var deleteHref = (m.category === 'CUSTOM'
+        ? './omni__maintenance_custom?mode=delete&dt_id=' + Util.enc(m.ID)
+        : './omni__maintenance_itsi?mode=delete&dt_id=' + Util.enc(m.ID));
       var media = '/static/app/' + Config.appPath + '/media/';
 
       var filterBlock = (m.dt_filter)
@@ -791,10 +792,11 @@ require([
       var gBadge = Render.gstatus(m.status);   // marqueur status GLOBAL (enabled/disabled)
 
       var modifyHref = (m.category === 'ITSI'
-        ? './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID)
-        : './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID))
-        + '&selected_version=' + Util.enc(m.version);
-      var deleteHref = './omni__maintenance?mode=delete&dt_id=' + Util.enc(m.ID);
+        ? './omni__maintenance_itsi?mode=update&dt_id=' + Util.enc(m.ID) + '&selected_version=' + Util.enc(m.version)
+        : './omni__maintenance_custom?mode=update_custom&dt_id=' + Util.enc(m.ID)) + '&selected_version=' + Util.enc(m.version);
+      var deleteHref = (m.category === 'CUSTOM'
+        ? './omni__maintenance_custom?mode=delete&dt_id=' + Util.enc(m.ID)
+        : './omni__maintenance_itsi?mode=delete&dt_id=' + Util.enc(m.ID));
       var logsHref = './omni__maintenance_logs?form.input_ID=' + Util.enc(m.ID);
       var activatorHref = './omni__maintenance_activator?form.DT_ID=' + Util.enc(m.ID);
       var media = '/static/app/' + Config.appPath + '/media/';

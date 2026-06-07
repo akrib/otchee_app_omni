@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.2.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Period Activator v' + APP_VERSION + ' charge');
@@ -32,7 +32,10 @@ require([
     debug: (urlParam('debug') || $cfg.attr('data-debug') || '0') === '1',
     // lien depuis les cartes : ?form.DT_ID=...
     dtId: urlParam('form.DT_ID') || urlParam('DT_ID') || urlParam('form.input_ID') || '',
-    appPath: APP_NAME
+    appPath: APP_NAME,
+    // utilisateur Splunk courant (injecte par Splunk Web). Sert a tracer
+    // l'auteur du dernier changement dans le champ "creator".
+    user: (window.$C && window.$C.USERNAME) || $cfg.attr('data-user') || 'unknown'
   };
 
   function log(obj, titre, level) {
@@ -55,12 +58,24 @@ require([
     enc: function (s) { return encodeURIComponent(s == null ? '' : s); },
     // pour une valeur simple injectee dans une chaine SPL entre guillemets
     splQuote: function (s) { return String(s == null ? '' : s).replace(/"/g, '\\"'); },
-    // echappement complet pour embarquer une chaine (ex: du JSON) dans un
-    // litteral SPL double-quote : backslash puis guillemet.
+    // echappement complet pour embarquer une chaine (ex: du JSON ou un
+    // commentaire) dans un litteral SPL double-quote. Aligne sur l'escapeSPL
+    // de maintenance_app.js : backslash, guillemet, retours ligne, tab.
     splEscape: function (s) {
-      return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return String(s == null ? '' : s)
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
     },
     arr: function (v) { return (v == null) ? [] : (_.isArray(v) ? v : [v]); },
+    // version stockee en ENTIER dans le kvstore : on incremente de 1.
+    // vide / non numerique -> 1.
+    bumpVersion: function (v) {
+      var n = parseInt(String(v == null ? '' : v).trim(), 10);
+      return isNaN(n) ? 1 : n + 1;
+    },
     // interpretation tolerante d'un status -> true (actif/enabled) / false
     statusOn: function (v) {
       var s = String(v == null ? '' : v).toLowerCase().trim();
@@ -90,7 +105,7 @@ require([
    *  ETAT
    * ============================================================ */
   var Store = {
-    rec: null,         // objet maintenance
+    rec: null,         // objet maintenance (champs bruts lus pour le re-write)
     periods: [],       // [{id,dt_type,begin_date,...,status}]
     states: [],        // [true/false] -> status PAR periode (true = enabled)
     global: true,      // status GLOBAL de la regle (champ scalaire hors json)
@@ -162,46 +177,92 @@ require([
   /* ============================================================
    *  SPL
    * ============================================================ */
+  // Lecture : on recupere TOUS les champs bruts necessaires a un re-write
+  // complet via la commande OmniKVUpdate (qui remplace integralement le
+  // document KV). On garde aussi quelques champs derives pour l'affichage
+  // (last_update lisible, category ITSI/CUSTOM).
   function buildReadSpl(id) {
     return ''
       + '| inputlookup ' + LOOKUP + ' '
       + '| search ID="' + Util.splQuote(id) + '" '
       + '| head 1 '
       + '| eval entity=mvjoin(entity,";"), kpi=mvjoin(kpi,";"), service=mvjoin(service,";") '
-      + '| eval dt_policy=coalesce(dt_policy,"-") '
-      + '| eval last_update=strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S") '
+      // dt_update tolerant pour l'affichage : ancien format = epoch ms,
+      // nouveau format = chaine "YYYY/MM/DD HH:MM:SS" ecrite par l'activator.
+      + '| eval last_update=if(isnum(dt_update),strftime(round(dt_update/1000,0),"%Y-%m-%d %H:%M:%S"),dt_update) '
+      // badge d'affichage
       + '| eval category=if(coalesce(step_opt,"")=="000","CUSTOM","ITSI") '
-      + '| table _key, ID, creator, last_update, version, category, step_opt, '
+      // dt_category REEL (champ KV, doit valoir "itsi" ou "custom") :
+      // repli sur step_opt si absent/invalide.
+      + '| eval dt_category=if(dt_category=="itsi" OR dt_category=="custom",dt_category,'
+      + 'if(coalesce(step_opt,"")=="000","custom","itsi")) '
+      + '| table _key, ID, creator, last_update, version, category, dt_category, step_opt, '
       + '        dt_policy, dt_filter, commentary, entity, kpi, service, downtime, status';
   }
 
-  // Ecriture du statut.
-  // - status PAR periode : porte par chaque objet json du champ multivalue
-  //   "downtime" (clef "status"). On reconstruit donc le mv downtime a partir
-  //   des objets deja parses, en remplacant uniquement leur status.
-  // - status GLOBAL de la regle : champ scalaire "status" (hors json).
-  // On relit la ligne brute (tous champs + _key preserves), on reecrit
-  // downtime + status, puis outputlookup append=true key_field=_key.
-  function buildSaveSpl(id, periodsOut, globalOn) {
+  // Ecriture du statut via la CUSTOM COMMAND OmniKVUpdate (action="update").
+  // -------------------------------------------------------------------------
+  // Contrairement a outputlookup, OmniKVUpdate :
+  //  - valide les champs (service/kpi/entity/commentary/creator/downtime/
+  //    dt_update/ID/version/step_opt/dt_filter/dt_category obligatoires),
+  //  - trace le changement dans omni_kv_trace_log + ecrit une version obsolete.
+  // L'update fait un REMPLACEMENT COMPLET du document => on doit renvoyer
+  // TOUS les champs lus, en ne modifiant que :
+  //  - downtime  : mv json reconstruit avec le status courant de chaque periode
+  //  - status    : status GLOBAL de la regle (enabled/disabled)
+  //  - dt_update : date/heure du changement (format "YYYY/MM/DD HH:MM:SS")
+  //  - creator   : utilisateur Splunk courant
+  //  - version   : entier incremente
+  // Le SPL est calque sur QueryBuilder.create de maintenance_app.js :
+  //   | makeresults | eval key=...,service=split(...,";"),...,downtime="<json>"
+  //   | OmniKVUpdate action="update"
+  function buildSaveSpl(rec, periodsOut, globalOn, creator, version) {
     var globalStatus = globalOn ? 'enabled' : 'disabled';
 
-    var spl = ''
-      + '| inputlookup ' + LOOKUP + ' '
-      + '| search ID="' + Util.splQuote(id) + '" '
-      + '| head 1 ';
+    // downtime : tableau d'objets -> chaine JSON (la commande la re-eclate en mv)
+    var dtJson = JSON.stringify(periodsOut || []);
 
-    if (periodsOut.length) {
-      var quoted = periodsOut.map(function (p) {
-        return '"' + Util.splEscape(JSON.stringify(p)) + '"';
-      });
-      // mvappend impose >=2 args sur certaines versions -> cas a 1 periode gere a part
-      var dtExpr = (quoted.length === 1) ? quoted[0] : 'mvappend(' + quoted.join(', ') + ')';
-      spl += '| eval downtime=' + dtExpr + ' ';
+    // dt_category : doit imperativement valoir "itsi" ou "custom"
+    var cat = String(rec.dt_category == null ? '' : rec.dt_category).toLowerCase().trim();
+    if (cat !== 'itsi' && cat !== 'custom') {
+      cat = (String(rec.step_opt == null ? '' : rec.step_opt) === '000') ? 'custom' : 'itsi';
     }
 
-    spl += '| eval status="' + globalStatus + '" '
-         + '| outputlookup append=true key_field=_key ' + LOOKUP;
-    return spl;
+    // dt_filter : champ obligatoire cote commande (is_null rejette le vide) ->
+    // repli sur le marqueur deja utilise par maintenance_app pour les regles ITSI.
+    var filter = (rec.dt_filter != null && String(rec.dt_filter).trim() !== '')
+      ? rec.dt_filter : 'omni_skip_filter=1';
+
+    // commentary : champ obligatoire cote commande -> repli si vide.
+    var commentary = (rec.commentary != null && String(rec.commentary).trim() !== '')
+      ? rec.commentary : 'MAJ statut des periodes (activator)';
+
+    // step_opt : conserve tel quel (repli "000" -> CUSTOM)
+    var stepOpt = (rec.step_opt != null && String(rec.step_opt).trim() !== '')
+      ? rec.step_opt : '000';
+
+    return ''
+      + '| makeresults '
+      + '| eval '
+      +     'key="'         + Util.splEscape(rec._key)            + '", '
+      +     'ID="'          + Util.splEscape(rec.ID)              + '", '
+      +     'service=split("' + Util.splEscape(rec.service || '%') + '",";"), '
+      +     'kpi=split("'     + Util.splEscape(rec.kpi || '%')     + '",";"), '
+      +     'entity=split("'  + Util.splEscape(rec.entity || '%')  + '",";"), '
+      +     'dt_filter="'   + Util.splEscape(filter)              + '", '
+      +     'dt_policy="'    + Util.splEscape(rec.dt_policy || '') + '", '
+      +     'dt_category="'  + Util.splEscape(cat)                + '", '
+      +     'downtime="'     + Util.splEscape(dtJson)             + '", '
+      +     'creator="'      + Util.splEscape(creator)            + '", '
+      +     'commentary="'   + Util.splEscape(commentary)         + '", '
+      // version : entier (pas de guillemets)
+      +     'version='       + version                            + ', '
+      // date/heure du changement, format demande : 2026/06/06 23:13:42 (heure serveur)
+      +     'dt_update=strftime(now(),"%Y/%m/%d %H:%M:%S"), '
+      +     'step_opt="'     + Util.splEscape(stepOpt)            + '", '
+      // status GLOBAL de la regle (hors json)
+      +     'status="'       + globalStatus                       + '" '
+      + '| OmniKVUpdate action="update"';
   }
 
   /* ============================================================
@@ -358,7 +419,8 @@ require([
         + '<div class="row"><span class="fieldlist">kpi :</span> ' + Render.tags(m.kpi) + '</div>'
         + '<div class="row"><span class="fieldlist">service :</span> ' + Render.tags(m.service) + '</div>'
         + '<div class="row"><span class="fieldlist">policy(s) :</span> ' + Render.tags(m.dt_policy) + '</div>'
-        + (m.dt_filter ? '<div class="row"><span class="fieldlist">Custom filter(s) :</span> ' + Render.tags(m.dt_filter) + '</div>' : '')
+        + (m.dt_filter && m.dt_filter !== 'omni_skip_filter=1'
+            ? '<div class="row"><span class="fieldlist">Custom filter(s) :</span> ' + Render.tags(m.dt_filter) + '</div>' : '')
         + (m.commentary ? '<div class="comment-block"><b>Commentaire :</b> ' + Util.esc(m.commentary) + '</div>' : '');
       $('#omni-summary').html(html);
     },
@@ -370,7 +432,7 @@ require([
         + '<div class="omni-master__inner ' + (on ? '' : 'is-off') + '">'
         + '  <div class="omni-master__txt">'
         + '    <div class="omni-master__ttl">Statut global de la regle</div>'
-        + '    <div class="omni-master__sub">Champ <code>status</code> (hors json). La desactiver coupe la regle entiere, '
+        + '    <div class="omni-master__sub">La desactiver coupe la regle entiere, '
         + '        independamment des periodes.</div>'
         + '  </div>'
         + '  <span class="omni-master__state ' + (on ? 'on' : 'off') + '">' + (on ? 'ACTIVE' : 'DESACTIVEE') + '</span>'
@@ -475,7 +537,7 @@ require([
           var gs = String(gRaw == null ? '' : gRaw).toLowerCase().trim();
           Store.global = (gs === '') ? true : Util.statusOn(gs);
 
-          log({ periodes: Store.periods.length, states: Store.states, global: Store.global }, 'donnees lues');
+          log({ periodes: Store.periods.length, states: Store.states, global: Store.global, rec: m }, 'donnees lues');
 
           Render.summary(m);
           Render.master();
@@ -525,6 +587,15 @@ require([
 
     save: function () {
       if (Store.busy || !Store.rec) return;
+
+      // garde-fou : la commande update exige une _key
+      if (!Store.rec._key) {
+        UI.modal('&#10006; Erreur',
+          '<p>Impossible d\'enregistrer : la cle unique (<code>_key</code>) de la maintenance '
+          + 'n\'a pas ete chargee. Verifiez la definition du lookup <code>' + LOOKUP + '</code>.</p>', 'err');
+        return;
+      }
+
       Store.busy = true;
       $('#omni-save').attr('disabled', 'disabled');
 
@@ -535,32 +606,65 @@ require([
         return clone;
       });
 
-      var spl = buildSaveSpl(Config.dtId, periodsOut, Store.global);
-      log(spl, 'SPL save');
+      // version (entier) incrementee + auteur du changement (user Splunk courant)
+      var newVersion = Util.bumpVersion(Store.rec.version);
+      var creator    = Config.user;
+
+      var spl = buildSaveSpl(Store.rec, periodsOut, Store.global, creator, newVersion);
+      log(spl, 'SPL save (OmniKVUpdate)');
 
       runSearch(spl, {
         id: 'save',
         message: 'Enregistrement…',
-        onDone: function () {
+        // la commande renvoie une ligne portant un champ "result"
+        onResults: function (rows, fields) {
           Store.busy = false;
           $('#omni-save').removeAttr('disabled');
+
+          var idx = (fields || []).indexOf('result');
+          var backend = (idx > -1 && rows.length) ? String(rows[0][idx]) : '';
+          log({ backend: backend }, 'retour OmniKVUpdate');
+
+          // succes = message "... OK (key: ...)". Tout le reste (ERREUR / Mise a
+          // jour interrompue / Exception) est traite comme un echec.
+          var ok = /OK\s*\(key/i.test(backend);
+          if (!ok) {
+            UI.modal('&#10006; Erreur',
+              '<p>La mise a jour de la maintenance <b>' + Util.esc(Config.dtId) + '</b> a echoue.</p>'
+              + (backend ? '<p><code>' + Util.esc(backend) + '</code></p>' : '')
+              + '<p>Verifiez la custom command <code>OmniKVUpdate</code>, vos droits sur le KVStore '
+              + 'et les logs Splunk.</p>', 'err');
+            return;
+          }
+
           var on = Store.states.filter(function (s) { return s; }).length;
           var off = Store.states.length - on;
           UI.modal('&#10004; Enregistre',
             '<p>Statut mis a jour pour la maintenance <b>' + Util.esc(Config.dtId) + '</b>.</p>'
             + '<p><b>Regle globale :</b> ' + (Store.global ? 'activee' : 'desactivee') + '.</p>'
+            + '<p><b>Version :</b> ' + Util.esc(newVersion)
+            + ' &nbsp; <b>Modifie par :</b> ' + Util.esc(creator) + '</p>'
             + (Store.periods.length
                 ? '<p>' + on + ' periode(s) active(s), ' + off + ' desactivee(s).</p>'
                 : ''),
             'ok');
           App.load(); // relit l etat persiste
         },
+        // filet de securite : aucune ligne renvoyee (resultCount < 0)
+        onDone: function () {
+          if (!Store.busy) return; // onResults a deja statue
+          Store.busy = false;
+          $('#omni-save').removeAttr('disabled');
+          UI.modal('&#10006; Erreur',
+            '<p>La commande <code>OmniKVUpdate</code> n\'a renvoye aucun resultat. '
+            + 'Verifiez les logs Splunk.</p>', 'err');
+        },
         onError: function () {
           Store.busy = false;
           $('#omni-save').removeAttr('disabled');
           UI.modal('&#10006; Erreur',
-            '<p>L\'enregistrement a echoue. Verifiez vos droits d\'ecriture sur le lookup '
-            + '<code>' + LOOKUP + '</code> et les logs Splunk.</p>', 'err');
+            '<p>L\'execution de la commande a echoue. Verifiez vos droits d\'ecriture sur le KVStore '
+            + 'et les logs Splunk.</p>', 'err');
         }
       });
     }
