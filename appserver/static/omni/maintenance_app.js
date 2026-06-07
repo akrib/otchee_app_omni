@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '2.6.0';
+var APP_VERSION = '2.7.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance App v' + APP_VERSION + ' charge');
@@ -289,7 +289,7 @@ var Config = (function () {
         '.omni-spacer{flex:1;}',
         '.omni-field{margin:14px 0;}',
         '.omni-field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}',
-        '.omni-field select,.omni-field input[type=text],.omni-field textarea{height:45px;width:100%;box-sizing:border-box;border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;}',
+        '.omni-field select,.omni-field input[type=text],.omni-field textarea{min-height:45px;width:100%;box-sizing:border-box;border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;}',
         '.omni-field select:focus,.omni-field input:focus,.omni-field textarea:focus{outline:none;border-color:var(--omni-primary);box-shadow:0 0 0 3px rgba(25,119,204,.12);}',
         '.omni-field--inline{display:inline-block;width:auto;margin-right:10px;vertical-align:top;}',
         '.omni-choices{display:flex;gap:8px;flex-wrap:wrap;}',
@@ -1493,7 +1493,7 @@ console.log("[OmniApp] État des tokens à la derniere étape :", {
 
       var version;
       if (action === 'add') version = Tokens.get('selected_version') || 1;
-      else if (action === 'update') version = parseInt(Tokens.get('selected_version') || 50, 10) + 2;
+      else if (action === 'update') version = parseInt(Tokens.get('selected_version') || 50, 10) + 1;
       else version = Tokens.get('selected_version') || 99999;
 
       var sel = {

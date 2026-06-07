@@ -1,5 +1,5 @@
 var APP_NAME = 'otchee_app_omni';
-var APP_VERSION = '1.2.0';
+var APP_VERSION = '1.3.0';
 
 console.log('%c %s', 'background:#222;color:#bada55',
   'Omni Maintenance Period Activator v' + APP_VERSION + ' charge');
@@ -218,7 +218,7 @@ require([
     // step_opt : conserve tel quel (repli "000" -> CUSTOM)
     var stepOpt = (rec.step_opt != null && String(rec.step_opt).trim() !== '')
       ? rec.step_opt : '000';
-
+    var dtUpdate = new Date().getTime();
     return ''
       + '| makeresults '
       + '| eval '
@@ -236,7 +236,7 @@ require([
       // version : entier (pas de guillemets)
       +     'version='       + version                            + ', '
       // date/heure du changement, format demande : 2026/06/06 23:13:42 (heure serveur)
-      +     'dt_update=now(), '
+      +     'dt_update=' + dtUpdate + ', '
       +     'step_opt="'     + Util.splEscape(stepOpt)            + '", '
       // status GLOBAL de la regle (hors json)
       +     'status="'       + globalStatus                       + '" '
