@@ -5,6 +5,10 @@ OmniKVUpdateCommand - Custom Splunk command for managing downtime records in KVS
 
 This command handles add, update, and delete operations for the omni_kv collection.
 Compatible with latest splunklib version.
+
+Le champ ``downtime`` est toujours manipulé au format JSON (liste d'objets
+sérialisés). L'ancien format legacy délimité par des dièses
+(``between_date#...#...#00:00:00#00:00:00``) a été retiré.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -45,11 +49,11 @@ class KVStoreClient:
     Client pour interagir avec le KVStore de Splunk
     Compatible avec les dernières versions de splunklib
     """
-    
+
     def __init__(self, app_name, collection_name, lookup_name, service):
         """
         Initialise le client KVStore
-        
+
         Args:
             app_name: Nom de l'application Splunk
             collection_name: Nom de la collection KVStore
@@ -66,7 +70,7 @@ class KVStoreClient:
     def get_all(self):
         """
         Récupère tous les enregistrements de la collection
-        
+
         Returns:
             list: Liste des enregistrements
         """
@@ -84,11 +88,11 @@ class KVStoreClient:
     def get_by_field(self, field, value):
         """
         Récupère les enregistrements par champ
-        
+
         Args:
             field: Nom du champ
             value: Valeur à rechercher
-            
+
         Returns:
             list: Liste des enregistrements correspondants
         """
@@ -99,36 +103,36 @@ class KVStoreClient:
                 search_query,
                 **{"exec_mode": "blocking"}
             )
-            
+
             # Attendre que le job soit terminé
             while not job.is_done():
                 pass
-            
+
             # Récupérer les résultats
             results_stream = job.results(count=0, output_mode='json')
             reader = results.JSONResultsReader(results_stream)
-            
+
             for record in reader:
                 if isinstance(record, dict):
                     records.append(record)
                 elif isinstance(record, results.Message):
                     # Log des messages si nécessaire
                     pass
-                    
+
             job.cancel()  # Nettoyer le job
-            
+
         except Exception as e:
             raise Exception(f"Error getting records by field {field}: {str(e)}")
-            
+
         return records
 
     def get_by_key(self, key):
         """
         Récupère un enregistrement par sa clé
-        
+
         Args:
             key: Clé de l'enregistrement
-            
+
         Returns:
             dict: Enregistrement ou None
         """
@@ -138,51 +142,51 @@ class KVStoreClient:
                 search_query,
                 **{"exec_mode": "blocking"}
             )
-            
+
             while not job.is_done():
                 pass
-            
+
             results_stream = job.results(count=0, output_mode='json')
             reader = results.JSONResultsReader(results_stream)
-            
+
             record = None
             for result in reader:
                 if isinstance(result, dict):
                     record = result
                     break
-                    
+
             job.cancel()
             return record
-            
+
         except Exception as e:
             raise Exception(f"Error getting record by key {key}: {str(e)}")
 
     def delete_by_field(self, field, value):
         """
         Supprime les enregistrements par champ
-        
+
         Args:
             field: Nom du champ
             value: Valeur à rechercher
-            
+
         Returns:
             list: Liste des enregistrements supprimés
         """
         records = self.get_by_field(field, value)
-        
+
         for record in records:
             if '_key' in record:
                 self.delete_key(record['_key'])
-                
+
         return records
 
     def delete_key(self, key):
         """
         Supprime un enregistrement par sa clé
-        
+
         Args:
             key: Clé de l'enregistrement
-            
+
         Returns:
             Response object
         """
@@ -199,10 +203,10 @@ class KVStoreClient:
     def add(self, content):
         """
         Ajoute un nouvel enregistrement
-        
+
         Args:
             content: Dictionnaire contenant les données
-            
+
         Returns:
             str: Clé du nouvel enregistrement
         """
@@ -221,11 +225,11 @@ class KVStoreClient:
     def update(self, key, content):
         """
         Met à jour un enregistrement existant
-        
+
         Args:
             key: Clé de l'enregistrement
             content: Dictionnaire contenant les nouvelles données
-            
+
         Returns:
             Response object
         """
@@ -245,18 +249,18 @@ class KVStoreClient:
 def is_null(value):
     """
     Vérifie si une valeur est nulle ou vide
-    
+
     Args:
         value: Valeur à vérifier
-        
+
     Returns:
         bool: True si la valeur est nulle/vide
     """
     if isinstance(value, str):
         return len(value.strip()) == 0
-    elif (value is None 
-          or value == 0 
-          or value == "0" 
+    elif (value is None
+          or value == 0
+          or value == "0"
           or value == "undefined"
           or (isinstance(value, bool) and not value)):
         return True
@@ -266,10 +270,10 @@ def is_null(value):
 def is_null_optional(value):
     """
     Vérifie si une valeur optionnelle est nulle (accepte les chaînes vides)
-    
+
     Args:
         value: Valeur à vérifier
-        
+
     Returns:
         bool: True si la valeur est None ou "undefined"
     """
@@ -298,15 +302,15 @@ def _scalarize(value):
 class OmniKVUpdate(StreamingCommand):
     """
     Commande personnalisée Splunk pour gérer le KVStore omni_kv
-    
+
     Syntaxe:
         | omnikvupdate action=("add"|"update"|"delete")
-    
+
     Exemple:
-        | makeresults 
+        | makeresults
         | eval service="web", kpi="availability", entity="server01", dt_category="itsi"
         | omnikvupdate action="add"
-    
+
     Champs requis:
         - action: Type d'action (add, update, delete)
         - service: Service(s) concerné(s)
@@ -314,18 +318,18 @@ class OmniKVUpdate(StreamingCommand):
         - entity: Entité(s) concernée(s)
         - commentary: Commentaire
         - creator: Créateur du downtime
-        - downtime: Configuration du downtime (JSON ou format legacy)
+        - downtime: Configuration du downtime (JSON)
         - dt_update: Timestamp de mise à jour
         - ID: Identifiant unique
         - version: Version du downtime
         - step_opt: Options d'étape
         - dt_filter: Filtre de downtime
         - dt_category: Type de maintenance au niveau de l'enregistrement ("itsi" ou "custom")
-    
+
     Champs optionnels:
         - dt_policy: policy de downtime
     """
-    
+
     action = Option(
         doc="""
         **Syntax:** **action=***("add"|"update"|"delete")*
@@ -339,38 +343,38 @@ class OmniKVUpdate(StreamingCommand):
     def stream(self, records):
         """
         Traite chaque enregistrement et effectue l'action demandée
-        
+
         Args:
             records: Générateur d'enregistrements Splunk
-            
+
         Yields:
             dict: Enregistrement avec le résultat de l'opération
         """
         for record in records:
             result = ""
-            
+
             try:
                 result = "omnikvupdate: "
-                
+
                 if self.action == "add":
                     error, error_output = self._validate_add_fields(record)
-                    
+
                     if error == 0:
                         result += self._add_record(record)
                     else:
                         result = f"ERREUR: {error_output}"
-                        
+
                 elif self.action == "update":
                     error, error_output = self._validate_update_fields(record)
-                    
+
                     if error == 0:
                         result += self._update_record(record)
                     else:
                         result = f"ERREUR: {error_output}"
-                        
+
                 elif self.action == "delete":
                     error, error_output = self._validate_delete_fields(record)
-                    
+
                     if error == 0:
                         result += self._delete_record(record)
                     else:
@@ -378,15 +382,27 @@ class OmniKVUpdate(StreamingCommand):
                 else:
                     result += ("Action incorrecte, les actions possibles sont "
                               "(en minuscule): add, update ou delete")
-                              
+
             except Exception as e:
                 result = f"Erreur inconnue: {str(e)}"
                 self.logger.error(f"Error in stream: {str(e)}")
-                
+
             record["result"] = str(result)
             yield record
 
     def _prepare_record_for_kvstore(self, record):
+        """
+        Normalise un enregistrement avant écriture dans le KVStore.
+
+        - Les champs scalaires multivalués sont réduits à leur première valeur.
+        - Le champ ``downtime`` (JSON) est converti en liste de strings JSON.
+
+        Args:
+            record: Enregistrement brut issu de la recherche Splunk
+
+        Returns:
+            dict: Copie normalisée prête pour le KVStore
+        """
         prepared = record.copy()
 
         scalar_fields = ['step_opt', 'dt_filter', 'dt_policy', 'dt_category', 'commentary',
@@ -394,9 +410,9 @@ class OmniKVUpdate(StreamingCommand):
         for field in scalar_fields:
             if field in prepared and isinstance(prepared[field], list):
                 prepared[field] = prepared[field][0] if prepared[field] else ''
-        
+
         json_array_fields = ['downtime']
-    
+
         for field in json_array_fields:
             if field in prepared and isinstance(prepared[field], str):
                 try:
@@ -408,22 +424,22 @@ class OmniKVUpdate(StreamingCommand):
                         prepared[field] = [json.dumps(parsed)]
                 except (json.JSONDecodeError, ValueError):
                     pass
-    
+
         return prepared
 
     def _validate_dt_category(self, record):
         """
         Valide la valeur du champ dt_category (doit être "itsi" ou "custom")
-        
+
         Args:
             record: Enregistrement à valider
-            
+
         Returns:
             tuple: (nombre d'erreurs, message d'erreur)
         """
         error = 0
         error_output = ""
-        
+
         dt_category_value = _scalarize(record.get('dt_category'))
         if dt_category_value is None or str(dt_category_value).strip() not in DT_CATEGORY_VALUES:
             error += 1
@@ -431,22 +447,22 @@ class OmniKVUpdate(StreamingCommand):
                 "dt_category field must be one of "
                 f"{', '.join(DT_CATEGORY_VALUES)}; "
             )
-        
+
         return error, error_output
 
     def _validate_add_fields(self, record):
         """
         Valide les champs requis pour l'ajout
-        
+
         Args:
             record: Enregistrement à valider
-            
+
         Returns:
             tuple: (nombre d'erreurs, message d'erreur)
         """
         error = 0
         error_output = ""
-        
+
         # Champs obligatoires
         required_fields = [
             'service',
@@ -462,43 +478,43 @@ class OmniKVUpdate(StreamingCommand):
             'dt_filter',
             'dt_category'
         ]
-        
+
         # Champs optionnels (peuvent être vides mais doivent exister)
         optional_fields = ['dt_policy']
-        
+
         # Validation des champs obligatoires
         for field in required_fields:
             if field not in record or is_null(record[field]):
                 error += 1
                 error_output += f"{field} field is Null or missing; "
-        
+
         # Validation de la valeur de dt_category (itsi | custom)
         dt_error, dt_error_output = self._validate_dt_category(record)
         error += dt_error
         error_output += dt_error_output
-        
+
         # Ajout des champs optionnels s'ils n'existent pas
         for field in optional_fields:
             if field not in record:
                 record[field] = ''  # Valeur par défaut
             elif is_null_optional(record[field]):
                 record[field] = ''  # Normaliser les valeurs null
-                
+
         return error, error_output
 
     def _validate_update_fields(self, record):
         """
         Valide les champs requis pour la mise à jour
-        
+
         Args:
             record: Enregistrement à valider
-            
+
         Returns:
             tuple: (nombre d'erreurs, message d'erreur)
         """
         error = 0
         error_output = ""
-        
+
         # Champs obligatoires (inclut 'key' pour l'update)
         required_fields = [
             'key',
@@ -515,56 +531,78 @@ class OmniKVUpdate(StreamingCommand):
             'dt_filter',
             'dt_category'
         ]
-        
+
         # Champs optionnels
         optional_fields = ['dt_policy']
-        
+
         # Validation des champs obligatoires
         for field in required_fields:
             if field not in record or is_null(record[field]):
                 error += 1
                 error_output += f"{field} field is Null or missing; "
-        
+
         # Validation de la valeur de dt_category (itsi | custom)
         dt_error, dt_error_output = self._validate_dt_category(record)
         error += dt_error
         error_output += dt_error_output
-        
+
         # Ajout des champs optionnels s'ils n'existent pas
         for field in optional_fields:
             if field not in record:
                 record[field] = ''
             elif is_null_optional(record[field]):
                 record[field] = ''
-                
+
         return error, error_output
 
     def _validate_delete_fields(self, record):
         """
         Valide les champs requis pour la suppression
-        
+
         Args:
             record: Enregistrement à valider
-            
+
         Returns:
             tuple: (nombre d'erreurs, message d'erreur)
         """
         error = 0
         error_output = ""
-        
+
         if 'key' not in record or is_null(record['key']):
             error += 1
             error_output += "key field is Null or missing; "
-            
+
         return error, error_output
+
+    def _build_trace_record(self, source, action):
+        """
+        Construit un enregistrement de trace destiné à omni_kv_trace_log.
+
+        Le trace log est strictement append-only : on retire toute clé KVStore
+        (`_key`) éventuellement présente afin de forcer la création d'un NOUVEL
+        enregistrement à chaque ajout. Sans cela, un POST contenant un `_key`
+        existant ferait un upsert et écraserait une entrée déjà tracée.
+
+        Args:
+            source: Enregistrement source (prepared ou record brut)
+            action: Type d'action tracée ("add", "update", "delete")
+
+        Returns:
+            dict: Copie prête à être ajoutée au trace log
+        """
+        trace_record = source.copy()
+        trace_record.pop('_key', None)
+        trace_record["action"] = action
+        trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+        return trace_record
 
     def _add_record(self, record):
         """
         Ajoute un nouvel enregistrement dans le KVStore
-        
+
         Args:
             record: Enregistrement à ajouter
-            
+
         Returns:
             str: Message de confirmation
         """
@@ -573,18 +611,14 @@ class OmniKVUpdate(StreamingCommand):
             # Ajouter dans la collection principale
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
             new_key = kv.add(prepared)
-            
-            # --- CORRECTION : Créer une copie pour la trace ---
+
+            # Traçabilité - copie de l'ajout dans le trace log (append-only)
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
-            trace_record = prepared.copy()
-            trace_record["action"] = "add"
-            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
-            trace_log.add(trace_record)
-            # --------------------------------------------------
-            
+            trace_log.add(self._build_trace_record(prepared, "add"))
+
             self.logger.info(f"Record added successfully with key: {new_key}")
             return f"Ajout OK (key: {new_key})"
-            
+
         except Exception as e:
             error_msg = f"Ajout interrompu: {str(e)}"
             self.logger.error(error_msg)
@@ -593,10 +627,10 @@ class OmniKVUpdate(StreamingCommand):
     def _update_record(self, record):
         """
         Met à jour un enregistrement existant dans le KVStore
-        
+
         Args:
             record: Enregistrement à mettre à jour
-            
+
         Returns:
             str: Message de confirmation
         """
@@ -606,36 +640,17 @@ class OmniKVUpdate(StreamingCommand):
             # Mise à jour dans la collection principale
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
             kv.update(key, prepared)
-            
-            # Traçabilité - Enregistrement de la mise à jour
+
+            # Traçabilité - on AJOUTE uniquement une nouvelle entrée pour la
+            # version courante. La/les version(s) précédente(s) restent telles
+            # qu'elles ont été tracées : aucune réécriture, aucun ré-étiquetage
+            # "obsolete". Le trace log est append-only.
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
-            
-            # Log de l'action update
-            trace_record = prepared.copy()
-            trace_record["action"] = "update"
-            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
-            trace_log.add(trace_record)
-            
-            # Log de l'ancienne version (obsolète)
-            obsolete_record = record.copy()
-            obsolete_record["action"] = "obsolete"
-            obsolete_record["trace_timestamp"] = datetime.datetime.now().isoformat()
-            obsolete_record["downtime"] = (
-                f"between_date#{datetime.date.today()}#"
-                f"{datetime.date.today()}#00:00:00#00:00:00"
-            )
-            
-            # Décrémenter la version pour l'obsolète
-            try:
-                obsolete_record["version"] = int(record["version"]) - 1
-            except (ValueError, KeyError):
-                obsolete_record["version"] = 0
-                
-            trace_log.add(obsolete_record)
-            
+            trace_log.add(self._build_trace_record(prepared, "update"))
+
             self.logger.info(f"Record updated successfully with key: {key}")
             return f"Mise à jour OK (key: {key})"
-            
+
         except Exception as e:
             error_msg = f"Mise à jour interrompue: {str(e)}"
             self.logger.error(error_msg)
@@ -644,39 +659,37 @@ class OmniKVUpdate(StreamingCommand):
     def _delete_record(self, record):
         """
         Supprime un enregistrement du KVStore
-        
+
         Args:
             record: Enregistrement à supprimer
-            
+
         Returns:
             str: Message de confirmation
         """
         try:
             key = record["key"]
-            
+
             # Suppression de la collection principale
             kv = KVStoreClient(APPNAME, COLLECTION, LOOKUP, self.service)
             kv.delete_key(key)
-            
-            # Traçabilité - Enregistrement de la suppression
+
+            # Traçabilité - Enregistrement de la suppression (append-only)
             trace_log = KVStoreClient(APPNAME, KVLOG, KVLOG, self.service)
-            trace_record = record.copy()
-            trace_record["action"] = "delete"
-            trace_record["trace_timestamp"] = datetime.datetime.now().isoformat()
+            trace_record = self._build_trace_record(record, "delete")
             trace_record["version"] = 99999
-            
+
             # Récupérer le nom d'utilisateur depuis les métadonnées
             try:
                 trace_record["creator"] = self._metadata.searchinfo.username
             except AttributeError:
                 # Fallback si les métadonnées ne sont pas disponibles
                 pass
-                
+
             trace_log.add(trace_record)
-            
+
             self.logger.info(f"Record deleted successfully with key: {key}")
             return f"Suppression OK (key: {key})"
-            
+
         except Exception as e:
             error_msg = f"Suppression interrompue: {str(e)}"
             self.logger.error(error_msg)

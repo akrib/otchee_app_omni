@@ -527,11 +527,11 @@ require([
 
       var sortByMode = {
         search: '<option value="update">Derniere MAJ</option>'
-              + '<option value="active">Actives d\'abord</option>'
+              + '<option value="active">En cours de maintenance d\'abord</option>'
               + '<option value="id">ID</option>'
               + '<option value="author">Auteur</option>',
         mine: '<option value="update">Derniere MAJ</option>'
-            + '<option value="active">Actives d\'abord</option>'
+            + '<option value="active">En cours de maintenance d\'abord</option>'
             + '<option value="id">ID</option>',
         logs: '<option value="date">Date (recent)</option>'
             + '<option value="id">ID</option>'

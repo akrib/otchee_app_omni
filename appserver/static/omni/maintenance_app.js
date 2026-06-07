@@ -261,7 +261,7 @@ var Config = (function () {
         '#omni_maintenance_app{font-family:Poppins,system-ui,Segoe UI,Roboto,sans-serif;color:var(--omni-ink);max-width:1080px;margin:0 auto;}',
         '.omni-card{background:#fff;border:1px solid var(--omni-line);border-radius:14px;box-shadow:0 6px 24px rgba(20,40,70,.06);overflow:hidden;}',
         '.omni-header{display:flex;align-items:center;gap:16px;padding:18px 24px;background:linear-gradient(90deg,var(--omni-primary),var(--omni-primary-2));color:#fff;}',
-        '.omni-header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.3px;}',
+        '.omni-header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.3px;color:#fff;}',
         '.omni-header .omni-badge{margin-left:auto;font-size:12px;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px;}',
         '.omni-back{display:inline-flex;align-items:center;gap:6px;color:var(--omni-primary);text-decoration:none;font-weight:600;margin:10px 4px;font-size:14px;}',
         '.omni-back:hover{text-decoration:underline;}',
@@ -289,7 +289,7 @@ var Config = (function () {
         '.omni-spacer{flex:1;}',
         '.omni-field{margin:14px 0;}',
         '.omni-field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}',
-        '.omni-field select,.omni-field input[type=text],.omni-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;}',
+        '.omni-field select,.omni-field input[type=text],.omni-field textarea{height:45px;width:100%;box-sizing:border-box;border:1px solid var(--omni-line);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;}',
         '.omni-field select:focus,.omni-field input:focus,.omni-field textarea:focus{outline:none;border-color:var(--omni-primary);box-shadow:0 0 0 3px rgba(25,119,204,.12);}',
         '.omni-field--inline{display:inline-block;width:auto;margin-right:10px;vertical-align:top;}',
         '.omni-choices{display:flex;gap:8px;flex-wrap:wrap;}',
@@ -856,7 +856,7 @@ var Config = (function () {
           SearchHub.run('entity_types', SPL.entityTypes, {
             message: 'Chargement des types d\'entite…',
             onResults: function (rows) {
-              var h = '';
+              var h = '<option value="*">-- Tous --</option>';
               rows.forEach(function (r) { if (r[0]) h += '<option>' + r[0] + '</option>'; });
               $et.html(h);
               var preT = Tokens.get('entity_input_type');
@@ -1446,7 +1446,7 @@ console.log("[OmniApp] État des tokens à la derniere étape :", {
       var email = Tokens.get('email');
       if (Utils.isNotNull(sending) && Utils.checkEmail(email)) {
         var act = action === 'add' ? 'Ajout' : (action === 'update' ? 'Modification' : 'Suppression');
-        return '| table ID,result | transpose column_name="Champs" '
+        return '| table ID,result '
           + '| sendemail to="' + email + '" subject="' + act + ' de downtime" sendresults=true inline=true format=table '
           + 'message="Le downtime ' + sel.ID + ' vient d\'etre ' + (act === 'Ajout' ? 'soumis' : 'mis a jour') + '"';
       }

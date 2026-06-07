@@ -174,13 +174,6 @@ require([
     var o = {}; for (var i = 0; i < fields.length; i++) o[fields[i]] = row[i]; return o;
   }
 
-  /* ============================================================
-   *  SPL
-   * ============================================================ */
-  // Lecture : on recupere TOUS les champs bruts necessaires a un re-write
-  // complet via la commande OmniKVUpdate (qui remplace integralement le
-  // document KV). On garde aussi quelques champs derives pour l'affichage
-  // (last_update lisible, category ITSI/CUSTOM).
   function buildReadSpl(id) {
     return ''
       + '| inputlookup ' + LOOKUP + ' '
@@ -200,22 +193,7 @@ require([
       + '        dt_policy, dt_filter, commentary, entity, kpi, service, downtime, status';
   }
 
-  // Ecriture du statut via la CUSTOM COMMAND OmniKVUpdate (action="update").
-  // -------------------------------------------------------------------------
-  // Contrairement a outputlookup, OmniKVUpdate :
-  //  - valide les champs (service/kpi/entity/commentary/creator/downtime/
-  //    dt_update/ID/version/step_opt/dt_filter/dt_category obligatoires),
-  //  - trace le changement dans omni_kv_trace_log + ecrit une version obsolete.
-  // L'update fait un REMPLACEMENT COMPLET du document => on doit renvoyer
-  // TOUS les champs lus, en ne modifiant que :
-  //  - downtime  : mv json reconstruit avec le status courant de chaque periode
-  //  - status    : status GLOBAL de la regle (enabled/disabled)
-  //  - dt_update : date/heure du changement (format "YYYY/MM/DD HH:MM:SS")
-  //  - creator   : utilisateur Splunk courant
-  //  - version   : entier incremente
-  // Le SPL est calque sur QueryBuilder.create de maintenance_app.js :
-  //   | makeresults | eval key=...,service=split(...,";"),...,downtime="<json>"
-  //   | OmniKVUpdate action="update"
+
   function buildSaveSpl(rec, periodsOut, globalOn, creator, version) {
     var globalStatus = globalOn ? 'enabled' : 'disabled';
 
@@ -258,7 +236,7 @@ require([
       // version : entier (pas de guillemets)
       +     'version='       + version                            + ', '
       // date/heure du changement, format demande : 2026/06/06 23:13:42 (heure serveur)
-      +     'dt_update=strftime(now(),"%Y/%m/%d %H:%M:%S"), '
+      +     'dt_update=now(), '
       +     'step_opt="'     + Util.splEscape(stepOpt)            + '", '
       // status GLOBAL de la regle (hors json)
       +     'status="'       + globalStatus                       + '" '
