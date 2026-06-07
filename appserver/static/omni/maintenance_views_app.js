@@ -1134,7 +1134,7 @@ require([
         UI.modal('Omni Assistant', ''
           + '<h3>Journal des maintenances</h3>'
           + '<p>Chaque carte represente une <b>action</b> (ajout, modification, suppression) effectuee sur une maintenance, '
-          + 'avec la version concernee et l\'auteur. Les actions <i>obsolete</i> sont masquees.</p>'
+          + 'avec la version concernee et l\'auteur.</p>'
           + '<h3>Options des cartes</h3>'
           + '<p>Les boutons d\'action ne sont disponibles que sur la <b>derniere version</b> d\'un ID, afin d\'eviter '
           + 'de modifier une maintenance a partir de valeurs obsoletes. Si la derniere version d\'un ID est une '
